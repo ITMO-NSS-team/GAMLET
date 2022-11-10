@@ -1,18 +1,32 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import openml
 import pandas as pd
 from scipy.io.arff import loadarff
 
+from components.dataset import Dataset
 
-def get_openml_dataset(dataset_id) -> Path:
+
+def get_openml_dataset(dataset_id) -> Dataset:
     openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
     name = openml_dataset.name
-    dataset_file = get_datasets_dir().joinpath(name).with_suffix('.csv')
-    if not dataset_file.exists():
-        raw_file = openml.datasets.get_dataset(dataset_id, download_data=True).data_file
-        arff_to_csv(raw_file, dataset_file)
-    return dataset_file
+    dataset_file_path = get_datasets_dir().joinpath(name).with_suffix('.csv')
+    if dataset_file_path.exists():
+        data = pd.read_csv(dataset_file_path)
+        X = data.drop('target', axis='columns')
+        y = data[['target']]
+    else:
+        X, y, categorical_indicator, attribute_names = openml_dataset.get_data(
+            target=openml_dataset.default_target_attribute,
+            dataset_format='array'
+        )
+        data = pd.DataFrame(X, columns=attribute_names)
+        data['target'] = y
+        data.to_csv(dataset_file_path)
+    dataset = Dataset(name, X, y, dataset_file_path)
+    return dataset
 
 
 def arff_to_csv(input_path, output_path):
