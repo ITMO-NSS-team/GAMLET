@@ -7,7 +7,7 @@ import pandas as pd
 from pymfe.mfe import MFE
 
 if TYPE_CHECKING:
-    from components.dataset import Dataset
+    from components.dataset import DatasetCache
 
 
 class MetaFeaturesExtractor:
@@ -27,10 +27,12 @@ class MetaFeaturesExtractor:
 class PymfeExtractor(MetaFeaturesExtractor):
     DEFAULT_FEATURES = 'default'
 
-    def _extract_features(self, datasets: List[Dataset]):
+    def _extract_features(self, datasets: List[DatasetCache]):
         meta_features = {}
         for dataset in datasets:
-            mfe = MFE(self.features).fit(dataset.X.to_numpy(), dataset.y.to_numpy())
+            dataset = dataset.load()
+            cat_cols = [i for i, val in enumerate(dataset.categorical_indicator) if val]
+            mfe = MFE(self.features).fit(dataset.X, dataset.y, cat_cols=cat_cols)
             feature_names, dataset_features = mfe.extract(out_type=tuple)
             meta_features[dataset.name] = dict(zip(feature_names, dataset_features))
         meta_features = pd.DataFrame.from_dict(meta_features, orient='index')

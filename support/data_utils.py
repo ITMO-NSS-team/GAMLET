@@ -6,33 +6,43 @@ import openml
 import pandas as pd
 from scipy.io.arff import loadarff
 
-from components.dataset import Dataset
+from components.dataset import Dataset, DatasetCache
 
 
-def get_openml_dataset(dataset_id) -> Dataset:
+def get_openml_dataset(dataset_id) -> DatasetCache:
     openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
     name = openml_dataset.name
-    dataset_file_path = get_datasets_dir().joinpath(name).with_suffix('.csv')
-    if dataset_file_path.exists():
-        data = pd.read_csv(dataset_file_path)
-        X = data.drop('target', axis='columns')
-        y = data[['target']]
+    dataset_cache_path = get_dataset_cache_path(name)
+    if dataset_cache_path.exists():
+        dataset_cache = DatasetCache(name, dataset_cache_path)
+        # data = pd.read_csv(dataset_cache_path)
+        # X = data.drop('target', axis='columns')
+        # y = data[['target']]
     else:
         X, y, categorical_indicator, attribute_names = openml_dataset.get_data(
             target=openml_dataset.default_target_attribute,
             dataset_format='array'
         )
-        data = pd.DataFrame(X, columns=attribute_names)
-        data['target'] = y
-        data.to_csv(dataset_file_path)
-    dataset = Dataset(name, X, y, dataset_file_path)
-    return dataset
+        dataset_cache = Dataset(name, X, y, categorical_indicator, attribute_names).dump(dataset_cache_path)
+        # data = pd.DataFrame(X, columns=attribute_names)
+        # data['target'] = y
+        # data.to_csv(dataset_cache_path)
+    # dataset = Dataset(name, X, y, dataset_cache_path)
+    return dataset_cache
 
 
 def arff_to_csv(input_path, output_path):
     raw_data = loadarff(input_path)
     df = pd.DataFrame(raw_data[0])
     df.to_csv(output_path)
+
+
+def get_dataset_cache_path(dataset_name: str) -> Path:
+    return get_dataset_dir(dataset_name).joinpath(dataset_name).with_suffix(DatasetCache.default_cache_extension)
+
+
+def get_dataset_dir(dataset_name: str) -> Path:
+    return ensure_dir_exists(get_datasets_dir().joinpath(dataset_name))
 
 
 def get_datasets_dir() -> Path:
