@@ -7,7 +7,7 @@ def main():
         'nomao', 'sylvine', 'kc1', 'jungle_chess_2pcs_raw_endgame_complete', 'credit-g', 'delta_ailerons', 'pol'
     ]
     loader = OpenmlLoader(dataset_names)
-    extractor = PymfeExtractor('general')
+    extractor = PymfeExtractor({'groups': 'general'})
 
     cached_datasets = loader()
     meta_features = extractor(cached_datasets)

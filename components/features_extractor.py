@@ -1,20 +1,23 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional, Iterable, Dict, Any
 
 import pandas as pd
 from pymfe.mfe import MFE
+
+from support.data_utils import get_meta_features_dict, update_meta_features_dict
 
 if TYPE_CHECKING:
     from components.dataset import DatasetCache
 
 
 class MetaFeaturesExtractor:
-    DEFAULT_FEATURES = None
+    DEFAULT_PARAMS = None
+    SOURCE: Optional[str] = None
 
-    def __init__(self, features=None):
-        self.features = features or self.DEFAULT_FEATURES
+    def __init__(self, extractor_params=None):
+        self.extractor_params = extractor_params or self.DEFAULT_PARAMS
 
     def __call__(self, datasets):
         return self._extract_features(datasets)
@@ -25,15 +28,36 @@ class MetaFeaturesExtractor:
 
 
 class PymfeExtractor(MetaFeaturesExtractor):
-    DEFAULT_FEATURES = 'default'
+    DEFAULT_PARAMS = {'groups': 'default'}
+    SOURCE = 'pymfe'
+
+    def __init__(self, extractor_params=None):
+        super().__init__(extractor_params)
+        self.extractor = MFE(**self.extractor_params)
 
     def _extract_features(self, datasets: List[DatasetCache]):
         meta_features = {}
+        meta_feature_names = self.extractor.extract_metafeature_names()
         for dataset in datasets:
-            dataset = dataset.load()
-            cat_cols = [i for i, val in enumerate(dataset.categorical_indicator) if val]
-            mfe = MFE(self.features).fit(dataset.X, dataset.y, cat_cols=cat_cols)
-            feature_names, dataset_features = mfe.extract(out_type=tuple)
-            meta_features[dataset.name] = dict(zip(feature_names, dataset_features))
+            if mfs := self._get_meta_features_cache(dataset.name, meta_feature_names):
+                meta_features[dataset.name] = mfs
+            else:
+                dataset = dataset.load()
+                cat_cols = [i for i, val in enumerate(dataset.categorical_indicator) if val]
+                mfe = self.extractor.fit(dataset.X, dataset.y, cat_cols=cat_cols)
+                feature_names, dataset_features = mfe.extract(out_type=tuple)
+                mfs = dict(zip(feature_names, dataset_features))
+                self._update_meta_features_cache(dataset.name, mfs)
+                meta_features[dataset.name] = mfs
         meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features
+
+    def _get_meta_features_cache(self, dataset_name: str, meta_feature_names: Iterable[str]):
+        cache = get_meta_features_dict(dataset_name, self.SOURCE)
+        if set(meta_feature_names) ^ cache.keys():
+            return None
+        else:
+            return {mf_name: cache[mf_name] for mf_name in meta_feature_names}
+
+    def _update_meta_features_cache(self, dataset_name: str, meta_features_dict: Dict[str, Any]):
+        update_meta_features_dict(dataset_name, self.SOURCE, meta_features_dict)

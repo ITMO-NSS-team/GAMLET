@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import pickle
 from pathlib import Path
+from typing import Dict, Any
 
 import openml
 import pandas as pd
@@ -15,19 +17,12 @@ def get_openml_dataset(dataset_id) -> DatasetCache:
     dataset_cache_path = get_dataset_cache_path(name)
     if dataset_cache_path.exists():
         dataset_cache = DatasetCache(name, dataset_cache_path)
-        # data = pd.read_csv(dataset_cache_path)
-        # X = data.drop('target', axis='columns')
-        # y = data[['target']]
     else:
         X, y, categorical_indicator, attribute_names = openml_dataset.get_data(
             target=openml_dataset.default_target_attribute,
             dataset_format='array'
         )
         dataset_cache = Dataset(name, X, y, categorical_indicator, attribute_names).dump(dataset_cache_path)
-        # data = pd.DataFrame(X, columns=attribute_names)
-        # data['target'] = y
-        # data.to_csv(dataset_cache_path)
-    # dataset = Dataset(name, X, y, dataset_cache_path)
     return dataset_cache
 
 
@@ -64,3 +59,25 @@ def ensure_dir_exists(dir_: Path) -> Path:
 def project_root() -> Path:
     """Returns project root folder."""
     return Path(__file__).parent.parent
+
+
+def get_meta_features_cache_path(dataset_name: str, source_name: str):
+    dataset_dir = get_dataset_dir(dataset_name)
+    return dataset_dir.joinpath(source_name).with_suffix('.pkl')
+
+
+def get_meta_features_dict(dataset_name: str, source_name: str) -> Dict[str, Any]:
+    meta_features_file = get_meta_features_cache_path(dataset_name, source_name)
+    if not meta_features_file.exists():
+        return {}
+    with open(meta_features_file, 'rb') as f:
+        meta_features = pickle.load(f)
+    return meta_features
+
+
+def update_meta_features_dict(dataset_name: str, source_name: str, meta_features: Dict[str, Any]):
+    meta_features_file = get_meta_features_cache_path(dataset_name, source_name)
+    meta_features_old = get_meta_features_dict(dataset_name, source_name)
+    with open(meta_features_file, 'wb') as f:
+        meta_features_old.update(meta_features)
+        pickle.dump(meta_features, f)
