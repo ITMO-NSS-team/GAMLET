@@ -1,4 +1,4 @@
-from components.datasets_loader import OpenmlLoader
+from components.data_preparation.datasets_loader import OpenmlLoader
 
 
 def get_datasets():
@@ -6,7 +6,7 @@ def get_datasets():
         'nomao', 'sylvine', 'kc1', 'jungle_chess_2pcs_raw_endgame_complete', 'credit-g', 'delta_ailerons', 'pol'
     ]
     loader = OpenmlLoader(dataset_names)
-    datasets = loader()
+    datasets = loader.load()
     print(f'Datasets "{", ".join(dataset_names)}" are available at the paths:')
     print('\n'.join(str(d) for d in datasets))
     return datasets

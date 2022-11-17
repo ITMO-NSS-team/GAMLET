@@ -1,5 +1,5 @@
-from components.datasets_loader import OpenmlLoader
-from components.features_extractor import PymfeExtractor
+from components.data_preparation.datasets_loader import OpenmlLoader
+from components.data_preparation.features_extractor import PymfeExtractor
 
 
 def main():
@@ -9,8 +9,8 @@ def main():
     loader = OpenmlLoader(dataset_names)
     extractor = PymfeExtractor({'groups': 'general'})
 
-    cached_datasets = loader()
-    meta_features = extractor(cached_datasets)
+    cached_datasets = loader.load()
+    meta_features = extractor.extract(cached_datasets)
     return meta_features
 
 

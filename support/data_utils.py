@@ -8,7 +8,7 @@ import openml
 import pandas as pd
 from scipy.io.arff import loadarff
 
-from components.dataset import Dataset, DatasetCache
+from components.data_preparation.dataset import Dataset, DatasetCache
 
 
 def get_openml_dataset(dataset_id) -> DatasetCache:

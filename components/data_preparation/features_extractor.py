@@ -9,7 +9,7 @@ from pymfe.mfe import MFE
 from support.data_utils import get_meta_features_dict, update_meta_features_dict
 
 if TYPE_CHECKING:
-    from components.dataset import DatasetCache
+    from components.data_preparation.dataset import DatasetCache
 
 
 class MetaFeaturesExtractor:
@@ -19,38 +19,9 @@ class MetaFeaturesExtractor:
     def __init__(self, extractor_params=None):
         self.extractor_params = extractor_params or self.DEFAULT_PARAMS
 
-    def __call__(self, datasets):
-        return self._extract_features(datasets)
-
     @abstractmethod
-    def _extract_features(self, datasets):
+    def extract(self, datasets):
         raise NotImplementedError()
-
-
-class PymfeExtractor(MetaFeaturesExtractor):
-    DEFAULT_PARAMS = {'groups': 'default'}
-    SOURCE = 'pymfe'
-
-    def __init__(self, extractor_params=None):
-        super().__init__(extractor_params)
-        self.extractor = MFE(**self.extractor_params)
-
-    def _extract_features(self, datasets: List[DatasetCache]):
-        meta_features = {}
-        meta_feature_names = self.extractor.extract_metafeature_names()
-        for dataset in datasets:
-            if mfs := self._get_meta_features_cache(dataset.name, meta_feature_names):
-                meta_features[dataset.name] = mfs
-            else:
-                dataset = dataset.load()
-                cat_cols = [i for i, val in enumerate(dataset.categorical_indicator) if val]
-                mfe = self.extractor.fit(dataset.X, dataset.y, cat_cols=cat_cols)
-                feature_names, dataset_features = mfe.extract(out_type=tuple)
-                mfs = dict(zip(feature_names, dataset_features))
-                self._update_meta_features_cache(dataset.name, mfs)
-                meta_features[dataset.name] = mfs
-        meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
-        return meta_features
 
     def _get_meta_features_cache(self, dataset_name: str, meta_feature_names: Iterable[str]):
         cache = get_meta_features_dict(dataset_name, self.SOURCE)
@@ -61,3 +32,29 @@ class PymfeExtractor(MetaFeaturesExtractor):
 
     def _update_meta_features_cache(self, dataset_name: str, meta_features_dict: Dict[str, Any]):
         update_meta_features_dict(dataset_name, self.SOURCE, meta_features_dict)
+
+
+class PymfeExtractor(MetaFeaturesExtractor):
+    DEFAULT_PARAMS = {'groups': 'default'}
+    SOURCE = 'pymfe'
+
+    def __init__(self, extractor_params=None):
+        super().__init__(extractor_params)
+        self.extractor = MFE(**self.extractor_params)
+
+    def extract(self, datasets: List[DatasetCache]):
+        meta_features = {}
+        meta_feature_names = self.extractor.extract_metafeature_names()
+        for dataset in datasets:
+            if mfs := self._get_meta_features_cache(dataset.name, meta_feature_names):
+                meta_features[dataset.name] = mfs
+            else:
+                loaded_dataset = dataset.load()
+                cat_cols = [i for i, val in enumerate(loaded_dataset.categorical_indicator) if val]
+                mfe = self.extractor.fit(loaded_dataset.X, loaded_dataset.y, cat_cols=cat_cols)
+                feature_names, dataset_features = mfe.extract(out_type=tuple)
+                mfs = dict(zip(feature_names, dataset_features))
+                self._update_meta_features_cache(dataset.name, mfs)
+                meta_features[dataset.name] = mfs
+        meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
+        return meta_features
