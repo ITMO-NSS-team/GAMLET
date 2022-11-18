@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import pickle
+from os import PathLike
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 import openml
-import pandas as pd
-from scipy.io.arff import loadarff
 
 from components.data_preparation.dataset import Dataset, DatasetCache
 
+PathType = Union[PathLike, str]
+OpenMLDatasetId = Union[str, int]
 
-def get_openml_dataset(dataset_id) -> DatasetCache:
+
+def get_openml_dataset(dataset_id: OpenMLDatasetId) -> DatasetCache:
     openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
     name = openml_dataset.name
     dataset_cache_path = get_dataset_cache_path(name)
@@ -24,12 +26,6 @@ def get_openml_dataset(dataset_id) -> DatasetCache:
         )
         dataset_cache = Dataset(name, X, y, categorical_indicator, attribute_names).dump(dataset_cache_path)
     return dataset_cache
-
-
-def arff_to_csv(input_path, output_path):
-    raw_data = loadarff(input_path)
-    df = pd.DataFrame(raw_data[0])
-    df.to_csv(output_path)
 
 
 def get_dataset_cache_path(dataset_name: str) -> Path:
