@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,7 +17,7 @@ class DatasetCache:
     name: str
     cache_path: Path
 
-    def load(self) -> 'Dataset':
+    def load(self) -> Dataset:
         with open(self.cache_path, 'rb') as f:
             dataset = pickle.load(f)
         dataset.cache_path = self.cache_path

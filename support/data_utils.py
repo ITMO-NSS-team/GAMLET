@@ -10,10 +10,10 @@ import openml
 from components.data_preparation.dataset import Dataset, DatasetCache
 
 PathType = Union[PathLike, str]
-OpenMLDatasetId = Union[str, int]
+OpenMLDatasetID = Union[str, int]
 
 
-def get_openml_dataset(dataset_id: OpenMLDatasetId) -> DatasetCache:
+def get_openml_dataset(dataset_id: OpenMLDatasetID) -> DatasetCache:
     openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
     name = openml_dataset.name
     dataset_cache_path = get_dataset_cache_path(name)

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import List, TYPE_CHECKING, Optional, Iterable, Dict, Any
+from typing import List, Optional, Iterable, Dict, Any, Union
 
 import pandas as pd
 from pymfe.mfe import MFE
 
 from support.data_utils import get_meta_features_dict, update_meta_features_dict
 
-if TYPE_CHECKING:
-    from components.data_preparation.dataset import DatasetCache
+from components.data_preparation.dataset import DatasetCache
 
 
 class MetaFeaturesExtractor:
@@ -18,6 +17,7 @@ class MetaFeaturesExtractor:
 
     def __init__(self, extractor_params=None):
         self.extractor_params = extractor_params or self.DEFAULT_PARAMS
+        self._datasets_loader = None
 
     @abstractmethod
     def extract(self, datasets):
@@ -42,10 +42,12 @@ class PymfeExtractor(MetaFeaturesExtractor):
         super().__init__(extractor_params)
         self.extractor = MFE(**self.extractor_params)
 
-    def extract(self, datasets: List[DatasetCache]):
+    def extract(self, datasets: List[Union[DatasetCache, str]]):
         meta_features = {}
         meta_feature_names = self.extractor.extract_metafeature_names()
         for dataset in datasets:
+            if isinstance(dataset, str):
+                dataset = DatasetCache(dataset)
             if mfs := self._get_meta_features_cache(dataset.name, meta_feature_names):
                 meta_features[dataset.name] = mfs
             else:

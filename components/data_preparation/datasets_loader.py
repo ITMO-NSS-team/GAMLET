@@ -19,7 +19,7 @@ class DatasetsLoader:
         raise NotImplementedError()
 
 
-class OpenmlLoader(DatasetsLoader):
+class OpenMLDatasetsLoader(DatasetsLoader):
     def load(self) -> List[DatasetCache]:
         if not self.dataset_sources:
             raise ValueError('No data sources provided!')

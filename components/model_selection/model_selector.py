@@ -20,7 +20,7 @@ from components.data_preparation.dataset import DatasetCache
 from support.data_utils import PathType
 
 
-class BestModelSelector:
+class ModelSelector:
 
     @abstractmethod
     def fit(self, *args, **kwargs):
@@ -56,10 +56,10 @@ def get_best_fedot_performers(dataset: DatasetCache, pipelines: List[Pipeline], 
     return best_pipeline
 
 
-class FedotResultsPipelineSelector(BestModelSelector):
+class FedotResultsBestPipelineSelector(ModelSelector):
     def __init__(self):
         self.datasets: Optional[List[DatasetCache]] = None
-        self.best_models: Optional[List[Union[Pipeline, List[Pipeline]]]] = None
+        self.selected_models: Optional[List[Union[Pipeline, List[Pipeline]]]] = None
         self.pipeline_paths: Optional[List[Union[PathType, List[PathType]]]] = None
         self.launch_dir: Optional[PathType] = None
 
@@ -83,7 +83,7 @@ class FedotResultsPipelineSelector(BestModelSelector):
             if n_best > 1:
                 ensure_wrapped_in_sequence(pipeline)
             pipelines.append(pipeline)
-        self.best_models = pipelines
+        self.selected_models = pipelines
         return pipelines
 
     def define_model_paths(self):
@@ -121,3 +121,28 @@ class FedotResultsPipelineSelector(BestModelSelector):
 
         self.pipeline_paths = [datasets_models_paths[dataset.name] for dataset in self.datasets]
         return self
+
+
+# class OpenMLSelector(ModelSelector):
+#     def __init__(self):
+#         self.dataset_ids: Optional[List[DatasetCache]] = None
+#         self.selected_models: Optional[List[Union[Pipeline, List[Pipeline]]]] = None
+#
+#     def fit(self, dataset_ids: List[OpenMLDatasetID], select_best: bool = True, n_models: int = 1,
+#             suitability_filter: Callable[[OpenMLEvaluation], bool] = lambda e: True):
+#         self.dataset_ids = dataset_ids
+#         # self.pipeline_paths = pipeline_paths
+#         # self.launch_dir = launch_dir
+#         # if not self.pipeline_paths:
+#         #     self.define_model_paths()
+#         return self
+#
+#     def select(self, n_best: int = 1, fit_from_scratch: bool = False):
+#         pipelines = []
+#         for ... in ...:
+#             pipeline = ...
+#             if n_best > 1:
+#                 ensure_wrapped_in_sequence(pipeline)
+#             pipelines.append(pipeline)
+#         self.selected_models = pipelines
+#         return pipelines
