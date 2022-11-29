@@ -5,35 +5,12 @@ from os import PathLike
 from pathlib import Path
 from typing import Dict, Any, Union
 
-import openml
-
-from components.data_preparation.dataset import Dataset, DatasetCache
-
 PathType = Union[PathLike, str]
-OpenMLDatasetID = Union[str, int]
-
-
-def get_openml_dataset(dataset_id: OpenMLDatasetID) -> DatasetCache:
-    openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
-    name = openml_dataset.name
-    dataset_cache_path = get_dataset_cache_path(name)
-    if dataset_cache_path.exists():
-        dataset_cache = DatasetCache(name, dataset_cache_path)
-    else:
-        X, y, categorical_indicator, attribute_names = openml_dataset.get_data(
-            target=openml_dataset.default_target_attribute,
-            dataset_format='array'
-        )
-        dataset_cache = Dataset(name, X, y, categorical_indicator, attribute_names).dump(dataset_cache_path)
-    return dataset_cache
+DEFAULT_CACHE_EXTENSION = '.pkl'
 
 
 def get_dataset_cache_path(dataset_name: str) -> Path:
-    return get_dataset_dir(dataset_name).joinpath(dataset_name).with_suffix(DatasetCache.default_cache_extension)
-
-
-def get_dataset_dir(dataset_name: str) -> Path:
-    return ensure_dir_exists(get_datasets_dir().joinpath(dataset_name))
+    return get_datasets_dir().joinpath(dataset_name).with_suffix(DEFAULT_CACHE_EXTENSION)
 
 
 def get_datasets_dir() -> Path:
@@ -58,8 +35,8 @@ def project_root() -> Path:
 
 
 def get_meta_features_cache_path(dataset_name: str, source_name: str):
-    dataset_dir = get_dataset_dir(dataset_name)
-    return dataset_dir.joinpath(source_name).with_suffix('.pkl')
+    meta_features_dir = ensure_dir_exists(get_data_dir().joinpath(source_name))
+    return meta_features_dir.joinpath(dataset_name).with_suffix('.pkl')
 
 
 def get_meta_features_dict(dataset_name: str, source_name: str) -> Dict[str, Any]:

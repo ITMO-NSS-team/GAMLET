@@ -9,15 +9,29 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 
+from support.data_utils import get_dataset_cache_path
+
+
+class NoCacheError(FileNotFoundError):
+    pass
+
 
 @dataclass
 class DatasetCache:
-    default_cache_extension = '.pkl'
-
     name: str
-    cache_path: Path
+    _cache_path: Path = None
+
+    @property
+    def cache_path(self):
+        return self._cache_path or get_dataset_cache_path(self.name)
+
+    @cache_path.setter
+    def cache_path(self, val):
+        self._cache_path = val
 
     def load(self) -> Dataset:
+        if not self.cache_path.exists():
+            raise NoCacheError(f'Dataset {self.name} not found!')
         with open(self.cache_path, 'rb') as f:
             dataset = pickle.load(f)
         dataset.cache_path = self.cache_path

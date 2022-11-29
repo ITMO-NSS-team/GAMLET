@@ -6,11 +6,8 @@ def main():
     dataset_names = [
         'nomao', 'sylvine', 'kc1', 'jungle_chess_2pcs_raw_endgame_complete', 'credit-g', 'delta_ailerons', 'pol'
     ]
-    loader = OpenMLDatasetsLoader().fit(dataset_names)
     extractor = PymfeExtractor().fit({'groups': 'general'})
-
-    cached_datasets = loader.load()
-    meta_features = extractor.extract(cached_datasets)
+    meta_features = extractor.extract(dataset_names)
     return meta_features
 
 

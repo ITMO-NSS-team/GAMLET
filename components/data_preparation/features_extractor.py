@@ -8,19 +8,19 @@ from pymfe.mfe import MFE
 
 from support.data_utils import get_meta_features_dict, update_meta_features_dict
 
-from components.data_preparation.dataset import DatasetCache
+from components.data_preparation.dataset import DatasetCache, NoCacheError
 
 
 class MetaFeaturesExtractor:
     DEFAULT_PARAMS = None
     SOURCE: Optional[str] = None
 
-    def __init__(self, extractor_params=None):
-        self.extractor_params = extractor_params or self.DEFAULT_PARAMS
-        self._datasets_loader = None
+    @abstractmethod
+    def fit(self, datasets) -> MetaFeaturesExtractor:
+        raise NotImplementedError()
 
     @abstractmethod
-    def extract(self, datasets):
+    def extract(self, datasets) -> pd.DataFrame:
         raise NotImplementedError()
 
     def _get_meta_features_cache(self, dataset_name: str, meta_feature_names: Iterable[str]):
@@ -38,22 +38,38 @@ class PymfeExtractor(MetaFeaturesExtractor):
     DEFAULT_PARAMS = {'groups': 'default'}
     SOURCE = 'pymfe'
 
-    def __init__(self, extractor_params=None):
-        super().__init__(extractor_params)
-        self.extractor = MFE(**self.extractor_params)
+    def __init__(self):
+        self.extractor_params = self.DEFAULT_PARAMS
+        self._datasets_loader = None
+        self._extractor = None
 
-    def extract(self, datasets: List[Union[DatasetCache, str]]):
+    def fit(self, extractor_params=None, datasets_loader=None) -> PymfeExtractor:
+        self._datasets_loader = datasets_loader
+        self.extractor_params = extractor_params if extractor_params is not None else self.extractor_params
+        self._extractor = MFE(**self.extractor_params)
+        return self
+
+    @property
+    def datasets_loader(self):
+        if not self._datasets_loader:
+            raise ValueError("Datasets loader not provided!")
+        return self._datasets_loader
+
+    def extract(self, datasets: List[Union[DatasetCache, str]]) -> pd.DataFrame:
         meta_features = {}
-        meta_feature_names = self.extractor.extract_metafeature_names()
+        meta_feature_names = self._extractor.extract_metafeature_names()
         for dataset in datasets:
             if isinstance(dataset, str):
                 dataset = DatasetCache(dataset)
             if mfs := self._get_meta_features_cache(dataset.name, meta_feature_names):
                 meta_features[dataset.name] = mfs
             else:
-                loaded_dataset = dataset.load()
+                try:
+                    loaded_dataset = dataset.load()
+                except NoCacheError:
+                    loaded_dataset = self.datasets_loader.load_single(dataset.name).load()
                 cat_cols = [i for i, val in enumerate(loaded_dataset.categorical_indicator) if val]
-                mfe = self.extractor.fit(loaded_dataset.X, loaded_dataset.y, cat_cols=cat_cols)
+                mfe = self._extractor.fit(loaded_dataset.X, loaded_dataset.y, cat_cols=cat_cols)
                 feature_names, dataset_features = mfe.extract(out_type=tuple)
                 mfs = dict(zip(feature_names, dataset_features))
                 self._update_meta_features_cache(dataset.name, mfs)
