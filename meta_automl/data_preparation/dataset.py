@@ -29,7 +29,7 @@ class DatasetCache:
     def cache_path(self, val):
         self._cache_path = val
 
-    def load(self) -> Dataset:
+    def load_into_memory(self) -> Dataset:
         if not self.cache_path.exists():
             raise NoCacheError(f'Dataset {self.name} not found!')
         with open(self.cache_path, 'rb') as f:
@@ -47,7 +47,7 @@ class Dataset:
     attribute_names: Optional[List[str]] = None
     cache_path: Optional[Path] = None
 
-    def dump(self, cache_path: Optional[Path] = None) -> DatasetCache:
+    def dump_to_cache(self, cache_path: Optional[Path] = None) -> DatasetCache:
         cache_path = cache_path or self.cache_path
         self.cache_path = cache_path
         with open(cache_path, 'wb') as f:

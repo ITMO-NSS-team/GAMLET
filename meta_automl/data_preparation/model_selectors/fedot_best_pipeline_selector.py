@@ -1,4 +1,3 @@
-from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import List, Union, Optional
@@ -13,35 +12,38 @@ from fedot.core.repository.quality_metrics_repository import ClassificationMetri
 from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot.core.utilities.data_structures import ensure_wrapped_in_sequence
 from fedot.core.validation.split import tabular_cv_generator
-from sklearn.metrics import roc_auc_score as roc_auc
+from tqdm import tqdm
 
 from meta_automl.data_preparation.data_directory_manager import PathType
-from meta_automl.data_preparation.dataset import DatasetCache
+from meta_automl.data_preparation.dataset import DatasetCache, NoCacheError
+from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.model_selectors import ModelSelector
 
 
-def get_best_fedot_performers(dataset: DatasetCache, pipelines: List[Pipeline], fit_from_scratch: bool = False,
+def evaluate_classification_fedot_pipeline(pipeline, input_data):
+    cv_folds = partial(tabular_cv_generator, input_data, folds=5)
+    objective_eval = PipelineObjectiveEvaluate(MetricsObjective(ClassificationMetricsEnum.ROCAUC), cv_folds)
+    metric_value = objective_eval(pipeline).value
+    return metric_value
+
+
+def get_best_fedot_performers(dataset: DatasetCache, pipelines: List[Pipeline], datasets_loader: DatasetsLoader,
                               n_best: int = 1) -> Union[Pipeline, List[Pipeline]]:
-    loaded_dataset = dataset.load()
+    try:
+        loaded_dataset = dataset.load_into_memory()
+    except NoCacheError:
+        loaded_dataset = datasets_loader.load_single(dataset.name).load_into_memory()
     X, y_test = loaded_dataset.X, loaded_dataset.y
-    X = InputData(idx=np.arange(0, len(X)), features=X, target=y_test, data_type=DataTypesEnum.table,
-                  task=Task(TaskTypesEnum.classification))
-    metrics_values = []
+    input_data = InputData(idx=np.arange(0, len(X)), features=X, target=y_test, data_type=DataTypesEnum.table,
+                           task=Task(TaskTypesEnum.classification))
+    metric_values = []
     for pipeline in pipelines:
-        if not pipeline.is_fitted or fit_from_scratch:
-            pipeline.unfit()
-            cv_folds = partial(tabular_cv_generator, X, folds=5)
-            objective_eval = PipelineObjectiveEvaluate(MetricsObjective(ClassificationMetricsEnum.ROCAUC), cv_folds)
-            metric_value = objective_eval(pipeline).value
-        else:
-            predict_labels = pipeline.predict(X)
-            y_pred = predict_labels.predict
-            metric_value = roc_auc(y_test, y_pred)
-        metrics_values.append(metric_value)
+        metric_value = evaluate_classification_fedot_pipeline(pipeline, input_data)
+        metric_values.append(metric_value)
     if n_best == 1:
-        best_pipeline = pipelines[np.argmax(metrics_values)]
+        best_pipeline = pipelines[np.argmax(metric_values)]
     else:
-        best_pipeline = [pipelines.pop(np.argmax(metrics_values)) for _ in range(min(n_best, len(pipelines)))]
+        best_pipeline = [pipelines.pop(np.argmax(metric_values)) for _ in range(min(n_best, len(pipelines)))]
     return best_pipeline
 
 
@@ -51,23 +53,29 @@ class FEDOTResultsBestPipelineSelector(ModelSelector):
         self.selected_models: Optional[List[Union[Pipeline, List[Pipeline]]]] = None
         self.pipeline_paths: Optional[List[Union[PathType, List[PathType]]]] = None
         self.launch_dir: Optional[PathType] = None
+        self.datasets_loader: Optional[DatasetsLoader] = None
 
-    def fit(self, datasets: List[Union[DatasetCache, str]],
+    def fit(self, datasets: Union[List[Union[DatasetCache, str]], str] = 'all',
             pipeline_paths: Optional[List[Union[PathType, List[PathType]]]] = None,
-            launch_dir: Optional[PathType] = None):
-        self.datasets = datasets
-        self.pipeline_paths = pipeline_paths
-        self.launch_dir = launch_dir
-        if not self.pipeline_paths:
-            self.define_model_paths()
+            launch_dir: Optional[PathType] = None, datasets_loader: Optional[DatasetsLoader] = None):
+
+        self.launch_dir: Path = Path(launch_dir) if isinstance(launch_dir, str) else launch_dir
+        self.datasets_loader = datasets_loader or OpenMLDatasetsLoader()
+
+        self.datasets: List[DatasetCache] = (self._define_datasets() if datasets == 'all'
+                                             else self._dataset_names_to_cache(datasets))
+
+        self.pipeline_paths = pipeline_paths or self._define_model_paths()
         return self
 
-    def select(self, n_best: int = 1, fit_from_scratch: bool = False):
+    def select(self, n_best: int = 1):
         pipelines = []
-        for dataset, path in zip(self.datasets, self.pipeline_paths):
+        for dataset, path in tqdm(list(zip(self.datasets, self.pipeline_paths)), desc='Selecting best models',
+                                  leave=False):
             if isinstance(path, list):
-                candidate_pipelines = [Pipeline.from_serialized(str(p)) for p in path]
-                pipeline = get_best_fedot_performers(dataset, candidate_pipelines, fit_from_scratch, n_best)
+                candidate_pipelines = [Pipeline.from_serialized(str(p)) for p in tqdm(path, desc='Importing pipelines',
+                                                                                      leave=False)]
+                pipeline = get_best_fedot_performers(dataset, candidate_pipelines, self.datasets_loader, n_best)
             else:
                 pipeline = Pipeline.from_serialized(str(path))
             if n_best > 1:
@@ -76,38 +84,37 @@ class FEDOTResultsBestPipelineSelector(ModelSelector):
         self.selected_models = pipelines
         return pipelines
 
-    def define_model_paths(self):
+    def _define_datasets(self) -> List[DatasetCache]:
         if not self.launch_dir:
-            raise ValueError('Launch dir or pipeline paths must be provided!')
+            raise ValueError('Launch dir or datasets must be provided!')
 
-        launch_dir = self.launch_dir
-        if isinstance(launch_dir, str):
-            launch_dir = Path(launch_dir)
-        datasets_launch_dates = {}
-        datasets_launch_dates_str = {}
+        datasets = list({p.parents[2].name for p in self.launch_dir.glob(r'*\FEDOT*\*\launch_0')})
+        datasets.sort()
+        datasets = self._dataset_names_to_cache(datasets)
+        return datasets
 
-        for dataset in self.datasets:
-            dataset_name = dataset.name
-            for launch in launch_dir.glob(f'{dataset_name}\\FEDOT\\*\\launch_0'):
-                launch_date_dir = launch.parent
-                # launch_date_dir: airlines\FEDOT\07-07-2022-08-25-07
-                dataset_name = launch_date_dir.parents[1].name
-                launch_date_str = launch_date_dir.name
-                launch_date = datetime.strptime(launch_date_str, '%d-%m-%Y-%H-%M-%S')
+    def _define_model_paths(self) -> List[List[Path]]:
+        if not self.launch_dir:
+            raise ValueError('Launch dir or model paths must be provided!')
 
-                if launch_date >= datasets_launch_dates.get(dataset_name, launch_date):
-                    datasets_launch_dates_str[dataset_name] = launch_date_str
-                    datasets_launch_dates[dataset_name] = launch_date
+        dataset_names = self.dataset_names
+        datasets_models_paths = dict(zip(dataset_names, [[]] * len(dataset_names)))
 
-        if len(datasets_launch_dates_str) != len(self.datasets):
-            raise ValueError('FEDOT launches not found!')
-
-        datasets_models_paths = dict(zip(datasets_launch_dates_str.keys(), [[]] * len(datasets_launch_dates_str)))
-
-        for dataset_name, launch_date_str in datasets_launch_dates_str.items():
-            launches_path = Path(launch_dir, dataset_name, 'FEDOT', launch_date_str)
-            for model_path in launches_path.glob(r'*\launch_*.json'):
+        for dataset_name in tqdm(dataset_names, desc='Defining model paths'):
+            for model_path in self.launch_dir.glob(f'{dataset_name}\\FEDOT*\\*\\*\\launch_*.json'):
                 datasets_models_paths[dataset_name].append(model_path)
 
-        self.pipeline_paths = [datasets_models_paths[dataset.name] for dataset in self.datasets]
-        return self
+        return [datasets_models_paths[dataset.name] for dataset in self.datasets]
+
+    @property
+    def dataset_names(self):
+        return [d.name if isinstance(d, DatasetCache) else d for d in self.datasets]
+
+    @staticmethod
+    def _dataset_names_to_cache(datasets: List[Union[str, DatasetCache]]) -> List[DatasetCache]:
+        new_list = []
+        for dataset in datasets:
+            if isinstance(dataset, str):
+                dataset = DatasetCache(dataset)
+            new_list.append(dataset)
+        return new_list

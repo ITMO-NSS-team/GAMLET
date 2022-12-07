@@ -40,9 +40,9 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 meta_features[dataset.name] = mfs
             else:
                 try:
-                    loaded_dataset = dataset.load()
+                    loaded_dataset = dataset.load_into_memory()
                 except NoCacheError:
-                    loaded_dataset = self.datasets_loader.load_single(dataset.name).load()
+                    loaded_dataset = self.datasets_loader.load_single(dataset.name).load_into_memory()
                 cat_cols = [i for i, val in enumerate(loaded_dataset.categorical_indicator) if val]
                 mfe = self._extractor.fit(loaded_dataset.X, loaded_dataset.y, cat_cols=cat_cols)
                 feature_names, dataset_features = mfe.extract(out_type=tuple)
