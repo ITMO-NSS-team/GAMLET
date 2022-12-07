@@ -1,5 +1,5 @@
-from components.data_preparation.datasets_loader import OpenMLDatasetsLoader
-from components.data_preparation.features_extractor import PymfeExtractor
+from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 
 
 def main():

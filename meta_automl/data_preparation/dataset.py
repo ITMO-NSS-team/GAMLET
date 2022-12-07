@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 
-from support.data_utils import get_dataset_cache_path
+from meta_automl.data_preparation.data_directory_manager import DataDirectoryManager
 
 
 class NoCacheError(FileNotFoundError):
@@ -23,7 +23,7 @@ class DatasetCache:
 
     @property
     def cache_path(self):
-        return self._cache_path or get_dataset_cache_path(self.name)
+        return self._cache_path or DataDirectoryManager.get_dataset_cache_path(self.name)
 
     @cache_path.setter
     def cache_path(self, val):

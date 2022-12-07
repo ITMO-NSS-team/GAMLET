@@ -1,29 +1,15 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from typing import List, Union
 
 import openml
 
-from components.data_preparation.dataset import DatasetCache, Dataset
-from support.data_utils import get_dataset_cache_path
+from meta_automl.data_preparation.data_directory_manager import DataDirectoryManager
+from meta_automl.data_preparation.dataset import DatasetCache, Dataset
+from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
+
 
 OpenMLDatasetID = Union[str, int]
-
-
-class DatasetsLoader:
-
-    @abstractmethod
-    def fit(self, *args, **kwargs) -> DatasetsLoader:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def load(self, *args, **kwargs) -> List[DatasetCache]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def load_single(self, *args, **kwargs) -> DatasetCache:
-        raise NotImplementedError()
 
 
 class OpenMLDatasetsLoader(DatasetsLoader):
@@ -53,7 +39,7 @@ class OpenMLDatasetsLoader(DatasetsLoader):
     def get_openml_dataset(dataset_id: OpenMLDatasetID) -> DatasetCache:
         openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
         name = openml_dataset.name
-        dataset_cache_path = get_dataset_cache_path(name)
+        dataset_cache_path = DataDirectoryManager.get_dataset_cache_path(name)
         if dataset_cache_path.exists():
             dataset_cache = DatasetCache(name, dataset_cache_path)
         else:

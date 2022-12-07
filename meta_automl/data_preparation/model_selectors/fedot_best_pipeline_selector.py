@@ -1,8 +1,7 @@
-from abc import abstractmethod
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Union, List, Optional
+from typing import List, Union, Optional
 
 import numpy as np
 from fedot.core.data.data import InputData
@@ -16,19 +15,9 @@ from fedot.core.utilities.data_structures import ensure_wrapped_in_sequence
 from fedot.core.validation.split import tabular_cv_generator
 from sklearn.metrics import roc_auc_score as roc_auc
 
-from components.data_preparation.dataset import DatasetCache
-from support.data_utils import PathType
-
-
-class ModelSelector:
-
-    @abstractmethod
-    def fit(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def select(self, *args, **kwargs):
-        raise NotImplementedError()
+from meta_automl.data_preparation.data_directory_manager import PathType
+from meta_automl.data_preparation.dataset import DatasetCache
+from meta_automl.data_preparation.model_selectors import ModelSelector
 
 
 def get_best_fedot_performers(dataset: DatasetCache, pipelines: List[Pipeline], fit_from_scratch: bool = False,
@@ -56,14 +45,15 @@ def get_best_fedot_performers(dataset: DatasetCache, pipelines: List[Pipeline], 
     return best_pipeline
 
 
-class FedotResultsBestPipelineSelector(ModelSelector):
+class FEDOTResultsBestPipelineSelector(ModelSelector):
     def __init__(self):
         self.datasets: Optional[List[DatasetCache]] = None
         self.selected_models: Optional[List[Union[Pipeline, List[Pipeline]]]] = None
         self.pipeline_paths: Optional[List[Union[PathType, List[PathType]]]] = None
         self.launch_dir: Optional[PathType] = None
 
-    def fit(self, datasets: List[DatasetCache], pipeline_paths: Optional[List[Union[PathType, List[PathType]]]] = None,
+    def fit(self, datasets: List[Union[DatasetCache, str]],
+            pipeline_paths: Optional[List[Union[PathType, List[PathType]]]] = None,
             launch_dir: Optional[PathType] = None):
         self.datasets = datasets
         self.pipeline_paths = pipeline_paths
@@ -121,28 +111,3 @@ class FedotResultsBestPipelineSelector(ModelSelector):
 
         self.pipeline_paths = [datasets_models_paths[dataset.name] for dataset in self.datasets]
         return self
-
-
-# class OpenMLSelector(ModelSelector):
-#     def __init__(self):
-#         self.dataset_ids: Optional[List[DatasetCache]] = None
-#         self.selected_models: Optional[List[Union[Pipeline, List[Pipeline]]]] = None
-#
-#     def fit(self, dataset_ids: List[OpenMLDatasetID], select_best: bool = True, n_models: int = 1,
-#             suitability_filter: Callable[[OpenMLEvaluation], bool] = lambda e: True):
-#         self.dataset_ids = dataset_ids
-#         # self.pipeline_paths = pipeline_paths
-#         # self.launch_dir = launch_dir
-#         # if not self.pipeline_paths:
-#         #     self.define_model_paths()
-#         return self
-#
-#     def select(self, n_best: int = 1, fit_from_scratch: bool = False):
-#         pipelines = []
-#         for ... in ...:
-#             pipeline = ...
-#             if n_best > 1:
-#                 ensure_wrapped_in_sequence(pipeline)
-#             pipelines.append(pipeline)
-#         self.selected_models = pipelines
-#         return pipelines

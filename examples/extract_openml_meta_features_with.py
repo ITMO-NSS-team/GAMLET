@@ -1,4 +1,4 @@
-from components.data_preparation.features_extractor import OpenMLFeaturesExtractor
+from meta_automl.data_preparation.meta_features_extractors import OpenMLFeaturesExtractor
 
 
 def main():
