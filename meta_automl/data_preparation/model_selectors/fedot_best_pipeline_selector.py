@@ -22,7 +22,8 @@ from meta_automl.data_preparation.model_selectors import ModelSelector
 
 def evaluate_classification_fedot_pipeline(pipeline, input_data):
     cv_folds = partial(tabular_cv_generator, input_data, folds=5)
-    objective_eval = PipelineObjectiveEvaluate(MetricsObjective(ClassificationMetricsEnum.ROCAUC), cv_folds)
+    objective_eval = PipelineObjectiveEvaluate(MetricsObjective(ClassificationMetricsEnum.ROCAUC), cv_folds,
+                                               eval_n_jobs=-1)
     metric_value = objective_eval(pipeline).value
     return metric_value
 
@@ -37,7 +38,7 @@ def get_best_fedot_performers(dataset: DatasetCache, pipelines: List[Pipeline], 
     input_data = InputData(idx=np.arange(0, len(X)), features=X, target=y_test, data_type=DataTypesEnum.table,
                            task=Task(TaskTypesEnum.classification))
     metric_values = []
-    for pipeline in pipelines:
+    for pipeline in tqdm(pipelines, desc='Evaluating pipelines'):
         metric_value = evaluate_classification_fedot_pipeline(pipeline, input_data)
         metric_values.append(metric_value)
     if n_best == 1:
