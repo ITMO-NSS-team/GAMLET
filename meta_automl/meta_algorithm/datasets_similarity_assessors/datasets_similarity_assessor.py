@@ -7,5 +7,5 @@ class DatasetsSimilarityAssessor:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_similar(self, *args, **kwargs):
+    def predict(self, *args, **kwargs):
         raise NotImplementedError()

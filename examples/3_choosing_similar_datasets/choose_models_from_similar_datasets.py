@@ -1,4 +1,3 @@
-from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from sklearn.model_selection import train_test_split
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
@@ -16,14 +15,11 @@ def main():
     meta_features = meta_features.dropna(axis=1, how='any')
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
     x_train, x_test = train_test_split(meta_features, train_size=0.75, random_state=42)
-    # Could use any of the classes ``ModelSelector`` but use synthetic pipelines for the example.
-    y_train = [PipelineBuilder().add_node('scaling').add_node('rf').to_pipeline(),
-               PipelineBuilder().add_node('normalization').add_node('knn').to_pipeline(),
-               PipelineBuilder().add_node('rf').add_node('logit').to_pipeline()]
-    assessor = KNNSimilarityAssessor({'n_neighbors': 1}, n_best=1)
+    y_train = x_train.index
+    assessor = KNNSimilarityAssessor({'n_neighbors': 1}, n_best=2)
     assessor.fit(x_train, y_train)
     # Get models for the best fitting datasets from train.
-    return assessor.get_similar(x_test)
+    return x_test.index, assessor.predict(x_test)
 
 
 if __name__ == '__main__':
