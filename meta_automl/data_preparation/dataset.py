@@ -55,7 +55,6 @@ class Dataset:
 
     def dump_to_cache(self, cache_path: Optional[Path] = None) -> DatasetCache:
         cache_path = cache_path or self.cache_path
-        self.cache_path = cache_path
         with open(cache_path, 'wb') as f:
             pickle.dump(self, f)
         return DatasetCache(self.name, cache_path, self.id)
