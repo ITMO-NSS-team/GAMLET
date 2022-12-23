@@ -30,10 +30,7 @@ def evaluate_classification_fedot_pipeline(pipeline, input_data):
 
 def get_n_best_fedot_performers(dataset: DatasetCache, pipelines: List[Pipeline], datasets_loader: DatasetsLoader,
                                 n_best: int = 1) -> List[Pipeline]:
-    try:
-        loaded_dataset = dataset.load_into_memory()
-    except NoCacheError:
-        loaded_dataset = datasets_loader.load_single(dataset.name).load_into_memory()
+    loaded_dataset = datasets_loader.cache_to_memory(dataset)
     X, y_test = loaded_dataset.X, loaded_dataset.y
     input_data = InputData(idx=np.arange(0, len(X)), features=X, target=y_test, data_type=DataTypesEnum.table,
                            task=Task(TaskTypesEnum.classification))

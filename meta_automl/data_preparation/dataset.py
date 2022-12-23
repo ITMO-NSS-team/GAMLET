@@ -29,7 +29,7 @@ class DatasetCache:
     def cache_path(self, val):
         self._cache_path = val
 
-    def load_into_memory(self) -> Dataset:
+    def from_cache(self) -> Dataset:
         if not self.cache_path.exists():
             raise NoCacheError(f'Dataset {self.name} not found!')
         with open(self.cache_path, 'rb') as f:
