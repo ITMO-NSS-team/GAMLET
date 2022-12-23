@@ -13,10 +13,6 @@ class MetaFeaturesExtractor:
     SOURCE: Optional[str] = None
 
     @abstractmethod
-    def fit(self, *args, **kwargs) -> MetaFeaturesExtractor:
-        raise NotImplementedError()
-
-    @abstractmethod
     def extract(self, datasets) -> pd.DataFrame:
         raise NotImplementedError()
 

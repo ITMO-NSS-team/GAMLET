@@ -13,9 +13,6 @@ class OpenMLFeaturesExtractor(MetaFeaturesExtractor):  # Demo
     DEFAULT_PARAMS = {}
     SOURCE = 'openml_mf'
 
-    def fit(self) -> OpenMLFeaturesExtractor:
-        return self
-
     def extract(self, datasets: List[Union[DatasetCache, str]]) -> pd.DataFrame:
         datasets = [d if isinstance(d, str) else d.name for d in datasets]
         datasets = [openml.datasets.get_dataset(d).dataset_id for d in datasets]

@@ -13,16 +13,10 @@ class PymfeExtractor(MetaFeaturesExtractor):
     DEFAULT_PARAMS = {'groups': 'default'}
     SOURCE = 'pymfe'
 
-    def __init__(self):
-        self.extractor_params = self.DEFAULT_PARAMS
-        self._datasets_loader = None
-        self._extractor = None
-
-    def fit(self, extractor_params=None, datasets_loader=None) -> PymfeExtractor:
+    def __init__(self, extractor_params=None, datasets_loader=None):
+        self.extractor_params = extractor_params if extractor_params is not None else self.DEFAULT_PARAMS
         self._datasets_loader = datasets_loader
-        self.extractor_params = extractor_params if extractor_params is not None else self.extractor_params
         self._extractor = MFE(**self.extractor_params)
-        return self
 
     @property
     def datasets_loader(self):

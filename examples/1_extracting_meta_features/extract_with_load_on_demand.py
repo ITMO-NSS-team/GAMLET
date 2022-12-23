@@ -6,7 +6,7 @@ def main():
     dataset_names = [
         'nomao', 'sylvine'
     ]
-    extractor = PymfeExtractor().fit({'groups': 'general'}, datasets_loader=OpenMLDatasetsLoader())
+    extractor = PymfeExtractor(extractor_params={'groups': 'general'}, datasets_loader=OpenMLDatasetsLoader())
     meta_features = extractor.extract(dataset_names)
     return meta_features
 
