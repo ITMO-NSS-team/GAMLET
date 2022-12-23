@@ -13,6 +13,8 @@ OpenMLDatasetID = Union[str, int]
 
 
 class OpenMLDatasetsLoader(DatasetsLoader):
+    data_manager = DataDirectoryManager
+
     def __init__(self):
         self.dataset_sources = []
 
@@ -30,11 +32,10 @@ class OpenMLDatasetsLoader(DatasetsLoader):
     def load_single(self, source: OpenMLDatasetID):
         return self.get_openml_dataset(source)
 
-    @staticmethod
-    def get_openml_dataset(dataset_id: OpenMLDatasetID, force_download: bool = True) -> DatasetCache:
+    def get_openml_dataset(self, dataset_id: OpenMLDatasetID, force_download: bool = False) -> DatasetCache:
         openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
         name = openml_dataset.name.lower()
-        dataset_cache_path = DataDirectoryManager.get_dataset_cache_path(name)
+        dataset_cache_path = self.data_manager.get_dataset_cache_path(name)
         if dataset_cache_path.exists() and not force_download:
             dataset_cache = DatasetCache(name, dataset_cache_path)
         else:
