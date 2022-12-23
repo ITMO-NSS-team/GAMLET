@@ -14,7 +14,7 @@ class PredictProbaSimilarityAssessor(DatasetsSimilarityAssessor):
         self.n_best = n_best
 
     @property
-    def classes(self) -> List[str]:
+    def datasets(self) -> List[str]:
         return self._inner_model.classes_
 
     @property
@@ -44,7 +44,7 @@ class PredictProbaSimilarityAssessor(DatasetsSimilarityAssessor):
             predictions = []
             for _ in range(self.n_best):
                 predicted_class_idx = np.argmax(probabilities)
-                predicted_class = self.classes[predicted_class_idx]
+                predicted_class = self.datasets[predicted_class_idx]
                 predictions.append(predicted_class)
                 probabilities.pop(predicted_class_idx)
             final_prediction.append(predictions)

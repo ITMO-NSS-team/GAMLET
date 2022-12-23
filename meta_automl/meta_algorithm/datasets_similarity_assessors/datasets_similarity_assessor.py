@@ -1,5 +1,7 @@
 from abc import abstractmethod
 
+from typing import List
+
 
 class DatasetsSimilarityAssessor:
     @abstractmethod
@@ -8,4 +10,9 @@ class DatasetsSimilarityAssessor:
 
     @abstractmethod
     def predict(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def datasets(self) -> List[str]:
         raise NotImplementedError()
