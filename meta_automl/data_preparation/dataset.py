@@ -19,7 +19,12 @@ class NoCacheError(FileNotFoundError):
 @dataclass
 class DatasetCache:
     name: str
-    _cache_path: Path = None
+    _cache_path: Optional[Path] = None
+    _id: Optional[int] = None
+
+    @property
+    def id(self):
+        return self._id or self.name
 
     @property
     def cache_path(self):
@@ -46,10 +51,15 @@ class Dataset:
     categorical_indicator: Optional[List[bool]] = None
     attribute_names: Optional[List[str]] = None
     cache_path: Optional[Path] = None
+    _id: Optional[int] = None
 
     def dump_to_cache(self, cache_path: Optional[Path] = None) -> DatasetCache:
         cache_path = cache_path or self.cache_path
         self.cache_path = cache_path
         with open(cache_path, 'wb') as f:
             pickle.dump(self, f)
-        return DatasetCache(self.name, cache_path)
+        return DatasetCache(self.name, cache_path, self.id)
+
+    @property
+    def id(self):
+        return self._id or self.name

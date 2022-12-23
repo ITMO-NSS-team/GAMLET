@@ -33,15 +33,16 @@ class OpenMLDatasetsLoader(DatasetsLoader):
     @staticmethod
     def get_openml_dataset(dataset_id: OpenMLDatasetID, force_download: bool = True) -> DatasetCache:
         openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
-        name = openml_dataset.name
+        name = openml_dataset.name.lower()
         dataset_cache_path = DataDirectoryManager.get_dataset_cache_path(name)
         if dataset_cache_path.exists() and not force_download:
             dataset_cache = DatasetCache(name, dataset_cache_path)
         else:
+            dataset_id = openml_dataset.id
             X, y, categorical_indicator, attribute_names = openml_dataset.get_data(
                 target=openml_dataset.default_target_attribute,
                 dataset_format='array'
             )
-            dataset = Dataset(name, X, y, categorical_indicator, attribute_names)
+            dataset = Dataset(name, X, y, categorical_indicator, attribute_names, _id=dataset_id)
             dataset_cache = dataset.dump_to_cache(dataset_cache_path)
         return dataset_cache

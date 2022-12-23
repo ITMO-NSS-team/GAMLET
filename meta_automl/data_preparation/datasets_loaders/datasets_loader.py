@@ -20,4 +20,4 @@ class DatasetsLoader:
         try:
             return dataset.from_cache()
         except NoCacheError:
-            return self.load_single(dataset.name).from_cache()
+            return self.load_single(dataset.id).from_cache()
