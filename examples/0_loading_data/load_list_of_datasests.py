@@ -5,8 +5,8 @@ def get_datasets():
     dataset_names = [
         'nomao', 'sylvine', 'kc1', 'jungle_chess_2pcs_raw_endgame_complete', 'credit-g', 'delta_ailerons', 'pol'
     ]
-    loader = OpenMLDatasetsLoader().fit(dataset_names)
-    datasets = loader.load()
+    loader = OpenMLDatasetsLoader()
+    datasets = loader.load(dataset_names)
     print(f'Datasets "{", ".join(dataset_names)}" are available at the paths:')
     print('\n'.join(str(d) for d in datasets))
     return datasets

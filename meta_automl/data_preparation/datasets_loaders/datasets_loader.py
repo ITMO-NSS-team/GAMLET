@@ -9,10 +9,6 @@ from meta_automl.data_preparation.dataset import DatasetCache
 class DatasetsLoader:
 
     @abstractmethod
-    def fit(self, *args, **kwargs) -> DatasetsLoader:
-        raise NotImplementedError()
-
-    @abstractmethod
     def load(self, *args, **kwargs) -> List[DatasetCache]:
         raise NotImplementedError()
 

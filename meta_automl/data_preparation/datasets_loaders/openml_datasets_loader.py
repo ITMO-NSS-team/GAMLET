@@ -16,13 +16,8 @@ class OpenMLDatasetsLoader(DatasetsLoader):
     def __init__(self):
         self.dataset_sources = []
 
-    def fit(self, dataset_sources: List[str]):
+    def load(self, dataset_sources: List[OpenMLDatasetID]) -> List[DatasetCache]:
         self.dataset_sources = dataset_sources
-        return self
-
-    def load(self) -> List[DatasetCache]:
-        if not self.dataset_sources:
-            raise ValueError('No data sources provided!')
 
         datasets = []
         # TODO: Optimize like this
