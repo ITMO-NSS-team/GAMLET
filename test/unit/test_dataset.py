@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from meta_automl.data_preparation.dataset import DatasetCache
+from meta_automl.data_preparation.dataset import DatasetCache, NoCacheError
 from test.data_manager import TestDataManager
 
 
@@ -16,7 +16,6 @@ def test_dataset_caching(dumped_cache_path):
     dataset_name = 'australian'
 
     cache_path = TestDataManager.get_dataset_cache_path(dataset_name)
-    dumped_cache_path = dumped_cache_path
 
     dataset_cache = DatasetCache(dataset_name, cache_path)
     dataset = dataset_cache.from_cache()
@@ -33,3 +32,8 @@ def test_dataset_caching(dumped_cache_path):
     assert dataset.cache_path == cache_path
     assert dumped_cache.cache_path == dumped_cache_path
     assert reloaded_dataset.cache_path == dumped_cache_path
+
+
+def test_error_on_missing_dataset_cache():
+    with pytest.raises(NoCacheError):
+        DatasetCache('random_missing_cache').from_cache()
