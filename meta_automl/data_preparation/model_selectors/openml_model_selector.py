@@ -12,6 +12,7 @@ from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetID
 from meta_automl.data_preparation.model_selectors import ModelSelector
 
 
+# TODO: Make it work.
 class OpenMLSelector(ModelSelector):
     def __init__(self):
         self.datasets: Optional[List[OpenMLDatasetID]] = None

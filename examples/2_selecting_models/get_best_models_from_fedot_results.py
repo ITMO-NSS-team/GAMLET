@@ -1,9 +1,8 @@
-from meta_automl.data_preparation.model_selectors import FEDOTResultsBestPipelineSelector
+from meta_automl.data_preparation.model_selectors import FEDOTPipelineSelector
 
 
 def main():
-    selector = FEDOTResultsBestPipelineSelector().fit(datasets=['DATASET_NAME'],
-                                                      launch_dir=r'LAUNCHES_PATH')
+    selector = FEDOTPipelineSelector(datasets=['cnae-9'], launch_dir=r'\\10.9.14.114\calc\Nikitin\aggregated_4h\agg')
     return selector.select()
 
 

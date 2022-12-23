@@ -1,3 +1,3 @@
 from .model_selector import ModelSelector
 from .openml_model_selector import OpenMLSelector
-from .fedot_best_pipeline_selector import FEDOTResultsBestPipelineSelector
+from .fedot_pipeline_selector import FEDOTPipelineSelector
