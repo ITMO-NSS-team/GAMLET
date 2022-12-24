@@ -4,16 +4,13 @@ from typing import List, Union
 
 import openml
 
-from meta_automl.data_preparation.data_directory_manager import DataDirectoryManager
 from meta_automl.data_preparation.dataset import DatasetCache, Dataset
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
-
 
 OpenMLDatasetID = Union[str, int]
 
 
 class OpenMLDatasetsLoader(DatasetsLoader):
-    data_manager = DataDirectoryManager
 
     def __init__(self):
         self.dataset_sources = []

@@ -9,7 +9,7 @@ PathType = Union[PathLike, str]
 DEFAULT_CACHE_EXTENSION = '.pkl'
 
 
-class DataDirectoryManager:
+class DataManager:
 
     @classmethod
     def get_dataset_cache_path(cls, dataset_name: str) -> Path:

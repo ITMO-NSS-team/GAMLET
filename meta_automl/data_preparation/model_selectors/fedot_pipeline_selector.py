@@ -14,7 +14,7 @@ from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot.core.validation.split import tabular_cv_generator
 from tqdm import tqdm
 
-from meta_automl.data_preparation.data_directory_manager import PathType
+from meta_automl.data_preparation.data_manager import PathType
 from meta_automl.data_preparation.dataset import DatasetCache, NoCacheError
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.model_selectors import ModelSelector
