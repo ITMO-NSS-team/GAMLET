@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from meta_automl.data_preparation.dataset import DatasetCache, NoCacheError
+from test.constants import CACHED_DATASETS
 from test.data_manager import TestDataManager
 
 
@@ -13,7 +14,7 @@ def dumped_cache_path():
 
 
 def test_dataset_caching(dumped_cache_path):
-    dataset_name = 'australian'
+    dataset_name = CACHED_DATASETS[0]
 
     cache_path = TestDataManager.get_dataset_cache_path(dataset_name)
 
