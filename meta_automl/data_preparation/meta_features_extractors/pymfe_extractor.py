@@ -37,7 +37,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             else:
                 loaded_dataset = load_dataset(dataset)
                 cat_cols = [i for i, val in enumerate(loaded_dataset.categorical_indicator) if val]
-                mfe = self._extractor.fit(loaded_dataset.X, loaded_dataset.y, cat_cols=cat_cols)
+                mfe = self._extractor.fit(loaded_dataset.x, loaded_dataset.y, cat_cols=cat_cols)
                 feature_names, dataset_features = mfe.extract(out_type=tuple)
                 mfs = dict(zip(feature_names, dataset_features))
                 self._update_meta_features_cache(dataset.name, mfs)

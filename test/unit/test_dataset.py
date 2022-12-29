@@ -26,7 +26,7 @@ def test_dataset_caching(dumped_cache_path):
     assert dataset.name == dataset_name
     assert reloaded_dataset.name == dataset_name
     assert dataset.id == reloaded_dataset.id
-    assert np.all(np.equal(dataset.X, reloaded_dataset.X))
+    assert np.all(np.equal(dataset.x, reloaded_dataset.x))
     assert np.all(np.equal(dataset.y, reloaded_dataset.y))
     # Check caching integrity.
     assert dataset_cache.cache_path == cache_path

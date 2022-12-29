@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Optional, Iterable, Dict, Any
+from typing import Optional, Iterable, Dict, Any, Type
 
 import pandas as pd
 
@@ -11,7 +11,7 @@ from meta_automl.data_preparation.data_manager import DataManager
 class MetaFeaturesExtractor:
     DEFAULT_PARAMS: Optional[Dict[str, Any]] = None
     SOURCE: Optional[str] = None
-    data_manager = DataManager
+    data_manager: Type[DataManager] = DataManager
 
     @abstractmethod
     def extract(self, datasets) -> pd.DataFrame:

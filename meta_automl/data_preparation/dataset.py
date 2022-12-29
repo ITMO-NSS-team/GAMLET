@@ -46,7 +46,7 @@ class DatasetCache:
 @dataclass
 class Dataset:
     name: str
-    X: Union[np.ndarray, pd.DataFrame, sp.sparse.csr_matrix]
+    x: Union[np.ndarray, pd.DataFrame, sp.sparse.csr_matrix]
     y: Optional[Union[np.ndarray, pd.DataFrame]] = None
     categorical_indicator: Optional[List[bool]] = None
     attribute_names: Optional[List[str]] = None
