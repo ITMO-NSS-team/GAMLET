@@ -1,15 +1,18 @@
+from fedot.core.optimisers.fitness import SingleObjFitness
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from sklearn.model_selection import train_test_split
 
+from meta_automl.data_preparation.dataset import DatasetCache
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
+from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import KNNSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
 
 
 def main():
     # Define datasets.
-    dataset_names = ['amazon_employee_access', 'apsfailure', 'australian', 'bank-marketing']
+    dataset_names = ['monks-problems-1', 'apsfailure', 'australian', 'bank-marketing']
     # Extract meta-features and load on demand.
     extractor = PymfeExtractor(extractor_params={'groups': 'general'}, datasets_loader=OpenMLDatasetsLoader())
     meta_features = extractor.extract(dataset_names)
@@ -20,13 +23,16 @@ def main():
     y_train = x_train.index
     assessor = KNNSimilarityAssessor({'n_neighbors': 2}, n_best=2)
     assessor.fit(x_train, y_train)
-    # Define best pipelines.
+    # Define best models for datasets.
     best_pipelines = [
-        [PipelineBuilder().add_node('scaling').add_node('rf').to_pipeline()],
-        [PipelineBuilder().add_node('normalization').add_node('logit').to_pipeline()],
-        [PipelineBuilder().add_node('rf').add_node('logit').to_pipeline()]
+        PipelineBuilder().add_node('scaling').add_node('rf').to_pipeline(),
+        PipelineBuilder().add_node('normalization').add_node('logit').to_pipeline(),
+        PipelineBuilder().add_node('rf').add_node('logit').to_pipeline()
     ]
-    dataset_names_to_best_pipelines = dict(zip(y_train, best_pipelines))
+    best_models = [[Model(pipeline, SingleObjFitness(1), DatasetCache(dataset_name))]
+                   for dataset_name, pipeline in zip(y_train, best_pipelines)]
+
+    dataset_names_to_best_pipelines = dict(zip(y_train, best_models))
     advisor = DiverseFEDOTPipelineAdvisor(assessor, minimal_distance=2).fit(dataset_names_to_best_pipelines)
     return advisor.predict(x_test)
 

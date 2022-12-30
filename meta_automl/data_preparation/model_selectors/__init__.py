@@ -1,2 +1,0 @@
-from .model_selector import ModelSelector
-from .fedot_pipeline_selector import FEDOTPipelineSelector

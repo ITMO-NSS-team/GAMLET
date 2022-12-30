@@ -7,7 +7,7 @@ from meta_automl.meta_algorithm.datasets_similarity_assessors import KNNSimilari
 
 def main():
     # Define datasets.
-    dataset_names = ['amazon_employee_access', 'apsfailure', 'australian', 'bank-marketing']
+    dataset_names = ['monks-problems-1', 'apsfailure', 'australian', 'bank-marketing']
     # Extract meta-features and load on demand.
     extractor = PymfeExtractor(extractor_params={'groups': 'general'}, datasets_loader=OpenMLDatasetsLoader())
     meta_features = extractor.extract(dataset_names)
