@@ -1,2 +1,3 @@
 from .meta_features_extractor import MetaFeaturesExtractor
+from .openml_features_extractor import OpenMLFeaturesExtractor
 from .pymfe_extractor import PymfeExtractor
