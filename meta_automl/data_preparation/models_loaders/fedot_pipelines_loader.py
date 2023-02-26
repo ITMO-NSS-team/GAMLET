@@ -4,7 +4,6 @@ from typing import List, Union, Optional, Literal
 
 import numpy as np
 from fedot.core.data.data import InputData
-from fedot.core.log import default_log
 from fedot.core.optimisers.objective import PipelineObjectiveEvaluate
 from fedot.core.optimisers.objective.metrics_objective import MetricsObjective
 from fedot.core.pipelines.pipeline import Pipeline
@@ -12,6 +11,7 @@ from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.quality_metrics_repository import ClassificationMetricsEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot.core.validation.split import tabular_cv_generator
+from golem.core.log import default_log
 from tqdm import tqdm
 
 from meta_automl.data_preparation.data_manager import PathType
