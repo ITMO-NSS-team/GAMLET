@@ -1,5 +1,5 @@
-from fedot.core.optimisers.fitness import SingleObjFitness
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
+from golem.core.optimisers.fitness import SingleObjFitness
 from sklearn.model_selection import train_test_split
 
 from meta_automl.data_preparation.dataset import DatasetCache
