@@ -6,7 +6,7 @@ from meta_automl.data_preparation.dataset import DatasetCache
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.model import Model
-from meta_automl.meta_algorithm.datasets_similarity_assessors import KNNSimilarityAssessor
+from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
 
 
@@ -21,7 +21,7 @@ def main():
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
     x_train, x_test = train_test_split(meta_features, train_size=0.75, random_state=42)
     y_train = x_train.index
-    assessor = KNNSimilarityAssessor({'n_neighbors': 3}, n_best=2)
+    assessor = KNeighborsBasedSimilarityAssessor(n_neighbors=2)
     assessor.fit(x_train, y_train)
     # Define best models for datasets.
     best_pipelines = [
