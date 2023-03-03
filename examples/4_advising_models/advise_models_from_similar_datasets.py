@@ -21,13 +21,13 @@ def main():
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
     x_train, x_test = train_test_split(meta_features, train_size=0.75, random_state=42)
     y_train = x_train.index
-    assessor = KNNSimilarityAssessor({'n_neighbors': 2}, n_best=2)
+    assessor = KNNSimilarityAssessor({'n_neighbors': 3}, n_best=2)
     assessor.fit(x_train, y_train)
     # Define best models for datasets.
     best_pipelines = [
-        PipelineBuilder().add_node('scaling').add_node('rf').to_pipeline(),
-        PipelineBuilder().add_node('normalization').add_node('logit').to_pipeline(),
-        PipelineBuilder().add_node('rf').add_node('logit').to_pipeline()
+        PipelineBuilder().add_node('scaling').add_node('rf').build(),
+        PipelineBuilder().add_node('normalization').add_node('logit').build(),
+        PipelineBuilder().add_node('rf').add_node('logit').build()
     ]
     best_models = [[Model(pipeline, SingleObjFitness(1), DatasetCache(dataset_name))]
                    for dataset_name, pipeline in zip(y_train, best_pipelines)]
