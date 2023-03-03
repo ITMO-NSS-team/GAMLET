@@ -1,7 +1,7 @@
 from typing import Callable, List, Iterable
 
-from fedot.core.dag.linked_graph import get_distance_between
 from fedot.core.pipelines.pipeline import Pipeline
+from golem.core.dag.linked_graph import get_distance_between
 
 from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSimilarityAssessor
