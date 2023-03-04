@@ -25,7 +25,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             raise ValueError("Datasets loader not provided!")
         return self._datasets_loader
 
-    def extract(self, datasets: List[Union[DatasetCache, str]]) -> pd.DataFrame:
+    def extract(self, datasets: List[Union[DatasetCache, str]], fill_nans: bool = False) -> pd.DataFrame:
         meta_features = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
         load_dataset = self.datasets_loader.cache_to_memory
@@ -37,10 +37,21 @@ class PymfeExtractor(MetaFeaturesExtractor):
             else:
                 loaded_dataset = load_dataset(dataset)
                 cat_cols = [i for i, val in enumerate(loaded_dataset.categorical_indicator) if val]
-                mfe = self._extractor.fit(loaded_dataset.x, loaded_dataset.y, cat_cols=cat_cols)
+                x = loaded_dataset.x
+                y = loaded_dataset.y
+                if fill_nans:
+                    x = self.fill_nans(x)
+                mfe = self._extractor.fit(x, y, cat_cols=cat_cols)
                 feature_names, dataset_features = mfe.extract(out_type=tuple)
                 mfs = dict(zip(feature_names, dataset_features))
                 self._update_meta_features_cache(dataset.name, mfs)
                 meta_features[dataset.name] = mfs
         meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features
+
+    @staticmethod
+    def fill_nans(x):
+        if not isinstance(x, pd.DataFrame):
+            x = pd.DataFrame(x)
+        x = x.fillna(x.median())
+        return x.to_numpy()
