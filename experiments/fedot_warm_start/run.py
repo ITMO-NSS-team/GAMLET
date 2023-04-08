@@ -1,5 +1,6 @@
 import functools
 import json
+import logging
 import timeit
 from datetime import datetime
 from itertools import chain
@@ -14,6 +15,7 @@ from fedot.core.optimisers.objective import MetricsObjective, PipelineObjectiveE
 from fedot.core.pipelines.adapters import PipelineAdapter
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from fedot.core.validation.split import tabular_cv_generator
+from golem.core.log import Log
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from tqdm import tqdm
 
@@ -27,11 +29,11 @@ from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdviso
 # Meta-alg hyperparameters
 SEED = 42
 # Datasets sampling
-N_DATASETS = None
-TEST_SIZE = 0.2
+N_DATASETS = 3
+TEST_SIZE = 0.33
 # Evaluation timeouts
-TRAIN_TIMEOUT = 5
-TEST_TIMEOUT = 5
+TRAIN_TIMEOUT = 0.5
+TEST_TIMEOUT = 0.5
 # Models & datasets
 N_BEST_DATASET_MODELS_TO_MEMORIZE = 10
 N_CLOSEST_DATASETS_TO_PROPOSE = 5
@@ -42,11 +44,24 @@ MF_EXTRACTOR_PARAMS = {'groups': 'general'}
 
 COMMON_FEDOT_PARAMS = dict(
     problem='classification',
-    logging_level=50,
     n_jobs=-1,
     seed=SEED,
     show_progress=False,
 )
+
+# Setup logging
+time_now = datetime.now().isoformat(timespec="minutes")
+time_now_for_path = time_now.replace(":", ".")
+save_dir = Path(f'run_{time_now_for_path}')
+save_dir.mkdir()
+log_file = save_dir.joinpath('log.txt')
+Log(log_file=log_file)
+logging.basicConfig(filename=log_file,
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    force=True,
+                    )
 
 
 def prepare_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
@@ -132,6 +147,19 @@ def get_result_data_row(dataset, run_label: str, pipeline, history_obj=None, aut
     return run_results
 
 
+def extract_best_history_models(dataset_cache, history):
+    best_individuals = sorted(chain(*history.individuals),
+                              key=lambda ind: ind.fitness,
+                              reverse=True)
+    best_individuals = list({ind.graph.descriptive_id: ind for ind in best_individuals}.values())
+    best_models = []
+    for individual in best_individuals[:N_BEST_DATASET_MODELS_TO_MEMORIZE]:
+        pipeline = PipelineAdapter().restore(individual.graph)
+        model = Model(pipeline, individual.fitness, dataset_cache)
+        best_models.append(model)
+    return best_models
+
+
 def main():
     baseline_pipeline = PipelineBuilder().add_node('rf').build()
 
@@ -144,93 +172,91 @@ def main():
 
     results = []
     best_models_per_dataset = {}
-    for name in tqdm(datasets_train, 'Train datasets'):
-        cache = datasets_cache[name]
-        data = cache.from_cache()
+    progress_file = open(save_dir.joinpath('progress.txt'), 'a')
+    for name in tqdm(datasets_train, 'Train datasets', file=progress_file):
+        try:
+            cache = datasets_cache[name]
+            data = cache.from_cache()
 
-        fedot, run_results = fit_fedot(data=data, timeout=TRAIN_TIMEOUT, run_label='FEDOT')
-        results.append(run_results)
-        # TODO:
-        #   x Turn the tuned pipeline into a model (evaluate its fitness on the data)
-        #   x Evaluate historical pipelines on the data instead of using fitness
-        #   x Start FEDOT `N_BEST_DATASET_MODELS_TO_MEMORIZE` times, but not in one run
+            fedot, run_results = fit_fedot(data=data, timeout=TRAIN_TIMEOUT, run_label='FEDOT')
+            results.append(run_results)
+            # TODO:
+            #   x Turn the tuned pipeline into a model (evaluate its fitness on the data)
+            #   x Evaluate historical pipelines on the data instead of using fitness
+            #   x Start FEDOT `N_BEST_DATASET_MODELS_TO_MEMORIZE` times, but not in one run
 
-        # Filter out unique individuals with the best fitness
-        history = fedot.history
-        best_individuals = sorted(chain(*fedot.history.individuals),
-                                  key=lambda ind: ind.fitness,
-                                  reverse=True)
-        best_individuals = list({ind.graph.descriptive_id: ind for ind in best_individuals}.values())
-        best_models = []
-        for individual in best_individuals[:N_BEST_DATASET_MODELS_TO_MEMORIZE]:
-            pipeline = PipelineAdapter().restore(individual.graph)
-            model = Model(pipeline, individual.fitness, cache)
-            best_models.append(model)
-        best_models_per_dataset[name] = best_models
+            # Filter out unique individuals with the best fitness
+            history = fedot.history
+            best_models = extract_best_history_models(cache, history)
+            best_models_per_dataset[name] = best_models
+        except Exception:
+            logging.exception(f'Train dataset "{name}"')
 
     model_advisor = DiverseFEDOTPipelineAdvisor(data_similarity_assessor, n_best_to_advise=N_BEST_MODELS_TO_ADVISE,
                                                 minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
     model_advisor.fit(best_models_per_dataset)
 
-    for name in tqdm(datasets_test, 'Test datasets'):
-        cache = datasets_cache[name]
-        data = cache.from_cache()
+    for name in tqdm(datasets_test, 'Test datasets', file=progress_file):
+        try:
+            cache = datasets_cache[name]
+            data = cache.from_cache()
 
-        # Run pure AutoML
-        fedot_naive, fedot_naive_results = fit_fedot(data=data, timeout=TEST_TIMEOUT, run_label='FEDOT')
-        results.append(fedot_naive_results)
+            # Run pure AutoML
+            fedot_naive, fedot_naive_results = fit_fedot(data=data, timeout=TEST_TIMEOUT, run_label='FEDOT')
+            results.append(fedot_naive_results)
 
-        # Run meta AutoML
-        # 1
-        time_start = timeit.default_timer()
-        meta_features = extractor.extract([cache], fill_input_nans=True, use_cached=False, update_cached=True)
-        meta_features = meta_features.fillna(0)
-        meta_learning_time = timeit.default_timer() - time_start
-        initial_assumptions = model_advisor.predict(meta_features)[0]
-        assumption_pipelines = [model.predictor for model in initial_assumptions]
-        # 2
-        fedot_meta, fedot_meta_results = fit_fedot(data=data, timeout=TEST_TIMEOUT, run_label='MetaFEDOT',
-                                                   initial_assumption=assumption_pipelines)
-        fedot_meta_results['meta_learning_time'] = meta_learning_time
-        results.append(fedot_meta_results)
+            # Run meta AutoML
+            # 1
+            time_start = timeit.default_timer()
+            meta_features = extractor.extract([cache], fill_input_nans=True, use_cached=False, update_cached=True)
+            meta_features = meta_features.fillna(0)
+            meta_learning_time = timeit.default_timer() - time_start
+            initial_assumptions = model_advisor.predict(meta_features)[0]
+            assumption_pipelines = [model.predictor for model in initial_assumptions]
+            # 2
+            fedot_meta, fedot_meta_results = fit_fedot(data=data, timeout=TEST_TIMEOUT, run_label='MetaFEDOT',
+                                                       initial_assumption=assumption_pipelines)
+            fedot_meta_results['meta_learning_time'] = meta_learning_time
+            results.append(fedot_meta_results)
 
-        # Fit & evaluate simple baseline
-        baseline_metrics = get_pipeline_metrics(baseline_pipeline, fedot_meta.train_data, fedot_meta.metrics)
-        baseline_res = get_result_data_row(dataset=data, run_label='simple baseline', pipeline=baseline_pipeline,
-                                           **baseline_metrics)
-        results.append(baseline_res)
+            # Fit & evaluate simple baseline
+            baseline_metrics = get_pipeline_metrics(baseline_pipeline, fedot_meta.train_data, fedot_meta.metrics)
+            baseline_res = get_result_data_row(dataset=data, run_label='simple baseline', pipeline=baseline_pipeline,
+                                               **baseline_metrics)
+            results.append(baseline_res)
 
-        # Fit & evaluate initial assumptions
-        for i, assumption in enumerate(initial_assumptions):
-            pipeline = assumption.predictor
-            assumption_metrics = get_pipeline_metrics(assumption.predictor, fedot_meta.train_data, fedot_meta.metrics)
-            assumption_res = get_result_data_row(dataset=data, run_label=f'MetaFEDOT - initial assumption {i}',
-                                                 pipeline=assumption.predictor, **assumption_metrics)
-            results.append(assumption_res)
+            # Fit & evaluate initial assumptions
+            for i, assumption in enumerate(initial_assumptions):
+                pipeline = assumption.predictor
+                assumption_metrics = get_pipeline_metrics(pipeline, fedot_meta.train_data, fedot_meta.metrics)
+                assumption_res = get_result_data_row(dataset=data, run_label=f'MetaFEDOT - initial assumption {i}',
+                                                     pipeline=pipeline, **assumption_metrics)
+                results.append(assumption_res)
+        except Exception:
+            logging.exception(f'Test dataset "{name}"')
 
     # Save the accumulated results
-    time_now = datetime.now().isoformat(timespec="minutes")
-    time_now_for_path = time_now.replace(":", ".")
-    save_dir = Path(f'run_{time_now_for_path}')
-    save_dir.mkdir()
     history_dir = save_dir.joinpath('histories')
     history_dir.mkdir()
     models_dir = save_dir.joinpath('models')
     for res in results:
-        res['run_date'] = time_now
-        dataset_name = res['dataset_name']
-        run_label = res['run_label']
-        # define saving paths
-        model_path = models_dir.joinpath(f'{dataset_name}_{run_label}')
-        history_path = history_dir.joinpath(f'{dataset_name}_{run_label}_history.json')
-        # replace objects with export paths for csv
-        res['model_path'] = str(model_path)
-        res.pop('model_obj').save(res['model_path'])
-        res['history_path'] = str(history_path)
-        history_obj = res.pop('history_obj')
-        if history_obj is not None:
-            history_obj.save(res['history_path'])
-    pd.DataFrame(results).to_csv(save_dir.joinpath(f'results_pre_{time_now_for_path}.csv'))
+        try:
+            res['run_date'] = time_now
+            dataset_name = res['dataset_name']
+            run_label = res['run_label']
+            # define saving paths
+            model_path = models_dir.joinpath(f'{dataset_name}_{run_label}')
+            history_path = history_dir.joinpath(f'{dataset_name}_{run_label}_history.json')
+            # replace objects with export paths for csv
+            res['model_path'] = str(model_path)
+            res.pop('model_obj').save(res['model_path'])
+            res['history_path'] = str(history_path)
+            history_obj = res.pop('history_obj')
+            if history_obj is not None:
+                history_obj.save(res['history_path'])
+        except Exception:
+            logging.exception(f'Saving results "{res}"')
+
     pd.DataFrame(results).to_csv(save_dir.joinpath(f'results_{time_now_for_path}.csv'))
 
     # save experiment hyperparameters
@@ -257,4 +283,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        logging.exception(f'Main level cached the error')
