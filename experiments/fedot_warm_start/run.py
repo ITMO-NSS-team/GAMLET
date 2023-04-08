@@ -29,11 +29,11 @@ from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdviso
 # Meta-alg hyperparameters
 SEED = 42
 # Datasets sampling
-N_DATASETS = 3
-TEST_SIZE = 0.33
+N_DATASETS = None
+TEST_SIZE = 0.2
 # Evaluation timeouts
-TRAIN_TIMEOUT = 0.5
-TEST_TIMEOUT = 0.5
+TRAIN_TIMEOUT = 15
+TEST_TIMEOUT = 15
 # Models & datasets
 N_BEST_DATASET_MODELS_TO_MEMORIZE = 10
 N_CLOSEST_DATASETS_TO_PROPOSE = 5
