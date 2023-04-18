@@ -24,6 +24,7 @@ WORKDIR $WORKDIR
 COPY . $WORKDIR
 
 RUN pip3 install pip && \
+    pip install wheel && \
     pip install --trusted-host pypi.python.org -r ${WORKDIR}/requirements.txt
 
 ENV PYTHONPATH $WORKDIR
