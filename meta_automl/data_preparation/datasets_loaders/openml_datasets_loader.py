@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
 from typing import List, Union
 
 import openml
@@ -8,6 +10,12 @@ from meta_automl.data_preparation.dataset import DatasetCache, Dataset
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 
 OpenMLDatasetID = Union[str, int]
+
+
+def _clear_openml_cache():
+    cache_dir = openml.config.get_cache_directory()
+    cache_dir = Path(cache_dir)
+    shutil.rmtree(cache_dir)
 
 
 class OpenMLDatasetsLoader(DatasetsLoader):
@@ -27,7 +35,10 @@ class OpenMLDatasetsLoader(DatasetsLoader):
         return datasets
 
     def load_single(self, source: OpenMLDatasetID):
-        return self.get_openml_dataset(source)
+        try:
+            return self.get_openml_dataset(source)
+        finally:
+            _clear_openml_cache()
 
     def get_openml_dataset(self, dataset_id: OpenMLDatasetID, force_download: bool = False) -> DatasetCache:
         openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
