@@ -1,0 +1,13 @@
+# Config & info files
+.pep8speaks.yml
+Dockerfile
+LICENSE
+README.md
+
+# Unnecessary files
+examples
+notebooks
+test
+
+# User data
+data
