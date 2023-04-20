@@ -1,6 +1,6 @@
 fedot==0.7.1
 numpy==1.24.4
-openml==0.14.0
+openml==0.14.1
 pandas==2.0.3
 pymfe==0.4.2
 pytest==7.4.0
