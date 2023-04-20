@@ -19,6 +19,7 @@ from golem.core.log import Log
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from tqdm import tqdm
 
+from meta_automl.data_preparation.data_manager import DataManager
 from meta_automl.data_preparation.dataset import DatasetCache, Dataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
@@ -52,7 +53,8 @@ COMMON_FEDOT_PARAMS = dict(
 # Setup logging
 time_now = datetime.now().isoformat(timespec="minutes")
 time_now_for_path = time_now.replace(":", ".")
-save_dir = Path(f'run_{time_now_for_path}')
+save_dir = DataManager.get_data_dir()\
+    .joinpath(f'run_{time_now_for_path}').joinpath('experiments').joinpath('fedot_warm_start')
 save_dir.mkdir()
 log_file = save_dir.joinpath('log.txt')
 Log(log_file=log_file)
@@ -168,17 +170,16 @@ def main():
     datasets_train, datasets_test = \
         train_test_split(list(datasets_cache.keys()), test_size=TEST_SIZE, random_state=SEED)
 
-    data_similarity_assessor, extractor = prepare_extractor_and_assessor(datasets_train)
-
     results = []
     best_models_per_dataset = {}
     progress_file = open(save_dir.joinpath('progress.txt'), 'a')
-    for name in tqdm(datasets_train, 'Train datasets', file=progress_file):
+    for name in tqdm(datasets_cache.keys(), 'FEDOT, all datasets', file=progress_file):
         try:
             cache = datasets_cache[name]
             data = cache.from_cache()
 
-            fedot, run_results = fit_fedot(data=data, timeout=TRAIN_TIMEOUT, run_label='FEDOT')
+            timeout = TRAIN_TIMEOUT if name in datasets_train else TEST_TIMEOUT
+            fedot, run_results = fit_fedot(data=data, timeout=timeout, run_label='FEDOT')
             results.append(run_results)
             # TODO:
             #   x Turn the tuned pipeline into a model (evaluate its fitness on the data)
@@ -192,18 +193,15 @@ def main():
         except Exception:
             logging.exception(f'Train dataset "{name}"')
 
+    data_similarity_assessor, extractor = prepare_extractor_and_assessor(datasets_train)
     model_advisor = DiverseFEDOTPipelineAdvisor(data_similarity_assessor, n_best_to_advise=N_BEST_MODELS_TO_ADVISE,
                                                 minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
     model_advisor.fit(best_models_per_dataset)
 
-    for name in tqdm(datasets_test, 'Test datasets', file=progress_file):
+    for name in tqdm(datasets_test, 'MetaFEDOT, Test datasets', file=progress_file):
         try:
             cache = datasets_cache[name]
             data = cache.from_cache()
-
-            # Run pure AutoML
-            fedot_naive, fedot_naive_results = fit_fedot(data=data, timeout=TEST_TIMEOUT, run_label='FEDOT')
-            results.append(fedot_naive_results)
 
             # Run meta AutoML
             # 1
@@ -234,6 +232,7 @@ def main():
                 results.append(assumption_res)
         except Exception:
             logging.exception(f'Test dataset "{name}"')
+    progress_file.close()
 
     # Save the accumulated results
     history_dir = save_dir.joinpath('histories')
