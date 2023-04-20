@@ -4,7 +4,6 @@ import logging
 import timeit
 from datetime import datetime
 from itertools import chain
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -53,9 +52,9 @@ COMMON_FEDOT_PARAMS = dict(
 # Setup logging
 time_now = datetime.now().isoformat(timespec="minutes")
 time_now_for_path = time_now.replace(":", ".")
-save_dir = DataManager.get_data_dir()\
-    .joinpath(f'run_{time_now_for_path}').joinpath('experiments').joinpath('fedot_warm_start')
-save_dir.mkdir()
+save_dir = DataManager.get_data_dir().\
+    joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
+save_dir.mkdir(parents=True)
 log_file = save_dir.joinpath('log.txt')
 Log(log_file=log_file)
 logging.basicConfig(filename=log_file,
