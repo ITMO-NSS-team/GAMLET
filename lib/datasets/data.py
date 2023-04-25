@@ -1,20 +1,17 @@
-# -*- coding: utf-8 -*-
+import os
+
 import torch
-import torch.nn.functional as F
-from torch.utils.data.dataloader import default_collate
 import torch_geometric.utils as utils
 from torch_geometric.data import Data
-import numpy as np
-import os
 
 
 def my_inc(self, key, value, *args, **kwargs):
     if key == 'subgraph_edge_index':
-        return self.num_subgraph_nodes 
+        return self.num_subgraph_nodes
     if key == 'subgraph_node_idx':
-        return self.num_nodes 
+        return self.num_nodes
     if key == 'subgraph_indicator':
-        return self.num_nodes 
+        return self.num_nodes
     elif 'index' in key:
         return self.num_nodes
     else:
@@ -37,7 +34,7 @@ class GraphDataset(object):
         if self.se == 'khopgnn':
             Data.__inc__ = my_inc
             self.extract_subgraphs()
- 
+
     def compute_degree(self):
         if not self.degree:
             self.degree_list = None
@@ -82,17 +79,17 @@ class GraphDataset(object):
 
             for node_idx in range(graph.num_nodes):
                 sub_nodes, sub_edge_index, _, edge_mask = utils.k_hop_subgraph(
-                    node_idx, 
-                    self.k_hop, 
+                    node_idx,
+                    self.k_hop,
                     graph.edge_index,
-                    relabel_nodes=True, 
+                    relabel_nodes=True,
                     num_nodes=graph.num_nodes
-                    )
+                )
                 node_indices.append(sub_nodes)
                 edge_indices.append(sub_edge_index + edge_index_start)
                 indicators.append(torch.zeros(sub_nodes.shape[0]).fill_(node_idx))
                 if self.use_subgraph_edge_attr and graph.edge_attr is not None:
-                    edge_attributes.append(graph.edge_attr[edge_mask]) # CHECK THIS DIDN"T BREAK ANYTHING
+                    edge_attributes.append(graph.edge_attr[edge_mask])  # CHECK THIS DIDN"T BREAK ANYTHING
                 edge_index_start += len(sub_nodes)
 
             if self.cache_path is not None:
@@ -134,7 +131,7 @@ class GraphDataset(object):
         data.abs_pe = None
         if self.abs_pe_list is not None and len(self.abs_pe_list) == len(self.dataset):
             data.abs_pe = self.abs_pe_list[index]
-         
+
         # add subgraphs and relevant meta data
         if self.se == "khopgnn":
             if self.cache_path is not None:

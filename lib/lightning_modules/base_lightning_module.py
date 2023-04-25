@@ -5,7 +5,7 @@ from pytorch_lightning import LightningModule as LightningModule_
 from torch import optim
 
 
-class LightningModule(LightningModule_):
+class BaseLightningModule(LightningModule_):
     def __init__(self, model: nn.Module, loss: Callable, lr: float = 1e-3):
         super().__init__()
         self.model = model

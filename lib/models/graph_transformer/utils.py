@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
-from typing import Optional
-import torch
-from torch import Tensor
-from torch_scatter import scatter, segment_csr, gather_csr
-from torch_geometric.utils.num_nodes import maybe_num_nodes
-from scipy.sparse import csr_matrix,lil_matrix
 import numpy as np
+import torch
+from torch_scatter import scatter
 
 
 def count_parameters(model):
     return sum([p.numel() for p in model.parameters() if p.requires_grad])
+
 
 def dense_to_sparse_tensor(matrix):
     rows, columns = torch.where(matrix > 0)
@@ -75,6 +72,7 @@ def pad_batch(x, ptr, return_mask=False):
     if return_mask:
         return new_x, padding_mask
     return new_x
+
 
 def unpad_batch(x, ptr):
     bsz, n, d = x.shape

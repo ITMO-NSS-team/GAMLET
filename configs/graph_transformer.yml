@@ -1,0 +1,51 @@
+training_method: train_graph_transformer
+batch_size: 128
+
+lightning_module:
+  name: "GraphTransformer"
+  model_parameters:
+    in_size: null  # The parameter is inferred
+    num_class: 1
+    d_model: 64
+    n_dataset: 10
+    dim_feedforward: null  # The parameter is inferred
+    dropout: 0.2
+    num_heads: 8
+    num_layers: 6
+    #    layer_norm: True
+    batch_norm: False  # not LAYER_NORM
+    abs_pe: null
+    abs_pe_dim: 20
+    gnn_type: "graphsage"
+    use_edge_attr: True
+    num_edge_features: 1
+    edge_dim: 32
+    k_hop: 2
+    se: "gnn"
+    deg: null  # The parameter is inferred
+    global_pool: "mean"
+  loss_name: "l1_loss"
+  lr: 0.001
+  weight_decay: 0.00001
+  warmup_steps: 5000
+
+dataset_params:
+  pipeline_graph_rename_path: null # TODO: specify path
+  y_pipeline_path: null # TODO: specify path
+  labels_path: null # TODO: specify path
+  pipelines_path: null # TODO: specify path
+  seed: 0
+
+trainer:
+  max_epochs: 10
+  devices: "auto"
+
+tensorboard_logger:
+  save_dir: null # TODO: specify path
+  name: null # # TODO: specify experiment name
+
+model_checkpoint_callback:
+  save_top_k: 1
+  monitor: "val_loss"
+  save_last: True
+  every_n_epochs: 1

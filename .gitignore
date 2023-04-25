@@ -129,3 +129,7 @@ dmypy.json
 
 # User data
 data/
+
+# IDEs
+.idea/
+.vscode/
