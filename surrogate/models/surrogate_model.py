@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 from torch import optim
 
-from lib.models import GraphTransformer as GraphTransformer_
+from encoders.sat import GraphTransformer
+from encoders.models import MLPDatasetEncoder
 
-
-class GraphTransformer(LightningModule):
+class SurrogateModel(LightningModule):
     def __init__(
             self,
             model_parameters: Dict[str, Any],
@@ -19,7 +19,15 @@ class GraphTransformer(LightningModule):
     ):
         """loss_name: loss name from torch.nn.functional"""
         super().__init__()
-        self.model = GraphTransformer_(**model_parameters)
+
+
+        self.pipeline_encoder = GraphTransformer(**model_parameters)
+        self.dataset_encoder = sfsf
+        self.final_model = sfds
+
+        # self.model = GraphTransformer_(**model_parameters)
+
+
         self.loss = getattr(F, loss_name)
         self.lr = lr
         self.abs_pe = abs_pe
