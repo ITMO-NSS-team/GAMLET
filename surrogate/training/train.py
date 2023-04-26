@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
-from lib import datasets, lightning_modules
+from surrogate import datasets, models
 
 
 def train(config: Dict[str, Any]):

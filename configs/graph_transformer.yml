@@ -30,10 +30,10 @@ lightning_module:
   warmup_steps: 5000
 
 dataset_params:
-  pipeline_graph_rename_path: null # TODO: specify path
-  y_pipeline_path: null # TODO: specify path
-  labels_path: null # TODO: specify path
-  pipelines_path: null # TODO: specify path
+  pipeline_graph_rename_path: 'data/openml/pipelines_graphs/pipeline_graph_rename.pickle' # TODO: specify path
+  y_pipeline_path: 'data/openml/pipelines_graphs/y.pickle' # TODO: specify path
+  labels_path: 'data/openml/pipelines_graphs/labels.pickle' # TODO: specify path
+  pipelines_path: 'data/openml/pipelines_graphs/pipelines.pickle' # TODO: specify path
   seed: 0
 
 trainer:

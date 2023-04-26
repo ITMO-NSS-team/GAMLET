@@ -16,7 +16,7 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import from_networkx
 
-from lib import lightning_modules
+from surrogate import models
 
 
 def get_datasets(
@@ -27,7 +27,7 @@ def get_datasets(
         seed: int = 0,
 ) -> Tuple[List[Data], Data, Data, Data]:
     """The method makes dataset."""
-    X_dataset = pd.read_csv('X_dataset.csv').drop(columns='Unnamed: 0')
+    X_dataset = pd.read_csv('data/openml/X_dataset.csv').drop(columns='Unnamed: 0')
     X_dataset = X_dataset.fillna(-1)
     scaler = StandardScaler()
     X_dataset = scaler.fit_transform(X_dataset)

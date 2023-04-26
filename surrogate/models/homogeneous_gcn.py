@@ -2,7 +2,7 @@ from typing import Dict, Any
 
 import torch.nn.functional as F
 
-from lib.models import HomogeneousGCN as HomogeneousGCN_
+from surrogate.encoders import HomogeneousGCN as HomogeneousGCN_
 from .base_lightning_module import BaseLightningModule
 
 

@@ -4,7 +4,7 @@ import sys
 import yaml
 
 sys.path.append("..")
-from lib import training
+from surrogate import training
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

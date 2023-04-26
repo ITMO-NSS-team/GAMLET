@@ -1,4 +1,4 @@
-from .graph_transformer import GraphTransformer
+from .surrogate_model import SurrogateModel
 from .homogeneous_gcn import HomogeneousGCN
 
 __all__ = [

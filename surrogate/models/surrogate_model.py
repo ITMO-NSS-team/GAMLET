@@ -5,8 +5,7 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 from torch import optim
 
-from encoders.sat import GraphTransformer
-from encoders.models import MLPDatasetEncoder
+from surrogate.encoders import GraphTransformer, MLPDatasetEncoder
 
 class SurrogateModel(LightningModule):
     def __init__(
@@ -24,10 +23,9 @@ class SurrogateModel(LightningModule):
         self.pipeline_encoder = GraphTransformer(**model_parameters)
         self.dataset_encoder = MLPDatasetEncoder(input_dim, dict_category, hidden_dim = 128, output_dim = 64)
         self.final_model = nn.Sequential(nn.BatchNorm1d(hidden_dim),
-                            nn.Linear(hidden_dim, hidden_dim),
-                            nn.ReLU()
-                            nn.Linear(hidden_dim, hidden_dim)
-                            )
+                                         nn.Linear(hidden_dim, hidden_dim),
+                                         nn.ReLU(),
+                                         nn.Linear(hidden_dim, hidden_dim))
 
         # self.model = GraphTransformer_(**model_parameters)
 
