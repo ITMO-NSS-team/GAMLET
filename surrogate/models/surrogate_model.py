@@ -22,8 +22,12 @@ class SurrogateModel(LightningModule):
 
 
         self.pipeline_encoder = GraphTransformer(**model_parameters)
-        self.dataset_encoder = sfsf
-        self.final_model = sfds
+        self.dataset_encoder = MLPDatasetEncoder(input_dim, dict_category, hidden_dim = 128, output_dim = 64)
+        self.final_model = nn.Sequential(nn.BatchNorm1d(hidden_dim),
+                            nn.Linear(hidden_dim, hidden_dim),
+                            nn.ReLU()
+                            nn.Linear(hidden_dim, hidden_dim)
+                            )
 
         # self.model = GraphTransformer_(**model_parameters)
 
@@ -34,6 +38,8 @@ class SurrogateModel(LightningModule):
         self.warmup_steps = warmup_steps
 
     def forward(self, x) -> Tuple[torch.Tensor, torch.Tensor]:
+        
+        
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
