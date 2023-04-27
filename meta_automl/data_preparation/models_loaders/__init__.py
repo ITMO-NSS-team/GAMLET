@@ -1,2 +1,3 @@
 from .models_loader import ModelsLoader
 from .fedot_pipelines_loader import FEDOTPipelinesLoader
+from .knowledge_base_models_loader import KnowledgeBaseModelsLoader

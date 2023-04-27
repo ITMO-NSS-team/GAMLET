@@ -29,7 +29,7 @@ def main():
         PipelineBuilder().add_node('normalization').add_node('logit').build(),
         PipelineBuilder().add_node('rf').add_node('logit').build()
     ]
-    best_models = [[Model(pipeline, SingleObjFitness(1), DatasetCache(dataset_name))]
+    best_models = [[Model(pipeline, SingleObjFitness(1), 'some_metric_name', DatasetCache(dataset_name))]
                    for dataset_name, pipeline in zip(y_train, best_pipelines)]
 
     dataset_names_to_best_pipelines = dict(zip(y_train, best_models))
