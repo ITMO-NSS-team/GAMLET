@@ -1,6 +1,7 @@
 import os
 
 import torch
+from torch.utils.data import Dataset
 import torch_geometric.utils as utils
 from torch_geometric.data import Data
 
@@ -155,3 +156,38 @@ class GraphDataset(object):
             data.subgraph_indicator = None
 
         return data
+
+    
+class PairDataset(Dataset):
+    def __init__(self,data, dict_category):
+    
+        self.data = data
+        self.value = self.data['value']
+        self.task_id = self.data['task_id']
+        self.x1 = self.data[list(set(self.data.columns) - {'value', 'task_id'})]
+        self.x1_cat = torch.tensor(np.array(self.x1[dict_category.keys()]), dtype=torch.int64) #dtype=torch.float16
+        self.x1_cont = torch.tensor(np.array(self.x1[list(set(self.x1.columns) - set(dict_category.keys()))]), dtype=torch.float32) #dtype=torch.float16
+        # self.x1 = torch.tensor(np.array(self.data[list(set(self.data.columns) - {'value', 'task_id'})]), dtype=torch.float32) #dtype=torch.float16
+        self.y1 = np.array(self.data['value'])
+
+        self.x2 = pd.DataFrame()
+        self.y2 = np.array([])
+        for i in self.data.index:
+            new_row = self.data[self.data['task_id'] == self.data['task_id'][i]].drop(index=i,columns =['value','task_id']).sample(n=1)
+            self.x2 = self.x2.append(new_row)
+            self.y2 = np.append(self.y2, self.data['value'][new_row.index])
+
+        self.x2_cat = torch.tensor(np.array(self.x2[dict_category.keys()]), dtype=torch.int64) #dtype=torch.float16
+        self.x2_cont = torch.tensor(np.array(self.x2[list(set(self.x2.columns) - set(dict_category.keys()))]), dtype=torch.float32)
+        # self.x2 = torch.tensor(np.array(self.x2), dtype=torch.float32) #dtype=torch.float16
+        self.y2 = np.array(self.y2)
+
+        self.compare = torch.tensor([1.0 if t1 > t2 else 0.0 if t1 < t2 else 0.5 for t1,t2 in zip(self.y1,self.y2)], dtype=torch.float32) #dtype=torch.float16
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.x1_cat[idx], self.x1_cont[idx], self.x2_cat[idx], self.x2_cont[idx], self.compare[idx], self.value[idx], self.task_id[idx]
+    
+    
