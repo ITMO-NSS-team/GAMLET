@@ -26,6 +26,7 @@ from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
 
+
 # Meta-alg hyperparameters
 SEED = 42
 # Datasets sampling
@@ -49,30 +50,41 @@ COMMON_FEDOT_PARAMS = dict(
     show_progress=False,
 )
 
-# Setup logging
-time_now = datetime.now().isoformat(timespec="minutes")
-time_now_for_path = time_now.replace(":", ".")
-save_dir = Path(f'run_{time_now_for_path}')
-save_dir.mkdir()
-log_file = save_dir.joinpath('log.txt')
-Log(log_file=log_file)
-logging.basicConfig(filename=log_file,
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    force=True,
-                    )
+SAVE_DIR = None
+TIME_NOW = None
+TIME_NOW_FOR_PATH = None
+
+DEBUG = False
 
 
-def prepare_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
+def setup_logging():
+    global TIME_NOW
+    TIME_NOW = time_now = datetime.now().isoformat(timespec="minutes")
+    global TIME_NOW_FOR_PATH
+    TIME_NOW_FOR_PATH = time_now_for_path = time_now.replace(":", ".")
+    global SAVE_DIR
+    SAVE_DIR = save_dir = Path(f'run_{time_now_for_path}')
+    save_dir.mkdir()
+    log_file = save_dir.joinpath('log.txt')
+    Log(log_file=log_file)
+    logging.basicConfig(filename=log_file,
+                        filemode='a',
+                        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                        datefmt='%H:%M:%S',
+                        force=True,
+                        )
+
+
+def fetch_openml_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
     """Returns dictionary with dataset names and cached datasets downloaded from OpenML."""
-
     dataset_ids = openml.study.get_suite(99).data
     if N_DATASETS is not None:
         dataset_ids = pd.Series(dataset_ids)
         dataset_ids = dataset_ids.sample(n=N_DATASETS, random_state=SEED)
-    dataset_ids = list(dataset_ids)
-    return dataset_ids, {cache.name: cache for cache in OpenMLDatasetsLoader().load(dataset_ids)}
+        dataset_ids = list(dataset_ids)
+
+    datasets = {cache.name: cache for cache in OpenMLDatasetsLoader().load(dataset_ids)}
+    return dataset_ids, datasets
 
 
 def transform_data_for_fedot(data: Dataset) -> (np.array, np.array):
@@ -92,6 +104,7 @@ def get_pipeline_metrics(pipeline,
     Returns:
         the values of quality metrics
     """
+    # print(str(metrics_obj))
     metrics = metrics_obj.metric_functions
     metric_names = metrics_obj.get_metric_names(metrics)
 
@@ -160,22 +173,34 @@ def extract_best_history_models(dataset_cache, history):
     return best_models
 
 
+def prepare_data() -> Tuple[Tuple[List[int], Dict[str, DatasetCache]], Tuple[List[str], List[str]]]:
+    dataset_ids, datasets = fetch_openml_data()
+
+    train_data_names, test_data_names = train_test_split(
+        list(datasets.keys()),
+        test_size=TEST_SIZE,
+        random_state=SEED
+    )
+    return (dataset_ids, datasets), (train_data_names, test_data_names)
+
+
 def main():
     baseline_pipeline = PipelineBuilder().add_node('rf').build()
 
-    dataset_ids, datasets_cache = prepare_data()
+    ds_with_ids, dataset_names = prepare_data()
 
-    datasets_train, datasets_test = \
-        train_test_split(list(datasets_cache.keys()), test_size=TEST_SIZE, random_state=SEED)
+    train_ds_names, test_ds_names = dataset_names
 
-    data_similarity_assessor, extractor = prepare_extractor_and_assessor(datasets_train)
+    ds_ids, datasets = ds_with_ids
+
+    data_similarity_assessor, extractor = prepare_extractor_and_assessor(train_ds_names)
 
     results = []
     best_models_per_dataset = {}
-    progress_file = open(save_dir.joinpath('progress.txt'), 'a')
-    for name in tqdm(datasets_train, 'Train datasets', file=progress_file):
+    progress_file = open(SAVE_DIR.joinpath('progress.txt'), 'a')
+    for name in tqdm(train_ds_names, 'Train datasets', file=progress_file):
         try:
-            cache = datasets_cache[name]
+            cache = datasets[name]
             data = cache.from_cache()
 
             fedot, run_results = fit_fedot(data=data, timeout=TRAIN_TIMEOUT, run_label='FEDOT')
@@ -196,9 +221,9 @@ def main():
                                                 minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
     model_advisor.fit(best_models_per_dataset)
 
-    for name in tqdm(datasets_test, 'Test datasets', file=progress_file):
+    for name in tqdm(test_ds_names, 'Test datasets', file=progress_file):
         try:
-            cache = datasets_cache[name]
+            cache = datasets[name]
             data = cache.from_cache()
 
             # Run pure AutoML
@@ -236,12 +261,12 @@ def main():
             logging.exception(f'Test dataset "{name}"')
 
     # Save the accumulated results
-    history_dir = save_dir.joinpath('histories')
+    history_dir = SAVE_DIR.joinpath('histories')
     history_dir.mkdir()
-    models_dir = save_dir.joinpath('models')
+    models_dir = SAVE_DIR.joinpath('models')
     for res in results:
         try:
-            res['run_date'] = time_now
+            res['run_date'] = TIME_NOW
             dataset_name = res['dataset_name']
             run_label = res['run_label']
             # define saving paths
@@ -257,18 +282,18 @@ def main():
         except Exception:
             logging.exception(f'Saving results "{res}"')
 
-    pd.DataFrame(results).to_csv(save_dir.joinpath(f'results_{time_now_for_path}.csv'))
+    pd.DataFrame(results).to_csv(SAVE_DIR.joinpath(f'results_{TIME_NOW_FOR_PATH}.csv'))
 
     # save experiment hyperparameters
     params = {
-        'run_date': time_now,
+        'run_date': TIME_NOW,
         'seed': SEED,
-        'n_datasets': N_DATASETS or len(dataset_ids),
+        'n_datasets': N_DATASETS or len(ds_ids),
         'test_size': TEST_SIZE,
-        'dataset_ids': dataset_ids,
-        'dataset_names': list(datasets_cache.keys()),
-        'dataset_names_train': datasets_train,
-        'dataset_names_test': datasets_test,
+        'dataset_ids': ds_ids,
+        'dataset_names': list(dataset_names.keys()),
+        'dataset_names_train': train_ds_names,
+        'dataset_names_test': test_ds_names,
         'train_timeout': TRAIN_TIMEOUT,
         'test_timeout': TEST_TIMEOUT,
         'n_best_dataset_models_to_memorize': N_BEST_DATASET_MODELS_TO_MEMORIZE,
@@ -278,12 +303,14 @@ def main():
         'common_fedot_params': COMMON_FEDOT_PARAMS,
         'baseline_pipeline': baseline_pipeline.descriptive_id,
     }
-    with open(save_dir.joinpath('parameters.json'), 'w') as params_file:
+    with open(SAVE_DIR.joinpath('parameters.json'), 'w') as params_file:
         json.dump(params, params_file, indent=2)
 
 
 if __name__ == "__main__":
     try:
+        if DEBUG:
+            setup_logging()
         main()
     except Exception:
         logging.exception(f'Main level cached the error')
