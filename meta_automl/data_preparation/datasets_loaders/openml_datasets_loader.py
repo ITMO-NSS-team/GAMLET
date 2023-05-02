@@ -41,7 +41,7 @@ class OpenMLDatasetsLoader(DatasetsLoader):
             _clear_openml_cache()
 
     def get_openml_dataset(self, dataset_id: OpenMLDatasetID, force_download: bool = False) -> DatasetCache:
-        openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False)
+        openml_dataset = openml.datasets.get_dataset(dataset_id, download_data=False, download_qualities=False)
         name = openml_dataset.name.lower()
         dataset_cache_path = self.data_manager.get_dataset_cache_path(name)
         if dataset_cache_path.exists() and not force_download:
