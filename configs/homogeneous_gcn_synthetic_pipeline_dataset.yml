@@ -3,7 +3,7 @@ training_method: train
 
 batch_size: 1024
 
-lightning_module:
+model:
   name: "HomogeneousGCN"
   model_parameters:
     in_channels: 15

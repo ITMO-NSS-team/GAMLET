@@ -1,8 +1,8 @@
-training_method: train_graph_transformer
+training_method: train_surrogate_model
 batch_size: 32
 
-lightning_module:
-  name: "GraphTransformer"
+model:
+  name: "SurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
@@ -30,19 +30,17 @@ lightning_module:
   warmup_steps: 5000
 
 dataset_params:
-  pipeline_graph_rename_path: 'data/openml/pipelines_graphs/pipeline_graph_rename.pickle' # TODO: specify path
-  y_pipeline_path: 'data/openml/pipelines_graphs/y.pickle' # TODO: specify path
-  labels_path: 'data/openml/pipelines_graphs/labels.pickle' # TODO: specify path
-  pipelines_path: 'data/openml/pipelines_graphs/pipelines.pickle' # TODO: specify path
+  pipeline_graph_rename_path: 'data/openml/pipelines_graphs/pipeline_graph_rename.pickle'
+  y_pipeline_path: 'data/openml/pipelines_graphs/y.pickle'
+  labels_path: 'data/openml/pipelines_graphs/labels.pickle'
+  pipelines_path: 'data/openml/pipelines_graphs/pipelines.pickle'
   seed: 0
 
 trainer:
   max_epochs: 1
   devices: "auto"
 
-tensorboard_logger:
-  save_dir: "results" # TODO: specify path
-  name: "test" # # TODO: specify experiment name
+tensorboard_logger: null
 
 model_checkpoint_callback:
   save_top_k: 1

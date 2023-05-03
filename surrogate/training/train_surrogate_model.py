@@ -1,4 +1,4 @@
-"""The module contains general method to train a model from `lib.lightning_modules`."""
+"""The module contains custom method to train `lib.lightning_modules.GraphTransformer`."""
 
 import pickle
 from typing import Dict, Any, List
@@ -6,45 +6,19 @@ from typing import Tuple
 
 import pandas as pd
 import torch
-
+import torch_geometric.utils as utils
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import from_networkx
-import torch_geometric.utils as utils
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-
-from surrogate import datasets, models
+from surrogate import models
 
 
-def train(config: Dict[str, Any]):
-    train_dataset = getattr(datasets, config["train_dataset"]["name"])(**config["train_dataset"]["parameters"])
-    val_dataset = getattr(datasets, config["val_dataset"]["name"])(**config["val_dataset"]["parameters"])
-    test_dataset = getattr(datasets, config["test_dataset"]["name"])(**config["test_dataset"]["parameters"])
-
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"])
-    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"])
-
-    lightning_module_class = getattr(lightning_modules, config["lightning_module"]["name"])
-    lightning_module = lightning_module_class(**{k: v for k, v in config["lightning_module"].items() if k != "name"})
-
-    logger = TensorBoardLogger(**config["tensorboard_logger"])
-    model_checkpoint_callback = ModelCheckpoint(**config["model_checkpoint_callback"])
-
-    trainer = Trainer(
-        **config["trainer"],
-        logger=logger,
-        callbacks=[model_checkpoint_callback, ],
-    )
-    trainer.fit(lightning_module, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    trainer.test(lightning_module, dataloaders=test_loader)
-
-    
 def get_datasets(
         pipeline_graph_rename_path: str,
         y_pipeline_path: str,
@@ -72,7 +46,7 @@ def get_datasets(
     for idx, graph in enumerate(pipeline_graph_rename):
         graph = from_networkx(graph)
         graph.y = torch.tensor(int(labels[idx]), dtype=torch.float)
-        graph.d = torch.tensor(X_dataset[idx], dtype=torch.float).view(1,-1)
+        graph.d = torch.tensor(X_dataset[idx], dtype=torch.float).view(1, -1)
         if graph.edge_index.size(1) != 0:
             pyg_graph.append(graph)
             p.append(pipelines[idx])
@@ -82,40 +56,36 @@ def get_datasets(
     return pyg_graph, train_dset, val_dset, test_dset, dict()
 
 
-def train_graph_transformer(config: Dict[str, Any]):
+def train_surrogate_model(config: Dict[str, Any]):
     pyg_graph, train_dataset, val_dataset, test_dataset, meta_data = get_datasets(**config["dataset_params"])
 
     train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=50)
     val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=50)
     test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=50)
 
-    # model_class = getattr(lightning_modules, config["lightning_module"]["name"])
-    model_class = models.SurrogateModel
-    
-    
+    model_class = getattr(models, config["model"]["name"])
+
     # Infer parameters
     xs = []
     for dset in pyg_graph:
         for item in list(dset.x):
             xs.append(int(item))
     n_tags = len(set(xs))
-    config["lightning_module"]["model_parameters"]["in_size"] = n_tags
-    
-    config["lightning_module"]["model_parameters"]["dim_dataset"] = dset.d.shape[1]
-    
+    config["model"]["model_parameters"]["in_size"] = n_tags
+
+    config["model"]["model_parameters"]["dim_dataset"] = dset.d.shape[1]
+
     deg = torch.cat([
         utils.degree(data.edge_index[1], num_nodes=data.num_nodes) for
         data in train_dataset])
-    config["lightning_module"]["model_parameters"]["deg"] = deg
-    dim_feedforward = 2 * config["lightning_module"]["model_parameters"]["d_model"]
-    config["lightning_module"]["model_parameters"]["dim_feedforward"] = dim_feedforward
-    config["lightning_module"]["model_parameters"]["meta_data"] = meta_data
-    
-    
-    
-    model = model_class(config["lightning_module"]["model_parameters"])
-    
-    logger = None#TensorBoardLogger(**config["tensorboard_logger"])
+    config["model"]["model_parameters"]["deg"] = deg
+    dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
+    config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
+    config["model"]["model_parameters"]["meta_data"] = meta_data
+
+    model = model_class(config["model"]["model_parameters"])
+
+    logger = TensorBoardLogger(**config["tensorboard_logger"]) if config["tensorboard_logger"] is not None else None
     model_checkpoint_callback = ModelCheckpoint(**config["model_checkpoint_callback"])
 
     trainer = Trainer(

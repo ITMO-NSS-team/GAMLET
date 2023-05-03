@@ -1,5 +1,6 @@
+from .graph_transformer import GraphTransformer
 from .homogeneous_gcn import HomogeneousGCN
-from .models import GraphTransformerEncoder, GraphTransformer, MLPDatasetEncoder
+from .mlp_dataset_encoder import MLPDatasetEncoder
 
 __all__ = [
     'GraphTransformer',
