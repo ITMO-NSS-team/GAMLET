@@ -61,6 +61,7 @@ class HomogeneousPipelineDataset(Dataset):
             or `reversed` (reversed original direction). Edge direction might have impact on
             node embedding aggregation.
         use_operations_hyperparameters: Flag whether to include operations hyperparameters to node features.
+        overriden_processed_dir: path to processed dir to override default. # TODO: fix to run knowledge_base_v0
     """
 
     # Path to fitted preprocessors files that are stored in dataset `root` `processed` subdir.
@@ -79,6 +80,7 @@ class HomogeneousPipelineDataset(Dataset):
             log: bool = True,
             direction: str = "undirected",
             use_operations_hyperparameters: bool = True,
+            overriden_processed_dir: str = None,
     ):
         self.direction = direction
         self.use_operations_hyperparameters = use_operations_hyperparameters
@@ -101,20 +103,23 @@ class HomogeneousPipelineDataset(Dataset):
             self.json_pipelines = self.json_pipelines[start: stop]
             self.pickle_metrics = self.pickle_metrics[start: stop]
 
+        # Fix to run knowledge_base_v0
+        processed_dir = overriden_processed_dir if overriden_processed_dir is not None else self.processed_dir
+
         self._operations_parameters_vector_indexes = self._load_pickle(
-            os.path.join(self.processed_dir, self.OPERATIONS_PARAMETERS_VECTOR_INDEXES_FILENAME),
+            os.path.join(processed_dir, self.OPERATIONS_PARAMETERS_VECTOR_INDEXES_FILENAME),
         )
         self._operations_parameters_vector_template = self._load_pickle(
-            os.path.join(self.processed_dir, self.OPERATIONS_PARAMETERS_VECTOR_TEMPLATE_FILENAME),
+            os.path.join(processed_dir, self.OPERATIONS_PARAMETERS_VECTOR_TEMPLATE_FILENAME),
         )
         self._operation_name_one_hot_encoder = self._load_pickle(
-            os.path.join(self.processed_dir, self.OPERATION_NAME_ONE_HOT_ENCODER_FILENAME),
+            os.path.join(processed_dir, self.OPERATION_NAME_ONE_HOT_ENCODER_FILENAME),
         )
         self._operations_preprocessors = self._load_pickle(
-            os.path.join(self.processed_dir, self.OPERATIONS_PREPROCESSORS_FILENAME),
+            os.path.join(processed_dir, self.OPERATIONS_PREPROCESSORS_FILENAME),
         )
         self._metrics_scaler = self._load_pickle(
-            os.path.join(self.processed_dir, self.METRICS_SCALER_FILENAME),
+            os.path.join(processed_dir, self.METRICS_SCALER_FILENAME),
         )
 
     def _fit_operation_name_one_hot_encoder(self, names: List[str]) -> None:
