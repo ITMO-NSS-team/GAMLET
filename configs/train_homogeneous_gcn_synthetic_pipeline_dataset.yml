@@ -1,4 +1,4 @@
-training_method: train
+training_method: "train"
 
 
 batch_size: 1024
@@ -62,3 +62,5 @@ model_checkpoint_callback:
   monitor: "val_loss"
   save_last: True
   every_n_epochs: 1
+
+early_stopping_callback: null

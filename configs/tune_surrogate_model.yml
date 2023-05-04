@@ -1,0 +1,53 @@
+tuning_method: "tune_surrogate_model"
+n_trials: 100
+
+batch_size: 32
+
+model:
+  name: "SurrogateModel"
+  model_parameters:
+    in_size: null  # The parameter is inferred
+    num_class: 1
+    d_model: [32, 256]
+    dim_feedforward: null  # The parameter is inferred
+    dropout: [0.2, 0.6]
+    num_heads: [4, 12]
+    num_layers: [2, 8]
+    batch_norm: [True, False]
+    # Not working with current settings: "gin", "khopgnn", "rwgnn", "pna4", "gine"
+    gnn_type: ["graph", "graphsage", "gcn", "pna", "pna2", "pna3", "mpnn"]
+    k_hop: [1, 3]
+    se: "gnn"
+    deg: null  # The parameter is inferred
+    global_pool: ["mean", "add", "cls"]
+    abs_pe: False
+    use_edge_attr: False
+  loss_name: "l1_loss"
+  lr: [0.0001, 0.001]
+  weight_decay: 0.00001
+  warmup_steps: [1000, 5000]
+
+dataset_params:
+  pipeline_graph_rename_path: 'data/openml/pipelines_graphs/pipeline_graph_rename.pickle'
+  labels_path: 'data/openml/pipelines_graphs/labels.pickle'
+  pipelines_path: 'data/openml/pipelines_graphs/pipelines.pickle'
+  seed: 0
+
+trainer:
+  num_sanity_val_steps: 0
+  max_epochs: 1000
+  devices: "auto"
+
+tensorboard_logger:
+  save_dir: "experiments/tune_surrogate_model"
+  name: "test_run"
+
+model_checkpoint_callback:
+  save_top_k: 1
+  monitor: "val_loss"
+  save_last: True
+  every_n_epochs: 1
+
+early_stopping_callback:
+  monitor: "val_loss"
+  min_delta: 0.00001

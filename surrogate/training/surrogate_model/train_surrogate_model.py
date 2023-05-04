@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 import torch_geometric.utils as utils
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -21,7 +21,6 @@ from surrogate import models
 
 def get_datasets(
         pipeline_graph_rename_path: str,
-        y_pipeline_path: str,
         labels_path: str,
         pipelines_path: str,
         seed: int = 0,
@@ -34,8 +33,6 @@ def get_datasets(
 
     with open(pipeline_graph_rename_path, 'rb') as file:
         pipeline_graph_rename = pickle.load(file)
-    with open(y_pipeline_path, 'rb') as file:
-        y_pipeline = list(pickle.load(file))
     with open(labels_path, 'rb') as file:
         labels = list(pickle.load(file))
     with open(pipelines_path, 'rb') as file:
@@ -56,12 +53,12 @@ def get_datasets(
     return pyg_graph, train_dset, val_dset, test_dset, dict()
 
 
-def train_surrogate_model(config: Dict[str, Any]):
+def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     pyg_graph, train_dataset, val_dataset, test_dataset, meta_data = get_datasets(**config["dataset_params"])
 
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=50)
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=50)
-    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=50)
+    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=4)
 
     model_class = getattr(models, config["model"]["name"])
 
@@ -85,13 +82,23 @@ def train_surrogate_model(config: Dict[str, Any]):
 
     model = model_class(config["model"]["model_parameters"])
 
-    logger = TensorBoardLogger(**config["tensorboard_logger"]) if config["tensorboard_logger"] is not None else None
+    if config["tensorboard_logger"] is not None:
+        logger = TensorBoardLogger(**config["tensorboard_logger"])
+    else:
+        logger = None
+
     model_checkpoint_callback = ModelCheckpoint(**config["model_checkpoint_callback"])
+
+    if config["early_stopping_callback"] is not None:
+        early_stopping_callback = EarlyStopping(**config["early_stopping_callback"])
+    else:
+        early_stopping_callback = None
 
     trainer = Trainer(
         **config["trainer"],
         logger=logger,
-        callbacks=[model_checkpoint_callback, ],
+        callbacks=[c for c in [model_checkpoint_callback, early_stopping_callback] if c is not None],
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    trainer.test(model, dataloaders=test_loader)
+    test_results = trainer.test(model, dataloaders=test_loader)
+    return test_results

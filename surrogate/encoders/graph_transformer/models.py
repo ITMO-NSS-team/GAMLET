@@ -32,7 +32,7 @@ class GraphTransformerEncoder(nn.TransformerEncoder):
 
 
 class GraphTransformer(nn.Module):
-    def __init__(self, in_size, d_model, n_dataset, num_heads=8,
+    def __init__(self, in_size, d_model, num_heads=8,
                  dim_feedforward=512, dropout=0.0, num_layers=4,
                  batch_norm=False, abs_pe=False, abs_pe_dim=0,
                  gnn_type="graph", se="gnn", use_edge_attr=False, num_edge_features=4,

@@ -65,12 +65,17 @@ class SurrogateModel(LightningModule):
         self.log("val_mae_loss", mae_loss, batch_size=batch.y.shape[0])
         return loss
 
-    # TODO: Egor shoud fix it
     def test_step(self, batch, batch_idx):
+        # TODO: Egor shoud fix it
+        # pred = torch.squeeze(self.forward(batch))
+        # ndcg = 1  # ndcg_fixed(batch.y.cpu().numpy(), pred.cpu().numpy())
+        #
+        # self.log("test_ndcg", ndcg, batch_size=batch.y.shape[0])
+        # return loss
+        # TODO: currently use dummy model test
         pred = torch.squeeze(self.forward(batch))
-        ndcg = 1  # ndcg_fixed(batch.y.cpu().numpy(), pred.cpu().numpy())
-
-        self.log("test_ndcg", ndcg, batch_size=batch.y.shape[0])
+        loss = self.loss(pred, batch.y)
+        self.log("test_loss", loss, batch_size=batch.y.shape[0])
         return loss
 
     # TODO: oprimizewr config + scheduler config
