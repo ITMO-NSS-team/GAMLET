@@ -36,8 +36,12 @@ class SurrogateModel(LightningModule):
         self.warmup_steps = warmup_steps
 
     def forward(self, data) -> Tuple[torch.Tensor, torch.Tensor]:
-        z_pipeline = self.pipeline_encoder(data)
-        z_dataset = self.dataset_encoder(data.d)
+        _, _, x_graph, x_dset, y = data
+        # print(x_dset.dtype, y.dtype)
+        # print(x_graph, x_dset, y)
+        
+        z_pipeline = self.pipeline_encoder(x_graph)
+        z_dataset = self.dataset_encoder(x_dset)
 
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
@@ -64,6 +68,20 @@ class SurrogateModel(LightningModule):
         self.log("val_mse_loss", mse_loss, batch_size=batch.y.shape[0])
         self.log("val_mae_loss", mae_loss, batch_size=batch.y.shape[0])
         return loss
+    
+#     def optimizer_step(self,
+#                      epoch=None,
+#                      batch_idx=None,
+#                      optimizer=None,
+#                      optimizer_idx=None,
+#                      optimizer_closure=None,
+#                      on_tpu=None,
+#                      using_native_amp=None,
+#                      using_lbfgs=None):
+
+#         optimizer.step() 
+#         optimizer.zero_grad()
+#         self.lr_scheduler.step()
 
     def test_step(self, batch, batch_idx):
         # TODO: Egor shoud fix it
@@ -87,6 +105,9 @@ class SurrogateModel(LightningModule):
                                       weight_decay=1e-5)
         return optimizer
 
+    
+    
+    
         # optimizer = optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-5)
         # if self.warmup_steps is not None:
         #     return [optimizer, ]
@@ -101,18 +122,19 @@ class SurrogateModel(LightningModule):
         #     )
         #     return [optimizer, ], [lr_scheduler, ]
 
-    def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure=None) -> None:
-        if self.warmup_steps is not None:
-            if self.trainer.global_step < self.warmup_steps:
-                lr_steps = (self.lr - 1e-6) / self.warmup_steps
-                lr = 1e-6 + self.trainer.global_step * lr_steps
-            else:
-                decay_factor = self.lr * self.warmup_steps ** .5
-                lr = decay_factor * self.trainer.global_step ** -.5
-            for param_group in self.optimizer.param_groups:
-                param_group["lr"] = lr
-        super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)
+    # def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure=None,**kwargs) -> None:
+    #     if self.warmup_steps is not None:
+    #         if self.trainer.global_step < self.warmup_steps:
+    #             lr_steps = (self.lr - 1e-6) / self.warmup_steps
+    #             lr = 1e-6 + self.trainer.global_step * lr_steps
+    #         else:
+    #             decay_factor = self.lr * self.warmup_steps ** .5
+    #             lr = decay_factor * self.trainer.global_step ** -.5
+    #         for param_group in self.optimizer.param_groups:
+    #             param_group["lr"] = lr
+    #     super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)
 
+        
 # class WarmupLR:
 #     def __init__(self, optimizer: Optimizer, target_lr: float, warmup_steps: int) -> None:
 #         self.optimizer = optimizer

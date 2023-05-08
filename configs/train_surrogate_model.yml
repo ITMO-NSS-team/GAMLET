@@ -34,7 +34,9 @@ dataset_params:
 trainer:
   num_sanity_val_steps: 0
   max_epochs: 100
+  accelerator: "cpu"
   devices: "auto"
+  
 
 tensorboard_logger: null
 

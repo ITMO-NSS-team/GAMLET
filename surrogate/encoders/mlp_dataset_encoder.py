@@ -27,8 +27,8 @@ class MLPDatasetEncoder(nn.Module):
 
     def forward(self, x_cont):
         z = self.inp_layer(x_cont)
-        for i in range(self.n_cat):
-            z += self.emb_layers[i](x_cont[:, i])  # TODO: fix!!!!!!!!!!!!!!!!!
+        # for i in range(self.n_cat):
+        #     z += self.emb_layers[i](x_cont[:, i])  # TODO: fix!!!!!!!!!!!!!!!!!
 
         z = self.block1(z)
         z = self.block2(z)

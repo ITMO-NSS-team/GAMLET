@@ -90,7 +90,7 @@ class GraphTransformer(nn.Module):
 
         
     def forward(self, data, return_attn=False):
-        x, edge_index, edge_attr, x_dataset = data.x, data.edge_index, data.edge_attr, data.d
+        x, edge_index, edge_attr = data.x.to(dtype=torch.long), data.edge_index, data.edge_attr
 
         node_depth = data.node_depth if hasattr(data, "node_depth") else None
 
@@ -106,6 +106,8 @@ class GraphTransformer(nn.Module):
             subgraph_indicator_index = None
             subgraph_edge_attr = None
 
+        # print(x)
+        
         complete_edge_index = data.complete_edge_index if hasattr(data, 'complete_edge_index') else None
         abs_pe = data.abs_pe if hasattr(data, 'abs_pe') else None
         degree = data.degree if hasattr(data, 'degree') else None
