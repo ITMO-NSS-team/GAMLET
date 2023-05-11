@@ -1,11 +1,21 @@
 from typing import Dict, Any, Tuple
 
+import pandas as pd
+import numpy as np
+from sklearn.metrics import ndcg_score
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 
 from surrogate.encoders import GraphTransformer, MLPDatasetEncoder
+
+def gr_ndcg(inp):
+    y1 = inp['y_true'].values.reshape(1,-1)
+    y2 = inp['y_pred'].values.reshape(1,-1)
+    return ndcg_score(y1,y2,k=3)
+
 
 
 class SurrogateModel(LightningModule):
@@ -36,38 +46,35 @@ class SurrogateModel(LightningModule):
         self.warmup_steps = warmup_steps
 
     def forward(self, data) -> Tuple[torch.Tensor, torch.Tensor]:
-        _, _, x_graph, x_dset, y = data
-        # print(x_dset.dtype, y.dtype)
-        # print(x_graph, x_dset, y)
-        
+        task_id, pipe_id, x_graph, x_dset, y = data
+
         z_pipeline = self.pipeline_encoder(x_graph)
         z_dataset = self.dataset_encoder(x_dset)
 
-        return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
+        return task_id, pipe_id, self.final_model(torch.cat((z_pipeline, z_dataset), 1)), y
 
     def training_step(self, batch, batch_idx):
         # sign flip as in Bresson et al. for laplacian PE
-        if self.abs_pe == 'lap':
-            sign_flip = torch.rand(batch.abs_pe.shape[-1])
-            sign_flip[sign_flip >= 0.5] = 1.0
-            sign_flip[sign_flip < 0.5] = -1.0
-            batch.abs_pe = batch.abs_pe * sign_flip.unsqueeze(0)
+        # if self.abs_pe == 'lap':
+        #     sign_flip = torch.rand(batch.abs_pe.shape[-1])
+        #     sign_flip[sign_flip >= 0.5] = 1.0
+        #     sign_flip[sign_flip < 0.5] = -1.0
+        #     batch.abs_pe = batch.abs_pe * sign_flip.unsqueeze(0)
 
-        pred = torch.squeeze(self.forward(batch))
-
-        loss = self.loss(pred, batch.y)
-        self.log("train_loss", loss, batch_size=batch.y.shape[0])
+        _, _, y_pred, y_true = self.forward(batch)
+        y_pred = torch.squeeze(y_pred)
+        loss = self.loss(torch.squeeze(y_pred), y_true)
+        self.log("train_loss", loss, batch_size=y_true.shape[0])
         return loss
 
     def validation_step(self, batch, batch_idx):
-        pred = torch.squeeze(self.forward(batch))
-        loss = self.loss(pred, batch.y)
-        mse_loss = F.mse_loss(pred, batch.y)
-        mae_loss = F.l1_loss(pred, batch.y)
-        self.log("val_loss", loss, batch_size=batch.y.shape[0])
-        self.log("val_mse_loss", mse_loss, batch_size=batch.y.shape[0])
-        self.log("val_mae_loss", mae_loss, batch_size=batch.y.shape[0])
-        return loss
+        task_id, pipe_id, y_pred, y_true = self.forward(batch)
+        y_pred = torch.squeeze(y_pred)
+        
+        return {'task_id': task_id.cpu().numpy(), 
+                'pipe_id':pipe_id.cpu().numpy(), 
+                'y_pred':y_pred.detach().cpu().numpy(), 
+                'y_true':y_true.detach().cpu().numpy()}
     
 #     def optimizer_step(self,
 #                      epoch=None,
@@ -84,19 +91,41 @@ class SurrogateModel(LightningModule):
 #         self.lr_scheduler.step()
 
     def test_step(self, batch, batch_idx):
-        # TODO: Egor shoud fix it
-        # pred = torch.squeeze(self.forward(batch))
-        # ndcg = 1  # ndcg_fixed(batch.y.cpu().numpy(), pred.cpu().numpy())
-        #
-        # self.log("test_ndcg", ndcg, batch_size=batch.y.shape[0])
-        # return loss
-        # TODO: currently use dummy model test
-        pred = torch.squeeze(self.forward(batch))
-        loss = self.loss(pred, batch.y)
-        self.log("test_loss", loss, batch_size=batch.y.shape[0])
-        return loss
+        task_id, pipe_id, y_pred, y_true = self.forward(batch)
+        y_pred = torch.squeeze(y_pred)
+        
+        return {'task_id': task_id.cpu().numpy(), 
+                'pipe_id':pipe_id.cpu().numpy(), 
+                'y_pred':y_pred.detach().cpu().numpy(), 
+                'y_true':y_true.detach().cpu().numpy()}
+    
+    def _get_ndcg(self, outputs):
+        task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
+        for output in outputs:
+            task_ids.append(output['task_id'])
+            pipe_ids.append(output['pipe_id'])
+            y_preds.append(output['y_pred'])
+            y_trues.append(output['y_true'])
+        
+        df = pd.DataFrame({'task_id': np.concatenate(task_ids),
+                            'pipe_id':np.concatenate(pipe_ids),
+                            'y_pred':np.concatenate(y_preds),
+                            'y_true':np.concatenate(y_trues)})
+        ndcg_mean = df.groupby('task_id').apply(gr_ndcg).mean()      
+        return ndcg_mean
+        
+    def test_epoch_end(self, outputs):
+        ndcg_mean = self._get_ndcg(outputs)
+        self.log("ndcg", ndcg_mean)
+        print("ndcg ", ndcg_mean)
+        return ndcg_mean
+    
+    def validation_epoch_end(self, outputs):
+        ndcg_mean = self._get_ndcg(outputs)
+        self.log("ndcg", ndcg_mean)
+        print("ndcg ", ndcg_mean)
+        return ndcg_mean    
 
-    # TODO: oprimizewr config + scheduler config
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(list(self.pipeline_encoder.parameters()) +
                                       list(self.dataset_encoder.parameters()) +

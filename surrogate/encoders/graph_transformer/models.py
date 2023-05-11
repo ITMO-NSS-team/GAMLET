@@ -55,7 +55,6 @@ class GraphTransformer(nn.Module):
             self.embedding = nn.Linear(in_features=in_size,
                                        out_features=d_model,
                                        bias=False)
-
         self.use_edge_attr = use_edge_attr
         if use_edge_attr:
             edge_dim = kwargs.get('edge_dim', 32)
@@ -111,6 +110,9 @@ class GraphTransformer(nn.Module):
         complete_edge_index = data.complete_edge_index if hasattr(data, 'complete_edge_index') else None
         abs_pe = data.abs_pe if hasattr(data, 'abs_pe') else None
         degree = data.degree if hasattr(data, 'degree') else None
+        # print('node_depth', node_depth)
+        # print('x  ', x)
+        
         output = self.embedding(x) if node_depth is None else self.embedding(x, node_depth.view(-1, ))
 
         if self.abs_pe and abs_pe is not None:

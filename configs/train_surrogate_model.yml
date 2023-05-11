@@ -37,15 +37,14 @@ trainer:
   accelerator: "cpu"
   devices: "auto"
   
-
 tensorboard_logger: null
 
 model_checkpoint_callback:
   save_top_k: 1
-  monitor: "val_loss"
+  monitor: "ndcg"
   save_last: True
   every_n_epochs: 1
 
 early_stopping_callback:
-  monitor: "val_loss"
+  monitor: "ndcg"
   min_delta: 0.00001

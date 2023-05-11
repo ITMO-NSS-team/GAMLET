@@ -7,7 +7,7 @@ class MLPDatasetEncoder(nn.Module):
                  hidden_dim=128, output_dim=64,
                  dropout_in=0.4, dropout=0.2):
         super().__init__()
-
+        
         self.inp_layer = nn.Sequential(nn.BatchNorm1d(input_dim),
                                        nn.Dropout(p=dropout_in),
                                        nn.Linear(input_dim, hidden_dim))

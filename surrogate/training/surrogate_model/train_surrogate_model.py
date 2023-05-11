@@ -4,6 +4,8 @@ import pickle
 from typing import Dict, Any, List
 from typing import Tuple
 
+import numpy as np
+
 import pandas as pd
 import torch
 import torch_geometric.utils as utils
@@ -18,6 +20,10 @@ from torch_geometric.utils.convert import from_networkx
 
 from surrogate import models
 
+from surrogate.datasets import SingleDataset, GraphDataset, PairDataset
+
+from functools import partial
+import random
 
 def get_datasets(
         pipeline_graph_rename_path: str,
@@ -52,34 +58,74 @@ def get_datasets(
     val_dset, test_dset = train_test_split(test_dset, test_size=0.5, random_state=seed)
     return pyg_graph, train_dset, val_dset, test_dset, dict()
 
+def to_labels_k(x, klim):
+    vals = np.zeros(len(x))
+    vals[:klim] = 1
+    x['y'] = vals
+    return x
+
+def train_test_split(datasets):
+    random.seed(10)
+    tasks = list(range(len(datasets)))
+    VAL_R = 0.15
+    TEST_R = 0.15
+    random.shuffle(tasks)
+
+    train_ind = int((1- (VAL_R+TEST_R))*len(datasets))
+    val_ind = train_ind + int(VAL_R*len(datasets))
+
+    train_task_set = set(tasks[:train_ind])
+    val_task_set = set(tasks[train_ind:val_ind])
+    test_task_set = set(tasks[val_ind:])
+    
+    return train_task_set, val_task_set, test_task_set
 
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
-    pyg_graph, train_dataset, val_dataset, test_dataset, meta_data = get_datasets(**config["dataset_params"])
+    path = 'data/openml/' 
+    with open(path + "pipelines.pickle", "rb") as input_file:
+        pipelines = pickle.load(input_file)
 
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=4)
+    task_pipe_comb = pd.read_csv(path +'task_pipe_comb.csv', index_col=0)
+    datasets = np.genfromtxt(path +'datasets.csv', delimiter=",")
+
+
+    K_TOP = 3
+    to_labels = partial(to_labels_k, klim=K_TOP)
+    task_pipe_comb_bin = task_pipe_comb.sort_values(by = 'y', ascending = False)
+    task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(to_labels)
+
+    train_task_set, val_task_set, test_task_set = train_test_split(datasets)
+    
+    
+    train_dataset = SingleDataset(task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)], 
+                              GraphDataset(pipelines), 
+                              datasets)
+    val_dataset = SingleDataset(task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(val_task_set)], 
+                                GraphDataset(pipelines), 
+                                datasets)
+    test_dataset = SingleDataset(task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(test_task_set)], 
+                                 GraphDataset(pipelines), 
+                                 datasets)
+    
+    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=50)
+    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=50)
+    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=50)
 
     model_class = getattr(models, config["model"]["name"])
 
     # Infer parameters
     xs = []
-    for dset in pyg_graph:
+    for dset in pipelines:
         for item in list(dset.x):
             xs.append(int(item))
     n_tags = len(set(xs))
     config["model"]["model_parameters"]["in_size"] = n_tags
+    config["model"]["model_parameters"]["dim_dataset"] = datasets.shape[1]
 
-    config["model"]["model_parameters"]["dim_dataset"] = dset.d.shape[1]
 
-    deg = torch.cat([
-        utils.degree(data.edge_index[1], num_nodes=data.num_nodes) for
-        data in train_dataset])
-    config["model"]["model_parameters"]["deg"] = deg
     dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
     config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
-    config["model"]["model_parameters"]["meta_data"] = meta_data
-
+    config["model"]["model_parameters"]["meta_data"] = {}
     model = model_class(config["model"]["model_parameters"])
 
     if config["tensorboard_logger"] is not None:

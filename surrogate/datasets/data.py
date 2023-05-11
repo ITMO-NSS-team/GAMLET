@@ -35,7 +35,7 @@ class GraphDataset(object):
         if self.se == 'khopgnn':
             Data.__inc__ = my_inc
             self.extract_subgraphs()
-
+        
     def compute_degree(self):
         if not self.degree:
             self.degree_list = None
@@ -116,12 +116,12 @@ class GraphDataset(object):
         return len(self.dataset)
 
     def __getitem__(self, index):
+        if index > len(self.dataset):
+            print(index)
         data = self.dataset[index]
 
         if self.n_features == 1:
             data.x = data.x.squeeze(-1)
-        if not isinstance(data.y, list):
-            data.y = data.y.view(data.y.shape[0], -1)
         n = data.num_nodes
         s = torch.arange(n)
         if self.return_complete_index:
@@ -156,38 +156,34 @@ class GraphDataset(object):
             data.subgraph_indicator = None
 
         return data
-
     
-class PairDataset(Dataset):
-    def __init__(self,data, dict_category):
-    
-        self.data = data
-        self.value = self.data['value']
-        self.task_id = self.data['task_id']
-        self.x1 = self.data[list(set(self.data.columns) - {'value', 'task_id'})]
-        self.x1_cat = torch.tensor(np.array(self.x1[dict_category.keys()]), dtype=torch.int64) #dtype=torch.float16
-        self.x1_cont = torch.tensor(np.array(self.x1[list(set(self.x1.columns) - set(dict_category.keys()))]), dtype=torch.float32) #dtype=torch.float16
-        # self.x1 = torch.tensor(np.array(self.data[list(set(self.data.columns) - {'value', 'task_id'})]), dtype=torch.float32) #dtype=torch.float16
-        self.y1 = np.array(self.data['value'])
-
-        self.x2 = pd.DataFrame()
-        self.y2 = np.array([])
-        for i in self.data.index:
-            new_row = self.data[self.data['task_id'] == self.data['task_id'][i]].drop(index=i,columns =['value','task_id']).sample(n=1)
-            self.x2 = self.x2.append(new_row)
-            self.y2 = np.append(self.y2, self.data['value'][new_row.index])
-
-        self.x2_cat = torch.tensor(np.array(self.x2[dict_category.keys()]), dtype=torch.int64) #dtype=torch.float16
-        self.x2_cont = torch.tensor(np.array(self.x2[list(set(self.x2.columns) - set(dict_category.keys()))]), dtype=torch.float32)
-        # self.x2 = torch.tensor(np.array(self.x2), dtype=torch.float32) #dtype=torch.float16
-        self.y2 = np.array(self.y2)
-
-        self.compare = torch.tensor([1.0 if t1 > t2 else 0.0 if t1 < t2 else 0.5 for t1,t2 in zip(self.y1,self.y2)], dtype=torch.float32) #dtype=torch.float16
-
+class SingleDataset(Dataset):
+    def __init__(self, indxs, data_pipe, data_dset):
+        self.indxs = indxs
+        self.data_pipe = data_pipe
+        self.data_dset = torch.tensor(data_dset, dtype=torch.float32)    
+        
     def __len__(self):
-        return len(self.data)
+        return len(self.indxs)
+
+    def __getitem__(self, idx):     
+        task_id = torch.tensor(self.indxs['task_id'].iloc[idx])
+        pipe_id = torch.tensor(self.indxs['pipeline_id'].iloc[idx])
+
+        y = torch.tensor(self.indxs['y'].iloc[idx], dtype=torch.float32)  
+        return task_id, pipe_id, self.data_pipe.__getitem__(pipe_id), self.data_dset[task_id], y
+    
+    
+class PairDataset(SingleDataset):
+    def __init__(self, indxs, data_pipe, data_dset):
+        super().__init__(indxs, data_pipe, data_dset)
+        self.task_pipe_dict = indxs.groupby('task_id')['pipeline_id'].apply(list).to_dict()
 
     def __getitem__(self, idx):
-        return self.x1_cat[idx], self.x1_cont[idx], self.x2_cat[idx], self.x2_cont[idx], self.compare[idx], self.value[idx], self.task_id[idx]
-    
+        t1, p1, x_pipe1, x_dset1, y1 = super().__getitem__(idx)
+        
+        idx2 = choice(self.task_pipe_dict[t1.item()])
+            
+        t2, p2, x_pipe2, x_dset2, y2 = super().__getitem__(idx2)
+        return x_pipe1, x_dset1, x_pipe2, x_dset2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)    
     
