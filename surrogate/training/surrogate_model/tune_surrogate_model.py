@@ -17,12 +17,11 @@ from torch_geometric.loader import DataLoader
 
 from surrogate import models
 from .train_surrogate_model import get_datasets
+from surrogate.datasets import SingleDataset, GraphDataset, PairDataset
 
 
 def train_surrogate_model(
         config: Dict[str, Any],
-        pyg_graph: List[Data],
-        train_dataset: List[Data],
         meta_data: Dict,
         train_loader: DataLoader,
         val_loader: DataLoader,
@@ -33,23 +32,12 @@ def train_surrogate_model(
     """
     model_class = getattr(models, config["model"]["name"])
 
-    # Infer parameters
-    xs = []
-    for dset in pyg_graph:
-        for item in list(dset.x):
-            xs.append(int(item))
-    n_tags = len(set(xs))
-    config["model"]["model_parameters"]["in_size"] = n_tags
-
-    config["model"]["model_parameters"]["dim_dataset"] = dset.d.shape[1]
-
-    deg = torch.cat([
-        utils.degree(data.edge_index[1], num_nodes=data.num_nodes) for
-        data in train_dataset])
-    config["model"]["model_parameters"]["deg"] = deg
+    config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
+    config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
     dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
     config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
-    config["model"]["model_parameters"]["meta_data"] = meta_data
+    config["model"]["model_parameters"]["meta_data"] = {}
+    model = model_class(config["model"]["model_parameters"])
 
     model = model_class(config["model"]["model_parameters"])
 
@@ -79,8 +67,6 @@ def objective(
         trial: Trial,
         config: Dict[str, Any],
         divisble_d_model_num_heads: List[str],
-        pyg_graph: List[Data],
-        train_dataset: List[Data],
         meta_data: Dict,
         train_loader: DataLoader,
         val_loader: DataLoader,
@@ -130,14 +116,12 @@ def objective(
 
     test_result = train_surrogate_model(
         config=config,
-        pyg_graph=pyg_graph,
-        train_dataset=train_dataset,
         meta_data=meta_data,
         train_loader=train_loader,
         val_loader=val_loader,
         test_loader=test_loader,
     )
-    test_loss = test_result[0]["test_loss"]
+    test_loss = test_result[0]["ndcg"]
     return test_loss
 
 
@@ -169,11 +153,13 @@ def tune_surrogate_model(config: dict, n_trials: int):
         direction="minimize",
         load_if_exists=True,
     )
-    pyg_graph, train_dataset, val_dataset, test_dataset, meta_data = get_datasets(**config["dataset_params"])
-
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=4)
+        
+    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets('data/openml/')
+    
+    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=50)
+    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=50)
+    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=50)
+    
     # To avoid mismatch of arguments for torch attention (`embed_dim must be divisible by num_heads`).
     divisble_d_model_num_heads = find_divisible_pairs(
         list(range(*config["model"]["model_parameters"]["d_model"])),
@@ -186,8 +172,6 @@ def tune_surrogate_model(config: dict, n_trials: int):
         objective,
         divisble_d_model_num_heads=divisble_d_model_num_heads,
         config=config,
-        pyg_graph=pyg_graph,
-        train_dataset=train_dataset,
         meta_data=meta_data,
         train_loader=train_loader,
         val_loader=val_loader,

@@ -1,21 +1,21 @@
 tuning_method: "tune_surrogate_model"
 n_trials: 100
 
-batch_size: 32
+batch_size: 256
 
 model:
   name: "SurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
-    d_model: [32, 256]
+    d_model: [32, 128, 32]
     dim_feedforward: null  # The parameter is inferred
     dropout: [0.2, 0.6]
-    num_heads: [4, 12]
-    num_layers: [2, 8]
+    num_heads: [2, 8, 2]
+    num_layers: [2,  5]
     batch_norm: [True, False]
     # Not working with current settings: "gin", "khopgnn", "rwgnn", "pna4", "gine"
-    gnn_type: ["graph", "graphsage", "gcn", "pna", "pna2", "pna3", "mpnn"]
+    gnn_type: ("graph", "graphsage", "gcn", "mpnn")
     k_hop: [1, 3]
     se: "gnn"
     deg: null  # The parameter is inferred
@@ -35,19 +35,21 @@ dataset_params:
 
 trainer:
   num_sanity_val_steps: 0
-  max_epochs: 1000
+  max_epochs: 100
+  accelerator: "cpu"
   devices: "auto"
 
-tensorboard_logger:
-  save_dir: "experiments/tune_surrogate_model"
-  name: "test_run"
+tensorboard_logger: null
+# tensorboard_logger:
+#   save_dir: "experiments/tune_surrogate_model"
+#   name: "test_run"
 
 model_checkpoint_callback:
   save_top_k: 1
-  monitor: "val_loss"
+  monitor: "ndcg"
   save_last: True
   every_n_epochs: 1
-
+  
 early_stopping_callback:
-  monitor: "val_loss"
-  min_delta: 0.00001
+  monitor: "ndcg"
+  min_delta: 0.001

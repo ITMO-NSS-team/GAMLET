@@ -1,5 +1,5 @@
 training_method: "train_surrogate_model"
-batch_size: 32
+batch_size: 256
 
 model:
   name: "SurrogateModel"

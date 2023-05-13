@@ -17,7 +17,6 @@ def gr_ndcg(inp):
     return ndcg_score(y1,y2,k=3)
 
 
-
 class SurrogateModel(LightningModule):
     def __init__(
             self,
@@ -50,7 +49,6 @@ class SurrogateModel(LightningModule):
 
         z_pipeline = self.pipeline_encoder(x_graph)
         z_dataset = self.dataset_encoder(x_dset)
-
         return task_id, pipe_id, self.final_model(torch.cat((z_pipeline, z_dataset), 1)), y
 
     def training_step(self, batch, batch_idx):
@@ -60,7 +58,6 @@ class SurrogateModel(LightningModule):
         #     sign_flip[sign_flip >= 0.5] = 1.0
         #     sign_flip[sign_flip < 0.5] = -1.0
         #     batch.abs_pe = batch.abs_pe * sign_flip.unsqueeze(0)
-
         _, _, y_pred, y_true = self.forward(batch)
         y_pred = torch.squeeze(y_pred)
         loss = self.loss(torch.squeeze(y_pred), y_true)
@@ -134,6 +131,11 @@ class SurrogateModel(LightningModule):
                                       weight_decay=1e-5)
         return optimizer
 
+    
+    
+    
+    
+    
     
     
     
