@@ -5,4 +5,4 @@ From the repository root run:
 
 `python scripts/main.py <--train|--tune> --config <path_to_your_config>`.
 
-Follow `configs/train_surrogate_model.yml` and `/home/cherniak/MetaFEDOT/configs/tune_surrogate_model.yml` as reference for training and hyperparameter search accordingly.
+Follow `configs/train_surrogate_model.yml` and `configs/tune_surrogate_model.yml` as reference for training and hyperparameter search accordingly.
