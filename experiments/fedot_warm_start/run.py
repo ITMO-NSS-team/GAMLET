@@ -4,6 +4,8 @@ import logging
 import timeit
 from datetime import datetime
 from itertools import chain
+from pathlib import Path
+
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -50,7 +52,7 @@ COMMON_FEDOT_PARAMS = dict(
     show_progress=False,
 )
 
-<<<<<<< HEAD
+
 SAVE_DIR = None
 TIME_NOW = None
 TIME_NOW_FOR_PATH = None
@@ -75,26 +77,6 @@ def setup_logging():
                         force=True,
                         )
 
-=======
-# Setup logging
-time_now = datetime.now().isoformat(timespec="minutes")
-time_now_for_path = time_now.replace(":", ".")
-save_dir = DataManager.get_data_dir().\
-    joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
-save_dir.mkdir(parents=True)
-log_file = save_dir.joinpath('log.txt')
-Log(log_file=log_file)
-logging.basicConfig(filename=log_file,
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    force=True,
-                    )
-
-
-def prepare_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
-    """Returns dictionary with dataset names and cached datasets downloaded from OpenML."""
->>>>>>> origin/docker_and_experiments
 
 def fetch_openml_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
     """Returns dictionary with dataset names and cached datasets downloaded from OpenML."""
@@ -214,24 +196,17 @@ def main():
 
     ds_ids, datasets = ds_with_ids
 
-<<<<<<< HEAD
     data_similarity_assessor, extractor = prepare_extractor_and_assessor(train_ds_names)
 
     results = []
     best_models_per_dataset = {}
     progress_file = open(SAVE_DIR.joinpath('progress.txt'), 'a')
-    for name in tqdm(train_ds_names, 'Train datasets', file=progress_file):
-=======
-    results = []
-    best_models_per_dataset = {}
-    progress_file = open(save_dir.joinpath('progress.txt'), 'a')
-    for name in tqdm(datasets_cache.keys(), 'FEDOT, all datasets', file=progress_file):
->>>>>>> origin/docker_and_experiments
+    for name in tqdm(train_ds_names, 'FEDOT, all datasets', file=progress_file):
         try:
             cache = datasets[name]
             data = cache.from_cache()
 
-            timeout = TRAIN_TIMEOUT if name in datasets_train else TEST_TIMEOUT
+            timeout = TRAIN_TIMEOUT if name in train_ds_names else TEST_TIMEOUT
             fedot, run_results = fit_fedot(data=data, timeout=timeout, run_label='FEDOT')
             results.append(run_results)
             # TODO:
@@ -251,11 +226,7 @@ def main():
                                                 minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
     model_advisor.fit(best_models_per_dataset)
 
-<<<<<<< HEAD
-    for name in tqdm(test_ds_names, 'Test datasets', file=progress_file):
-=======
-    for name in tqdm(datasets_test, 'MetaFEDOT, Test datasets', file=progress_file):
->>>>>>> origin/docker_and_experiments
+    for name in tqdm(test_ds_names, 'MetaFEDOT, Test datasets', file=progress_file):
         try:
             cache = datasets[name]
             data = cache.from_cache()
