@@ -49,7 +49,6 @@ class SurrogateModel(LightningModule):
         self.lr = lr
 
         # Migration to pytorch_lightning > 1.9.5
-        self.train_step_outputs = []
         self.validation_step_outputs = []
         self.test_step_outputs = []
 
@@ -60,17 +59,11 @@ class SurrogateModel(LightningModule):
         return task_id, pipe_id, self.final_model(torch.cat((z_pipeline, z_dataset), 1)), y
 
     def training_step(self, batch, batch_idx):
-        task_id, pipe_id, y_pred, y_true = self.forward(batch)
+        # task_id, pipe_id, y_pred, y_true = self.forward(batch)
+        _, _, y_pred, y_true = self.forward(batch)
         y_pred = torch.squeeze(y_pred)
         loss = self.loss(torch.squeeze(y_pred), y_true)
         self.log("train_loss", loss, batch_size=y_true.shape[0])
-        output = {
-            'task_id': task_id.cpu().numpy(),
-            'pipe_id': pipe_id.cpu().numpy(),
-            'y_pred': y_pred.detach().cpu().numpy(),
-            'y_true': y_true.detach().cpu().numpy(),
-        }
-        self.train_step_outputs.append(output)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -109,11 +102,6 @@ class SurrogateModel(LightningModule):
                            'y_true': np.concatenate(y_trues)})
         ndcg_mean = df.groupby('task_id').apply(gr_ndcg).mean()
         return ndcg_mean
-
-    def on_train_epoch_end(self):
-        ndcg_mean = self._get_ndcg(self.train_step_outputs)
-        self.log("train_ndcg", ndcg_mean)
-        self.train_step_outputs.clear()
 
     def on_validation_epoch_end(self):
         ndcg_mean = self._get_ndcg(self.validation_step_outputs)
