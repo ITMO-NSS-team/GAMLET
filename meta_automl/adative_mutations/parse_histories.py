@@ -18,7 +18,6 @@ def get_result_triplets(history_path: str, buffer: ExperienceBuffer):
                     buffer.collect_result(ind)
                 except IndexError:
                     print('Incorrect individual')
-    print('done')
 
 
 def get_all_triplets(path_to_datasets: str):

@@ -8,7 +8,6 @@ import torch.nn.functional as F
 from .layers import TransformerEncoderLayer
 
 
-
 class GraphTransformerEncoder(nn.TransformerEncoder):
     def forward(self, x, edge_index, complete_edge_index,
                 subgraph_node_index=None, subgraph_edge_index=None,
