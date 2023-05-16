@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 import torch
-import numpy as np
-from torch import nn
-from torch_scatter import scatter_add, scatter_mean, scatter_max
 import torch_geometric.nn as gnn
 import torch_geometric.utils as utils
 from einops import rearrange
-from .utils import pad_batch, unpad_batch
+from torch import nn
+from torch_geometric.utils import scatter
+
 from .gnn_layers import get_simple_gnn_layer, EDGE_GNN_TYPES
-import torch.nn.functional as F
+from .utils import pad_batch, unpad_batch
 
 
 class Attention(gnn.MessagePassing):
@@ -28,7 +27,7 @@ class Attention(gnn.MessagePassing):
     """
 
     def __init__(self, embed_dim, num_heads=8, dropout=0., bias=False,
-        symmetric=False, gnn_type="gcn", se="gnn", k_hop=2, **kwargs):
+                 symmetric=False, gnn_type="gcn", se="gnn", k_hop=2, **kwargs):
 
         super().__init__(node_dim=0, aggr='add')
         self.embed_dim = embed_dim
@@ -44,7 +43,7 @@ class Attention(gnn.MessagePassing):
         self.gnn_type = gnn_type
         if self.se == "khopgnn":
             self.khop_structure_extractor = KHopStructureExtractor(embed_dim, gnn_type=gnn_type,
-                                                          num_layers=k_hop, **kwargs)
+                                                                   num_layers=k_hop, **kwargs)
         else:
             self.structure_extractor = StructureExtractor(embed_dim, gnn_type=gnn_type,
                                                           num_layers=k_hop, **kwargs)
@@ -74,16 +73,16 @@ class Attention(gnn.MessagePassing):
             nn.init.constant_(self.to_v.bias, 0.)
 
     def forward(self,
-            x,
-            edge_index,
-            complete_edge_index,
-            subgraph_node_index=None,
-            subgraph_edge_index=None,
-            subgraph_indicator_index=None,
-            subgraph_edge_attr=None,
-            edge_attr=None,
-            ptr=None,
-            return_attn=False):
+                x,
+                edge_index,
+                complete_edge_index,
+                subgraph_node_index=None,
+                subgraph_edge_index=None,
+                subgraph_indicator_index=None,
+                subgraph_edge_attr=None,
+                edge_attr=None,
+                ptr=None,
+                return_attn=False):
         """
         Compute attention layer. 
 
@@ -105,7 +104,7 @@ class Attention(gnn.MessagePassing):
         v = self.to_v(x)
 
         # Compute structure-aware node embeddings 
-        if self.se == 'khopgnn': # k-subgraph SAT
+        if self.se == 'khopgnn':  # k-subgraph SAT
             x_struct = self.khop_structure_extractor(
                 x=x,
                 edge_index=edge_index,
@@ -114,9 +113,8 @@ class Attention(gnn.MessagePassing):
                 subgraph_node_index=subgraph_node_index,
                 subgraph_edge_attr=subgraph_edge_attr,
             )
-        else: # k-subtree SAT
+        else:  # k-subtree SAT
             x_struct = self.structure_extractor(x, edge_index, edge_attr)
-
 
         # Compute query and key matrices
         if self.symmetric:
@@ -124,7 +122,7 @@ class Attention(gnn.MessagePassing):
             qk = (qk, qk)
         else:
             qk = self.to_qk(x_struct).chunk(2, dim=-1)
-        
+
         # Compute complete self-attention
         attn = None
 
@@ -161,7 +159,7 @@ class Attention(gnn.MessagePassing):
         return v_j * attn.unsqueeze(-1)
 
     def self_attn(self, qk, v, ptr, return_attn=False):
-        """ Self attention which can return the attn """ 
+        """ Self attention which can return the attn """
 
         qk, mask = pad_batch(qk, ptr, return_mask=True)
         k, q = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.num_heads), qk)
@@ -222,7 +220,7 @@ class StructureExtractor(nn.Module):
         self.out_proj = nn.Linear(inner_dim, embed_dim)
 
     def forward(self, x, edge_index, edge_attr=None,
-            subgraph_indicator_index=None, agg="sum"):
+                subgraph_indicator_index=None, agg="sum"):
         x_cat = [x]
         for gcn_layer in self.gcn:
             # if self.gnn_type == "attn":
@@ -243,9 +241,9 @@ class StructureExtractor(nn.Module):
 
         if self.khopgnn:
             if agg == "sum":
-                x = scatter_add(x, subgraph_indicator_index, dim=0)
+                x = scatter(x, subgraph_indicator_index, dim=0, reduce="sum")
             elif agg == "mean":
-                x = scatter_mean(x, subgraph_indicator_index, dim=0)
+                x = scatter(x, subgraph_indicator_index, dim=0, reduce="mean")
             return x
 
         if self.num_layers > 0 and self.batch_norm:
@@ -268,8 +266,9 @@ class KHopStructureExtractor(nn.Module):
     concat (bool):          whether to concatenate the initial edge features
     khopgnn (bool):         whether to use the subgraph instead of subtree (True)
     """
+
     def __init__(self, embed_dim, gnn_type="gcn", num_layers=3, batch_norm=True,
-            concat=True, khopgnn=True, **kwargs):
+                 concat=True, khopgnn=True, **kwargs):
         super().__init__()
         self.num_layers = num_layers
         self.khopgnn = khopgnn
@@ -291,8 +290,8 @@ class KHopStructureExtractor(nn.Module):
         self.out_proj = nn.Linear(2 * embed_dim, embed_dim)
 
     def forward(self, x, edge_index, subgraph_edge_index, edge_attr=None,
-            subgraph_indicator_index=None, subgraph_node_index=None,
-            subgraph_edge_attr=None):
+                subgraph_indicator_index=None, subgraph_node_index=None,
+                subgraph_edge_attr=None):
 
         x_struct = self.structure_extractor(
             x=x[subgraph_node_index],
@@ -327,13 +326,14 @@ class TransformerEncoderLayer(nn.TransformerEncoderLayer):
         se:                 structure extractor to use, either gnn or khopgnn (default: gnn).
         k_hop:              the number of base GNN layers or the K hop size for khopgnn structure extractor (default=2).
     """
+
     def __init__(self, d_model, nhead=8, dim_feedforward=512, dropout=0.1,
-                activation="relu", batch_norm=True, pre_norm=False,
-                gnn_type="gcn", se="gnn", k_hop=2, **kwargs):
+                 activation="relu", batch_norm=True, pre_norm=False,
+                 gnn_type="gcn", se="gnn", k_hop=2, **kwargs):
         super().__init__(d_model, nhead, dim_feedforward, dropout, activation)
 
         self.self_attn = Attention(d_model, nhead, dropout=dropout,
-            bias=False, gnn_type=gnn_type, se=se, k_hop=k_hop, **kwargs)
+                                   bias=False, gnn_type=gnn_type, se=se, k_hop=k_hop, **kwargs)
         self.batch_norm = batch_norm
         self.pre_norm = pre_norm
         if batch_norm:
@@ -341,12 +341,12 @@ class TransformerEncoderLayer(nn.TransformerEncoderLayer):
             self.norm2 = nn.BatchNorm1d(d_model)
 
     def forward(self, x, edge_index, complete_edge_index,
-            subgraph_node_index=None, subgraph_edge_index=None,
-            subgraph_edge_attr=None,
-            subgraph_indicator_index=None,
-            edge_attr=None, degree=None, ptr=None,
-            return_attn=False,
-        ):
+                subgraph_node_index=None, subgraph_edge_index=None,
+                subgraph_edge_attr=None,
+                subgraph_indicator_index=None,
+                edge_attr=None, degree=None, ptr=None,
+                return_attn=False,
+                ):
 
         if self.pre_norm:
             x = self.norm1(x)

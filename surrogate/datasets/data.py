@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
+import os
+
 import torch
-import torch.nn.functional as F
-from torch.utils.data.dataloader import default_collate
+from torch.utils.data import Dataset
 import torch_geometric.utils as utils
 from torch_geometric.data import Data
-import numpy as np
-import os
 
 
 def my_inc(self, key, value, *args, **kwargs):
     if key == 'subgraph_edge_index':
-        return self.num_subgraph_nodes 
+        return self.num_subgraph_nodes
     if key == 'subgraph_node_idx':
-        return self.num_nodes 
+        return self.num_nodes
     if key == 'subgraph_indicator':
-        return self.num_nodes 
+        return self.num_nodes
     elif 'index' in key:
         return self.num_nodes
     else:
@@ -37,7 +35,7 @@ class GraphDataset(object):
         if self.se == 'khopgnn':
             Data.__inc__ = my_inc
             self.extract_subgraphs()
- 
+        
     def compute_degree(self):
         if not self.degree:
             self.degree_list = None
@@ -82,17 +80,17 @@ class GraphDataset(object):
 
             for node_idx in range(graph.num_nodes):
                 sub_nodes, sub_edge_index, _, edge_mask = utils.k_hop_subgraph(
-                    node_idx, 
-                    self.k_hop, 
+                    node_idx,
+                    self.k_hop,
                     graph.edge_index,
-                    relabel_nodes=True, 
+                    relabel_nodes=True,
                     num_nodes=graph.num_nodes
-                    )
+                )
                 node_indices.append(sub_nodes)
                 edge_indices.append(sub_edge_index + edge_index_start)
                 indicators.append(torch.zeros(sub_nodes.shape[0]).fill_(node_idx))
                 if self.use_subgraph_edge_attr and graph.edge_attr is not None:
-                    edge_attributes.append(graph.edge_attr[edge_mask]) # CHECK THIS DIDN"T BREAK ANYTHING
+                    edge_attributes.append(graph.edge_attr[edge_mask])  # CHECK THIS DIDN"T BREAK ANYTHING
                 edge_index_start += len(sub_nodes)
 
             if self.cache_path is not None:
@@ -118,12 +116,12 @@ class GraphDataset(object):
         return len(self.dataset)
 
     def __getitem__(self, index):
+        if index > len(self.dataset):
+            print(index)
         data = self.dataset[index]
 
         if self.n_features == 1:
             data.x = data.x.squeeze(-1)
-        if not isinstance(data.y, list):
-            data.y = data.y.view(data.y.shape[0], -1)
         n = data.num_nodes
         s = torch.arange(n)
         if self.return_complete_index:
@@ -134,7 +132,7 @@ class GraphDataset(object):
         data.abs_pe = None
         if self.abs_pe_list is not None and len(self.abs_pe_list) == len(self.dataset):
             data.abs_pe = self.abs_pe_list[index]
-         
+
         # add subgraphs and relevant meta data
         if self.se == "khopgnn":
             if self.cache_path is not None:
@@ -158,3 +156,34 @@ class GraphDataset(object):
             data.subgraph_indicator = None
 
         return data
+    
+class SingleDataset(Dataset):
+    def __init__(self, indxs, data_pipe, data_dset):
+        self.indxs = indxs
+        self.data_pipe = data_pipe
+        self.data_dset = torch.tensor(data_dset, dtype=torch.float32)    
+        
+    def __len__(self):
+        return len(self.indxs)
+
+    def __getitem__(self, idx):     
+        task_id = torch.tensor(self.indxs['task_id'].iloc[idx])
+        pipe_id = torch.tensor(self.indxs['pipeline_id'].iloc[idx])
+
+        y = torch.tensor(self.indxs['y'].iloc[idx], dtype=torch.float32)  
+        return task_id, pipe_id, self.data_pipe.__getitem__(pipe_id), self.data_dset[task_id], y
+    
+    
+class PairDataset(SingleDataset):
+    def __init__(self, indxs, data_pipe, data_dset):
+        super().__init__(indxs, data_pipe, data_dset)
+        self.task_pipe_dict = indxs.groupby('task_id')['pipeline_id'].apply(list).to_dict()
+
+    def __getitem__(self, idx):
+        t1, p1, x_pipe1, x_dset1, y1 = super().__getitem__(idx)
+        
+        idx2 = choice(self.task_pipe_dict[t1.item()])
+            
+        t2, p2, x_pipe2, x_dset2, y2 = super().__getitem__(idx2)
+        return x_pipe1, x_dset1, x_pipe2, x_dset2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)    
+    

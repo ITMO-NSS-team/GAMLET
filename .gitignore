@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -130,3 +129,11 @@ dmypy.json
 
 # User data
 data/
+
+# IDEs
+.idea/
+.run/
+.vscode/
+
+# Experiment folder
+/experiments
