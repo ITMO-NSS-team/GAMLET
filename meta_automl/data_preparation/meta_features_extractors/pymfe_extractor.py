@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, Union, Dict, Any
 
 import pandas as pd
+from golem.core.log import default_log
 from pymfe.mfe import MFE
 
 from meta_automl.data_preparation.dataset import DatasetCache
@@ -18,6 +19,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
         self.extractor_params = extractor_params if extractor_params is not None else self.DEFAULT_PARAMS
         self._datasets_loader = datasets_loader or OpenMLDatasetsLoader()
         self._extractor = MFE(**self.extractor_params)
+        self._logger = default_log(self)
 
     @property
     def datasets_loader(self) -> DatasetsLoader:
@@ -34,6 +36,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             if isinstance(dataset, str):
                 dataset = DatasetCache(dataset)
 
+            self._logger.info(f'Extracting meta features of the dataset {dataset.name}...')
             if (use_cached and
                     (mfs := self._get_meta_features_cache(dataset.name, meta_feature_names))):
                 meta_features[dataset.name] = mfs
