@@ -4,23 +4,28 @@ import logging
 import timeit
 from datetime import datetime
 from itertools import chain
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Sequence
 
 import numpy as np
 import openml
 import pandas as pd
+
 from fedot.api.main import Fedot
+from fedot.core.data.data import InputData
 from fedot.core.optimisers.objective import MetricsObjective, PipelineObjectiveEvaluate
 from fedot.core.pipelines.adapters import PipelineAdapter
+from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
+from fedot.core.repository.quality_metrics_repository import QualityMetricsEnum, MetricsRepository
 from fedot.core.validation.split import tabular_cv_generator
 from golem.core.log import Log
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 
 from meta_automl.data_preparation.data_manager import DataManager
 from meta_automl.data_preparation.dataset import DatasetCache, Dataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
@@ -29,11 +34,11 @@ from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdviso
 # Meta-alg hyperparameters
 SEED = 42
 # Datasets sampling
-N_DATASETS = None
-TEST_SIZE = 0.2
+N_DATASETS = 3
+TEST_SIZE = 0.33
 # Evaluation timeouts
-TRAIN_TIMEOUT = 15
-TEST_TIMEOUT = 15
+TRAIN_TIMEOUT = 1
+TEST_TIMEOUT = 1
 # Models & datasets
 N_BEST_DATASET_MODELS_TO_MEMORIZE = 10
 N_CLOSEST_DATASETS_TO_PROPOSE = 5
@@ -41,6 +46,9 @@ MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS = 1
 N_BEST_MODELS_TO_ADVISE = 5
 # Meta-features
 MF_EXTRACTOR_PARAMS = {'groups': 'general'}
+COLLECT_METRICS = ['f1', 'roc_auc', 'accuracy', 'neg_log_loss', 'precision']
+COLLECT_METRICS_ENUM = tuple(map(MetricsRepository.metric_by_id, COLLECT_METRICS))
+COLLECT_METRICS[COLLECT_METRICS.index('neg_log_loss')] = 'logloss'
 
 COMMON_FEDOT_PARAMS = dict(
     problem='classification',
@@ -50,19 +58,21 @@ COMMON_FEDOT_PARAMS = dict(
 )
 
 # Setup logging
-time_now = datetime.now().isoformat(timespec="minutes")
-time_now_for_path = time_now.replace(":", ".")
-save_dir = DataManager.get_data_dir().\
+time_now = datetime.now()
+time_now_iso = time_now.isoformat(timespec="minutes")
+time_now_for_path = time_now_iso.replace(":", ".")
+save_dir = DataManager.get_data_dir(). \
     joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
 save_dir.mkdir(parents=True)
 log_file = save_dir.joinpath('log.txt')
 Log(log_file=log_file)
-logging.basicConfig(filename=log_file,
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    force=True,
-                    )
+logging.basicConfig(
+    filename=log_file,
+    filemode='a',
+    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+    datefmt='%H:%M:%S',
+    force=True,
+)
 
 
 def prepare_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
@@ -84,18 +94,16 @@ def transform_data_for_fedot(data: Dataset) -> (np.array, np.array):
     return x, y
 
 
-def get_pipeline_metrics(pipeline,
-                         input_data,
-                         metrics_obj) -> dict:
+def get_pipeline_metrics(pipeline: Pipeline,
+                         input_data: InputData,
+                         metrics: Sequence[QualityMetricsEnum] = COLLECT_METRICS_ENUM,
+                         metric_names: Sequence[str] = COLLECT_METRICS) -> dict:
     """Gets quality metrics for the fitted pipeline.
     The function is based on `Fedot.get_metrics()`
 
     Returns:
         the values of quality metrics
     """
-    metrics = metrics_obj.metric_functions
-    metric_names = metrics_obj.get_metric_names(metrics)
-
     data_producer = functools.partial(tabular_cv_generator, input_data, 10, StratifiedKFold)
 
     objective = MetricsObjective(metrics)
@@ -103,10 +111,10 @@ def get_pipeline_metrics(pipeline,
                                          data_producer=data_producer,
                                          eval_n_jobs=-1)
 
-    metrics = obj_eval.evaluate(pipeline).values
-    metrics = {metric_name: round(metric, 3) for (metric_name, metric) in zip(metric_names, metrics)}
+    metric_values = obj_eval.evaluate(pipeline).values
+    metric_values = {metric_name: round(value, 3) for (metric_name, value) in zip(metric_names, metric_values)}
 
-    return metrics
+    return metric_values
 
 
 def prepare_extractor_and_assessor(datasets_train: List[str]):
@@ -127,7 +135,7 @@ def fit_fedot(data: Dataset, timeout: float, run_label: str, initial_assumption=
     fedot.fit(x, y)
     automl_time = timeit.default_timer() - time_start
 
-    metrics = get_pipeline_metrics(fedot.current_pipeline, fedot.train_data, fedot.metrics)
+    metrics = get_pipeline_metrics(fedot.current_pipeline, fedot.train_data)
     pipeline = fedot.current_pipeline
     run_results = get_result_data_row(dataset=data, run_label=run_label, pipeline=pipeline, automl_time_sec=automl_time,
                                       automl_timeout_min=fedot.params.timeout, history_obj=fedot.history, **metrics)
@@ -144,6 +152,7 @@ def get_result_data_row(dataset, run_label: str, pipeline, history_obj=None, aut
                        history_obj=history_obj,
                        automl_time_sec=automl_time_sec,
                        automl_timeout_min=automl_timeout_min,
+                       task_type='classification',
                        **metrics)
     return run_results
 
@@ -156,7 +165,7 @@ def extract_best_history_models(dataset_cache, history):
     best_models = []
     for individual in best_individuals[:N_BEST_DATASET_MODELS_TO_MEMORIZE]:
         pipeline = PipelineAdapter().restore(individual.graph)
-        model = Model(pipeline, individual.fitness, dataset_cache)
+        model = Model(pipeline, individual.fitness, history.objective.metric_names[0], dataset_cache)
         best_models.append(model)
     return best_models
 
@@ -166,10 +175,11 @@ def main():
 
     dataset_ids, datasets_cache = prepare_data()
 
-    datasets_train, datasets_test = \
-        train_test_split(list(datasets_cache.keys()), test_size=TEST_SIZE, random_state=SEED)
+    split_datasets = openml_datasets_train_test_split(dataset_ids, seed=SEED)
+    datasets_train = split_datasets[split_datasets['is_train'] == 1]['dataset_name'].to_list()
+    datasets_test = split_datasets[~split_datasets['is_train'] == 0]['dataset_name'].to_list()
 
-    results = []
+    evaluation_results = []
     best_models_per_dataset = {}
     progress_file = open(save_dir.joinpath('progress.txt'), 'a')
     for name in tqdm(datasets_cache.keys(), 'FEDOT, all datasets', file=progress_file):
@@ -179,7 +189,7 @@ def main():
 
             timeout = TRAIN_TIMEOUT if name in datasets_train else TEST_TIMEOUT
             fedot, run_results = fit_fedot(data=data, timeout=timeout, run_label='FEDOT')
-            results.append(run_results)
+            evaluation_results.append(run_results)
             # TODO:
             #   x Turn the tuned pipeline into a model (evaluate its fitness on the data)
             #   x Evaluate historical pipelines on the data instead of using fitness
@@ -207,28 +217,28 @@ def main():
             time_start = timeit.default_timer()
             meta_features = extractor.extract([cache], fill_input_nans=True, use_cached=False, update_cached=True)
             meta_features = meta_features.fillna(0)
-            meta_learning_time = timeit.default_timer() - time_start
+            meta_learning_time_sec = timeit.default_timer() - time_start
             initial_assumptions = model_advisor.predict(meta_features)[0]
             assumption_pipelines = [model.predictor for model in initial_assumptions]
             # 2
             fedot_meta, fedot_meta_results = fit_fedot(data=data, timeout=TEST_TIMEOUT, run_label='MetaFEDOT',
                                                        initial_assumption=assumption_pipelines)
-            fedot_meta_results['meta_learning_time'] = meta_learning_time
-            results.append(fedot_meta_results)
+            fedot_meta_results['meta_learning_time_sec'] = meta_learning_time_sec
+            evaluation_results.append(fedot_meta_results)
 
             # Fit & evaluate simple baseline
-            baseline_metrics = get_pipeline_metrics(baseline_pipeline, fedot_meta.train_data, fedot_meta.metrics)
+            baseline_metrics = get_pipeline_metrics(baseline_pipeline, fedot_meta.train_data)
             baseline_res = get_result_data_row(dataset=data, run_label='simple baseline', pipeline=baseline_pipeline,
                                                **baseline_metrics)
-            results.append(baseline_res)
+            evaluation_results.append(baseline_res)
 
             # Fit & evaluate initial assumptions
             for i, assumption in enumerate(initial_assumptions):
                 pipeline = assumption.predictor
-                assumption_metrics = get_pipeline_metrics(pipeline, fedot_meta.train_data, fedot_meta.metrics)
+                assumption_metrics = get_pipeline_metrics(pipeline, fedot_meta.train_data)
                 assumption_res = get_result_data_row(dataset=data, run_label=f'MetaFEDOT - initial assumption {i}',
                                                      pipeline=pipeline, **assumption_metrics)
-                results.append(assumption_res)
+                evaluation_results.append(assumption_res)
         except Exception:
             logging.exception(f'Test dataset "{name}"')
     progress_file.close()
@@ -237,7 +247,7 @@ def main():
     history_dir = save_dir.joinpath('histories')
     history_dir.mkdir()
     models_dir = save_dir.joinpath('models')
-    for res in results:
+    for res in evaluation_results:
         try:
             res['run_date'] = time_now
             dataset_name = res['dataset_name']
@@ -255,11 +265,11 @@ def main():
         except Exception:
             logging.exception(f'Saving results "{res}"')
 
-    pd.DataFrame(results).to_csv(save_dir.joinpath(f'results_{time_now_for_path}.csv'))
+    pd.DataFrame(evaluation_results).to_csv(save_dir.joinpath(f'results_{time_now_for_path}.csv'))
 
     # save experiment hyperparameters
     params = {
-        'run_date': time_now,
+        'run_date': time_now_iso,
         'seed': SEED,
         'n_datasets': N_DATASETS or len(dataset_ids),
         'test_size': TEST_SIZE,
@@ -283,5 +293,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
-        logging.exception(f'Main level cached the error')
+    except Exception as e:
+        logging.exception('Main level caught an error.')
+        raise
