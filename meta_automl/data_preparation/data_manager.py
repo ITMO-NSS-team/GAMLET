@@ -6,24 +6,15 @@ from pathlib import Path
 from typing import Dict, Any, Union
 
 PathType = Union[PathLike, str]
-DEFAULT_CACHE_EXTENSION = '.pkl'
 
 
 class DataManager:
+    default_cache_extension = '.pkl'
 
     @classmethod
-    def get_dataset_cache_path(cls, dataset_name: str) -> Path:
-        return cls.get_datasets_dir().joinpath(dataset_name).with_suffix(DEFAULT_CACHE_EXTENSION)
-
-    @classmethod
-    def get_datasets_dir(cls) -> Path:
-        datasets_dir = cls.get_data_dir().joinpath('datasets')
-        return cls.ensure_dir_exists(datasets_dir)
-
-    @classmethod
-    def get_data_dir(cls) -> Path:
-        data_dir = cls.get_project_root().joinpath('data')
-        return cls.ensure_dir_exists(data_dir)
+    def get_project_root(cls) -> Path:
+        """Returns project root folder."""
+        return Path(__file__).parents[2]
 
     @classmethod
     def ensure_dir_exists(cls, dir_: Path) -> Path:
@@ -32,14 +23,35 @@ class DataManager:
         return dir_
 
     @classmethod
-    def get_project_root(cls) -> Path:
-        """Returns project root folder."""
-        return Path(__file__).parents[2]
+    def get_data_dir(cls) -> Path:
+        data_dir = cls.get_project_root().joinpath('data')
+        return cls.ensure_dir_exists(data_dir)
 
     @classmethod
-    def get_meta_features_cache_path(cls, dataset_name: str, source_name: str):
-        meta_features_dir = cls.ensure_dir_exists(cls.get_data_dir().joinpath(source_name))
-        return meta_features_dir.joinpath(dataset_name).with_suffix('.pkl')
+    def get_datasets_dir(cls) -> Path:
+        datasets_dir = cls.get_data_dir().joinpath('datasets')
+        return cls.ensure_dir_exists(datasets_dir)
+
+    @classmethod
+    def get_dataset_cache_path(cls, dataset_id: Any, source_name: str) -> Path:
+        dataset_id = str(dataset_id)
+        datasets_dir = cls.get_datasets_dir()
+        source_dir = cls.ensure_dir_exists(datasets_dir.joinpath(source_name))
+        cache_path = source_dir.joinpath(dataset_id).with_suffix(cls.default_cache_extension)
+        return cache_path
+
+    @classmethod
+    def get_meta_features_dir(cls) -> Path:
+        meta_features_dir = cls.get_data_dir().joinpath('metafeatures')
+        return cls.ensure_dir_exists(meta_features_dir)
+
+    @classmethod
+    def get_meta_features_cache_path(cls, dataset_id: Any, source_name: str):
+        dataset_id = str(dataset_id)
+        meta_features_dir = cls.get_meta_features_dir()
+        source_dir = cls.ensure_dir_exists(meta_features_dir.joinpath(source_name))
+        cache_path = source_dir.joinpath(dataset_id).with_suffix(cls.default_cache_extension)
+        return cache_path
 
     @classmethod
     def get_meta_features_dict(cls, dataset_name: str, source_name: str) -> Dict[str, Any]:
