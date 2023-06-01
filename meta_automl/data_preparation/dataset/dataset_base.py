@@ -9,6 +9,9 @@ import pandas as pd
 import scipy as sp
 
 
+DatasetIDType = Any
+
+
 @dataclass
 class DatasetData:
     x: Union[np.ndarray, pd.DataFrame, sp.sparse.csr_matrix]
@@ -20,7 +23,7 @@ class DatasetData:
 class DatasetBase(ABC):
     source_name: str
 
-    def __init__(self, id_: Any, name: Optional[str] = None):
+    def __init__(self, id_: DatasetIDType, name: Optional[str] = None):
         self.id_ = id_
         self.name = name
 

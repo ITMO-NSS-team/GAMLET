@@ -6,7 +6,7 @@ import pandas as pd
 from golem.core.log import default_log
 from pymfe.mfe import MFE
 
-from meta_automl.data_preparation.dataset import DatasetBase
+from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 
@@ -27,12 +27,12 @@ class PymfeExtractor(MetaFeaturesExtractor):
             raise ValueError("Datasets loader not provided!")
         return self._datasets_loader
 
-    def extract(self, dataset_caches_or_ids: List[Union[DatasetBase, Any]], fill_input_nans: bool = False,
-                use_cached: bool = True, update_cached: bool = True) -> pd.DataFrame:
+    def extract(self, datasets_or_ids: List[Union[DatasetBase, Union[DatasetBase, DatasetIDType]]],
+                fill_input_nans: bool = False, use_cached: bool = True, update_cached: bool = True) -> pd.DataFrame:
         meta_features = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
 
-        for dataset in dataset_caches_or_ids:
+        for dataset in datasets_or_ids:
             if not isinstance(dataset, DatasetBase):
                 dataset = self._datasets_loader.load_single(dataset)
 

@@ -54,8 +54,8 @@ class DataManager:
         return cache_path
 
     @classmethod
-    def get_meta_features_dict(cls, dataset_name: str, source_name: str) -> Dict[str, Any]:
-        meta_features_file = cls.get_meta_features_cache_path(dataset_name, source_name)
+    def get_meta_features_dict(cls, dataset_id: Any, source_name: str) -> Dict[str, Any]:
+        meta_features_file = cls.get_meta_features_cache_path(dataset_id, source_name)
         if not meta_features_file.exists():
             return {}
         with open(meta_features_file, 'rb') as f:
@@ -63,9 +63,9 @@ class DataManager:
         return meta_features
 
     @classmethod
-    def update_meta_features_dict(cls, dataset_name: str, source_name: str, meta_features: Dict[str, Any]):
-        meta_features_file = cls.get_meta_features_cache_path(dataset_name, source_name)
-        meta_features_old = cls.get_meta_features_dict(dataset_name, source_name)
+    def update_meta_features_dict(cls, dataset_id: Any, source_name: str, meta_features: Dict[str, Any]):
+        meta_features_file = cls.get_meta_features_cache_path(dataset_id, source_name)
+        meta_features_old = cls.get_meta_features_dict(dataset_id, source_name)
         with open(meta_features_file, 'wb') as f:
             meta_features_old.update(meta_features)
             pickle.dump(meta_features, f)
