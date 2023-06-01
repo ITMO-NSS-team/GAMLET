@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Union, Optional, List, Any
 
 import numpy as np
 import pandas as pd
 import scipy as sp
 
+from meta_automl.data_preparation.file_system import CacheOperator, get_dataset_cache_path
 
 DatasetIDType = Any
 
@@ -20,8 +22,7 @@ class DatasetData:
     attribute_names: Optional[List[str]] = None
 
 
-class DatasetBase(ABC):
-    source_name: str
+class DatasetBase(ABC, CacheOperator):
 
     def __init__(self, id_: DatasetIDType, name: Optional[str] = None):
         self.id_ = id_
@@ -33,3 +34,7 @@ class DatasetBase(ABC):
     @abstractmethod
     def get_data(self) -> DatasetData:
         raise NotImplementedError()
+
+    @property
+    def cache_path(self) -> Path:
+        return get_dataset_cache_path(self)

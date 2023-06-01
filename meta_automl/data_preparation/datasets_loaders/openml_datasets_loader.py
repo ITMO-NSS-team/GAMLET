@@ -9,8 +9,6 @@ from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 
 
 class OpenMLDatasetsLoader(DatasetsLoader):
-    source_name = 'openml'
-
     def __init__(self):
         self.dataset_ids = []
 

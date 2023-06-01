@@ -22,7 +22,7 @@ from golem.core.log import Log
 from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 
-from meta_automl.data_preparation.data_manager import DataManager
+
 from meta_automl.data_preparation.dataset import OpenMLDataset, DatasetData
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
@@ -61,7 +61,7 @@ COMMON_FEDOT_PARAMS = dict(
 time_now = datetime.now()
 time_now_iso = time_now.isoformat(timespec="minutes")
 time_now_for_path = time_now_iso.replace(":", ".")
-save_dir = DataManager.get_data_dir(). \
+save_dir = get_data_dir(). \
     joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
 save_dir.mkdir(parents=True)
 log_file = save_dir.joinpath('log.txt')

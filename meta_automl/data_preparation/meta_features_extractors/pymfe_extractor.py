@@ -13,7 +13,6 @@ from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesEx
 
 class PymfeExtractor(MetaFeaturesExtractor):
     default_params = {'groups': 'default'}
-    source_name = 'pymfe'
 
     def __init__(self, extractor_params: Dict[str, Any] = None, datasets_loader: DatasetsLoader = None):
         self.extractor_params = extractor_params if extractor_params is not None else self.default_params
@@ -27,7 +26,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             raise ValueError("Datasets loader not provided!")
         return self._datasets_loader
 
-    def extract(self, datasets_or_ids: List[Union[DatasetBase, Union[DatasetBase, DatasetIDType]]],
+    def extract(self, datasets_or_ids: List[Union[DatasetBase, DatasetIDType]],
                 fill_input_nans: bool = False, use_cached: bool = True, update_cached: bool = True) -> pd.DataFrame:
         meta_features = {}
         meta_feature_names = self._extractor.extract_metafeature_names()

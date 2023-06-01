@@ -14,7 +14,7 @@ from fedot.core.validation.split import tabular_cv_generator
 from golem.core.log import default_log
 from tqdm import tqdm
 
-from meta_automl.data_preparation.data_manager import PathType
+from meta_automl.data_preparation.file_system import PathType
 from meta_automl.data_preparation.dataset import DatasetCache
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.model import Model

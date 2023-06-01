@@ -7,12 +7,12 @@ import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.optimisers.fitness import SingleObjFitness
 
-from meta_automl.data_preparation.data_manager import DataManager
+
 from meta_automl.data_preparation.dataset import DatasetCache
 from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 
-DEFAULT_KNOWLEDGE_BASE_PATH = DataManager.get_data_dir().joinpath('knowledge_base_0')
+DEFAULT_KNOWLEDGE_BASE_PATH = get_data_dir().joinpath('knowledge_base_0')
 
 
 class KnowledgeBaseModelsLoader(ModelsLoader):

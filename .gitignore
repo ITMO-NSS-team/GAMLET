@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # User data
-data/
+/data

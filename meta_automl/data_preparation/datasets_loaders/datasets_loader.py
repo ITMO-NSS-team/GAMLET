@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import List, Type
+from typing import List
 
-from meta_automl.data_preparation.data_manager import DataManager
 from meta_automl.data_preparation.dataset import DatasetBase
 
 
 class DatasetsLoader:
-    data_manager: Type[DataManager] = DataManager
 
     @abstractmethod
     def load(self, *args, **kwargs) -> List[DatasetBase]:
