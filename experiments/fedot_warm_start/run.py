@@ -37,8 +37,8 @@ SEED = 42
 N_DATASETS = 3
 TEST_SIZE = 0.33
 # Evaluation timeouts
-TRAIN_TIMEOUT = 1
-TEST_TIMEOUT = 1
+TRAIN_TIMEOUT = 0.01
+TEST_TIMEOUT = 0.01
 # Models & datasets
 N_BEST_DATASET_MODELS_TO_MEMORIZE = 10
 N_CLOSEST_DATASETS_TO_PROPOSE = 5
@@ -75,15 +75,20 @@ logging.basicConfig(
 )
 
 
-def prepare_data() -> Tuple[List[int], Dict[str, OpenMLDataset]]:
+def prepare_data() -> Tuple[pd.DataFrame, pd.DataFrame, Dict[int, OpenMLDataset]]:
     """Returns dictionary with dataset names and cached datasets downloaded from OpenML."""
 
     dataset_ids = openml.study.get_suite(99).data
     if N_DATASETS is not None:
         dataset_ids = pd.Series(dataset_ids)
         dataset_ids = dataset_ids.sample(n=N_DATASETS, random_state=SEED)
-    dataset_ids = list(dataset_ids)
-    return dataset_ids, {dataset.id_: dataset for dataset in OpenMLDatasetsLoader().load(dataset_ids)}
+
+    df_split_datasets = openml_datasets_train_test_split(dataset_ids, seed=SEED)
+    df_datasets_train = df_split_datasets[df_split_datasets['is_train'] == 1]
+    df_datasets_test = df_split_datasets[df_split_datasets['is_train'] == 0]
+
+    datasets = {dataset.id_: dataset for dataset in OpenMLDatasetsLoader().load(dataset_ids)}
+    return df_datasets_train, df_datasets_test, datasets
 
 
 def transform_data_for_fedot(data: DatasetData) -> (np.array, np.array):
@@ -173,11 +178,10 @@ def extract_best_history_models(dataset, history):
 def main():
     baseline_pipeline = PipelineBuilder().add_node('rf').build()
 
-    dataset_ids, datasets = prepare_data()
+    df_datasets_train, df_datasets_test, datasets = prepare_data()
 
-    split_datasets = openml_datasets_train_test_split(dataset_ids, seed=SEED)
-    datasets_train = split_datasets[split_datasets['is_train'] == 1].index.to_list()
-    datasets_test = split_datasets[split_datasets['is_train'] == 0].index.to_list()
+    dataset_ids_train = df_datasets_train.index.to_list()
+    dataset_ids_test = df_datasets_test.index.to_list()
 
     evaluation_results = []
     best_models_per_dataset = {}
@@ -185,7 +189,7 @@ def main():
     for dataset_id in tqdm(datasets.keys(), 'FEDOT, all datasets', file=progress_file):
         try:
             dataset = datasets[dataset_id]
-            timeout = TRAIN_TIMEOUT if dataset_id in datasets_train else TEST_TIMEOUT
+            timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_train else TEST_TIMEOUT
             fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT')
             evaluation_results.append(run_results)
             # TODO:
@@ -200,12 +204,12 @@ def main():
         except Exception:
             logging.exception(f'Train dataset "{dataset_id}"')
 
-    data_similarity_assessor, extractor = prepare_extractor_and_assessor(datasets_train)
+    data_similarity_assessor, extractor = prepare_extractor_and_assessor(dataset_ids_train)
     model_advisor = DiverseFEDOTPipelineAdvisor(data_similarity_assessor, n_best_to_advise=N_BEST_MODELS_TO_ADVISE,
                                                 minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
     model_advisor.fit(best_models_per_dataset)
 
-    for dataset_id in tqdm(datasets_test, 'MetaFEDOT, Test datasets', file=progress_file):
+    for dataset_id in tqdm(dataset_ids_test, 'MetaFEDOT, Test datasets', file=progress_file):
         try:
             dataset = datasets[dataset_id]
 
@@ -268,14 +272,13 @@ def main():
     params = {
         'run_date': time_now_iso,
         'seed': SEED,
-        'n_datasets': N_DATASETS or len(dataset_ids),
+        'n_datasets': N_DATASETS or len(datasets),
         'test_size': TEST_SIZE,
-        'dataset_ids': dataset_ids,
-        'dataset_ids_train': datasets_train,
-        'dataset_ids_test': datasets_test,
-        'dataset_names': split_datasets['dataset_name'].to_list(),
-        'dataset_names_train': split_datasets['dataset_name'].loc(datasets_train).to_list(),
-        'dataset_names_test': split_datasets['dataset_name'].loc(datasets_test).to_list(),
+        'dataset_ids': list(datasets.keys()),
+        'dataset_ids_train': dataset_ids_train,
+        'dataset_ids_test': dataset_ids_test,
+        'dataset_names_train': df_datasets_train['dataset_name'].to_list(),
+        'dataset_names_test': df_datasets_test['dataset_name'].to_list(),
         'train_timeout': TRAIN_TIMEOUT,
         'test_timeout': TEST_TIMEOUT,
         'n_best_dataset_models_to_memorize': N_BEST_DATASET_MODELS_TO_MEMORIZE,
