@@ -1,0 +1,49 @@
+<oml:data_set_description xmlns:oml="http://openml.org/openml">
+  <oml:id>40981</oml:id>
+  <oml:name>Australian</oml:name>
+  <oml:version>4</oml:version>
+  <oml:description>**Author**: Confidential. Donated by Ross Quinlan  
+**Source**: [LibSVM](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html), [UCI](https://archive.ics.uci.edu/ml/datasets/Statlog+(Australian+Credit+Approval)) - 1987    
+**Please cite**: [UCI](https://archive.ics.uci.edu/ml/citation_policy.html) 
+
+**Important note:** This dataset is derived from [credit-approval](https://www.openml.org/d/29), even though both datasets exist individually on UCI. In this version, missing values were filled in (not clear how) and a duplicate feature was removed.  
+
+**Australian Credit Approval**. This is the famous Australian Credit Approval dataset, originating from the StatLog project. It concerns credit card applications. All attribute names and values have been changed to meaningless symbols to protect the confidentiality of the data. 
+
+This dataset was retrieved 2014-11-14 from the UCI site and converted to the ARFF format.
+
+__Major changes w.r.t. version 3: dataset from UCI that matches description and data types__
+
+
+### Feature information
+
+There are 6 numerical and 8 categorical attributes, all normalized to [-1,1]. The original formatting was as follows:  
+
+A1: 0,1 CATEGORICAL (formerly: a,b)  
+A2: continuous.  
+A3: continuous.  
+A4: 1,2,3 CATEGORICAL (formerly: p,g,gg)  
+A5: 1, 2,3,4,5, 6,7,8,9,10,11,12,13,14 CATEGORICAL (formerly: ff,d,i,k,j,aa,m,c,w, e, q, r,cc, x)  
+A6: 1, 2,3, 4,5,6,7,8,9 CATEGORICAL (formerly: ff,dd,j,bb,v,n,o,h,z)  
+A7: continuous.  
+A8: 1, 0 CATEGORICAL (formerly: t, f)  
+A9: 1, 0 CATEGORICAL (formerly: t, f)  
+A10: continuous.  
+A11: 1, 0 CATEGORICAL (formerly t, f)  
+A12: 1, 2, 3 CATEGORICAL (formerly: s, g, p)  
+A13: continuous.  
+A14: continuous.  
+A15: 1,2 class attribute (formerly: +,-)  
+
+### Relevant Papers
+
+Ross Quinlan. &quot;Simplifying decision trees&quot;, Int J Man-Machine Studies 27, Dec 1987, pp. 221-234. 
+
+Ross Quinlan. &quot;C4.5: Programs for Machine Learning&quot;, Morgan Kaufmann, Oct 1992</oml:description>
+  <oml:description_version>2</oml:description_version>
+  <oml:format>ARFF</oml:format>
+        <oml:upload_date>2017-12-04T22:15:38</oml:upload_date>
+    <oml:licence>Public</oml:licence>  <oml:url>https://api.openml.org/data/v1/download/18151910/Australian.arff</oml:url>
+  <oml:parquet_url>http://openml1.win.tue.nl/dataset40981/dataset_40981.pq</oml:parquet_url>  <oml:file_id>18151910</oml:file_id>  <oml:default_target_attribute>A15</oml:default_target_attribute>      <oml:version_label>4</oml:version_label>    <oml:tag>derived</oml:tag><oml:tag>OpenML100</oml:tag><oml:tag>study_135</oml:tag><oml:tag>study_144</oml:tag><oml:tag>study_218</oml:tag><oml:tag>study_98</oml:tag>  <oml:visibility>public</oml:visibility>  <oml:original_data_url>https://archive.ics.uci.edu/ml/datasets/Statlog+(Australian+Credit+Approval)</oml:original_data_url>    <oml:minio_url>http://openml1.win.tue.nl/dataset40981/dataset_40981.pq</oml:minio_url>  <oml:status>active</oml:status>
+  <oml:processing_date>2018-10-04 07:20:02</oml:processing_date>      <oml:md5_checksum>920e2419a28215109651fcc5cbd1662e</oml:md5_checksum>
+</oml:data_set_description>
