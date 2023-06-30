@@ -1,4 +1,3 @@
-import openml
 from sklearn.model_selection import train_test_split
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
@@ -9,10 +8,10 @@ from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsB
 def main():
     # Define datasets.
     dataset_names = ['monks-problems-1', 'apsfailure', 'australian', 'bank-marketing']
-    dataset_ids = [openml.datasets.get_dataset(name, download_data=False).dataset_id for name in dataset_names]
+    datasets = OpenMLDatasetsLoader().load(dataset_names, allow_names=True)
     # Extract meta-features and load on demand.
-    extractor = PymfeExtractor(extractor_params={'groups': 'general'}, datasets_loader=OpenMLDatasetsLoader())
-    meta_features = extractor.extract(dataset_ids)
+    extractor = PymfeExtractor(extractor_params={'groups': 'general'})
+    meta_features = extractor.extract(datasets)
     # Preprocess meta-features, as KNN does not support NaNs.
     meta_features = meta_features.dropna(axis=1, how='any')
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
