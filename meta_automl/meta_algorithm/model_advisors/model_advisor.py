@@ -1,8 +1,9 @@
 from abc import abstractmethod
-from typing import List, Dict, Iterable, Optional
+from typing import List, Dict, Iterable
 
 import pandas as pd
 
+from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSimilarityAssessor
 
@@ -17,13 +18,13 @@ class ModelAdvisor:
 class SimpleSimilarityModelAdvisor(ModelAdvisor):
     def __init__(self, fitted_similarity_assessor: DatasetsSimilarityAssessor):
         self.similarity_assessor = fitted_similarity_assessor
-        self.best_models: Dict[str, List[Model]] = {}
+        self.best_models: Dict[DatasetIDType, List[Model]] = {}
 
     @property
     def datasets(self):
         return self.similarity_assessor.datasets
 
-    def fit(self, dataset_names_to_best_pipelines: Dict[str, List[Model]]):
+    def fit(self, dataset_names_to_best_pipelines: Dict[DatasetIDType, List[Model]]):
         self.best_models.update(dataset_names_to_best_pipelines)
         return self
 
