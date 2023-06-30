@@ -1,10 +1,11 @@
 from abc import ABC
-from typing import Optional, Dict, Any, List, Iterable
+from typing import Optional, List, Iterable
 
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 
+from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.meta_algorithm.datasets_similarity_assessors.datasets_similarity_assessor import \
     DatasetsSimilarityAssessor
 
@@ -13,7 +14,7 @@ class ModelBasedSimilarityAssessor(ABC, DatasetsSimilarityAssessor):
     def __init__(self, model, n_best: int = 1):
         self._inner_model = model
         self.n_best = n_best
-        self._datasets: Optional[Iterable[str]] = None
+        self._datasets: Optional[Iterable[DatasetIDType]] = None
 
 
 class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
@@ -21,7 +22,7 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         model = NearestNeighbors(n_neighbors=n_neighbors, **model_params)
         super().__init__(model, n_neighbors)
 
-    def fit(self, meta_features: pd.DataFrame, datasets: Iterable[str]):
+    def fit(self, meta_features: pd.DataFrame, datasets: Iterable[DatasetIDType]):
         meta_features = self.preprocess_meta_features(meta_features)
         self._datasets = np.array(datasets)
         self._inner_model.fit(meta_features)
@@ -30,7 +31,7 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
     def preprocess_meta_features(meta_features: pd.DataFrame) -> pd.DataFrame:
         return meta_features.dropna(axis=1, how='any')
 
-    def predict(self, meta_features: pd.DataFrame, return_distance: bool = False) -> Iterable[Iterable[str]]:
+    def predict(self, meta_features: pd.DataFrame, return_distance: bool = False) -> Iterable[Iterable[DatasetIDType]]:
         dataset_indexes = self._inner_model.kneighbors(meta_features, return_distance=return_distance)
         if return_distance:
             distances, dataset_indexes = dataset_indexes

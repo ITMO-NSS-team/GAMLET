@@ -22,8 +22,8 @@ from golem.core.log import Log
 from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 
-from meta_automl.data_preparation.data_manager import DataManager
-from meta_automl.data_preparation.dataset import DatasetCache, Dataset
+
+from meta_automl.data_preparation.dataset import OpenMLDataset, DatasetData
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
@@ -37,8 +37,8 @@ SEED = 42
 N_DATASETS = 3
 TEST_SIZE = 0.33
 # Evaluation timeouts
-TRAIN_TIMEOUT = 1
-TEST_TIMEOUT = 1
+TRAIN_TIMEOUT = 0.01
+TEST_TIMEOUT = 0.01
 # Models & datasets
 N_BEST_DATASET_MODELS_TO_MEMORIZE = 10
 N_CLOSEST_DATASETS_TO_PROPOSE = 5
@@ -61,7 +61,7 @@ COMMON_FEDOT_PARAMS = dict(
 time_now = datetime.now()
 time_now_iso = time_now.isoformat(timespec="minutes")
 time_now_for_path = time_now_iso.replace(":", ".")
-save_dir = DataManager.get_data_dir(). \
+save_dir = get_data_dir(). \
     joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
 save_dir.mkdir(parents=True)
 log_file = save_dir.joinpath('log.txt')
@@ -75,18 +75,23 @@ logging.basicConfig(
 )
 
 
-def prepare_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
+def prepare_data() -> Tuple[pd.DataFrame, pd.DataFrame, Dict[int, OpenMLDataset]]:
     """Returns dictionary with dataset names and cached datasets downloaded from OpenML."""
 
     dataset_ids = openml.study.get_suite(99).data
     if N_DATASETS is not None:
         dataset_ids = pd.Series(dataset_ids)
         dataset_ids = dataset_ids.sample(n=N_DATASETS, random_state=SEED)
-    dataset_ids = list(dataset_ids)
-    return dataset_ids, {cache.name: cache for cache in OpenMLDatasetsLoader().load(dataset_ids)}
+
+    df_split_datasets = openml_datasets_train_test_split(dataset_ids, seed=SEED)
+    df_datasets_train = df_split_datasets[df_split_datasets['is_train'] == 1]
+    df_datasets_test = df_split_datasets[df_split_datasets['is_train'] == 0]
+
+    datasets = {dataset.id_: dataset for dataset in OpenMLDatasetsLoader().load(dataset_ids)}
+    return df_datasets_train, df_datasets_test, datasets
 
 
-def transform_data_for_fedot(data: Dataset) -> (np.array, np.array):
+def transform_data_for_fedot(data: DatasetData) -> (np.array, np.array):
     x = data.x
     y = data.y
     if len(y.shape) == 1:
@@ -127,8 +132,8 @@ def prepare_extractor_and_assessor(datasets_train: List[str]):
     return data_similarity_assessor, extractor
 
 
-def fit_fedot(data: Dataset, timeout: float, run_label: str, initial_assumption=None):
-    x, y = transform_data_for_fedot(data)
+def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_assumption=None):
+    x, y = transform_data_for_fedot(dataset.get_data(dataset_format='array'))
 
     time_start = timeit.default_timer()
     fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **COMMON_FEDOT_PARAMS)
@@ -137,14 +142,14 @@ def fit_fedot(data: Dataset, timeout: float, run_label: str, initial_assumption=
 
     metrics = get_pipeline_metrics(fedot.current_pipeline, fedot.train_data)
     pipeline = fedot.current_pipeline
-    run_results = get_result_data_row(dataset=data, run_label=run_label, pipeline=pipeline, automl_time_sec=automl_time,
+    run_results = get_result_data_row(dataset=dataset, run_label=run_label, pipeline=pipeline, automl_time_sec=automl_time,
                                       automl_timeout_min=fedot.params.timeout, history_obj=fedot.history, **metrics)
     return fedot, run_results
 
 
-def get_result_data_row(dataset, run_label: str, pipeline, history_obj=None, automl_time_sec=0., automl_timeout_min=0.,
-                        **metrics):
-    run_results = dict(dataset_id=dataset.id,
+def get_result_data_row(dataset: OpenMLDataset, run_label: str, pipeline, history_obj=None, automl_time_sec=0.,
+                        automl_timeout_min=0., **metrics):
+    run_results = dict(dataset_id=dataset.id_,
                        dataset_name=dataset.name,
                        run_label=run_label,
                        model_obj=pipeline,
@@ -157,7 +162,7 @@ def get_result_data_row(dataset, run_label: str, pipeline, history_obj=None, aut
     return run_results
 
 
-def extract_best_history_models(dataset_cache, history):
+def extract_best_history_models(dataset, history):
     best_individuals = sorted(chain(*history.individuals),
                               key=lambda ind: ind.fitness,
                               reverse=True)
@@ -165,7 +170,7 @@ def extract_best_history_models(dataset_cache, history):
     best_models = []
     for individual in best_individuals[:N_BEST_DATASET_MODELS_TO_MEMORIZE]:
         pipeline = PipelineAdapter().restore(individual.graph)
-        model = Model(pipeline, individual.fitness, history.objective.metric_names[0], dataset_cache)
+        model = Model(pipeline, individual.fitness, history.objective.metric_names[0], dataset)
         best_models.append(model)
     return best_models
 
@@ -173,22 +178,19 @@ def extract_best_history_models(dataset_cache, history):
 def main():
     baseline_pipeline = PipelineBuilder().add_node('rf').build()
 
-    dataset_ids, datasets_cache = prepare_data()
+    df_datasets_train, df_datasets_test, datasets = prepare_data()
 
-    split_datasets = openml_datasets_train_test_split(dataset_ids, seed=SEED)
-    datasets_train = split_datasets[split_datasets['is_train'] == 1]['dataset_name'].to_list()
-    datasets_test = split_datasets[~split_datasets['is_train'] == 0]['dataset_name'].to_list()
+    dataset_ids_train = df_datasets_train.index.to_list()
+    dataset_ids_test = df_datasets_test.index.to_list()
 
     evaluation_results = []
     best_models_per_dataset = {}
     progress_file = open(save_dir.joinpath('progress.txt'), 'a')
-    for name in tqdm(datasets_cache.keys(), 'FEDOT, all datasets', file=progress_file):
+    for dataset_id in tqdm(datasets.keys(), 'FEDOT, all datasets', file=progress_file):
         try:
-            cache = datasets_cache[name]
-            data = cache.from_cache()
-
-            timeout = TRAIN_TIMEOUT if name in datasets_train else TEST_TIMEOUT
-            fedot, run_results = fit_fedot(data=data, timeout=timeout, run_label='FEDOT')
+            dataset = datasets[dataset_id]
+            timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_train else TEST_TIMEOUT
+            fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT')
             evaluation_results.append(run_results)
             # TODO:
             #   x Turn the tuned pipeline into a model (evaluate its fitness on the data)
@@ -197,38 +199,37 @@ def main():
 
             # Filter out unique individuals with the best fitness
             history = fedot.history
-            best_models = extract_best_history_models(cache, history)
-            best_models_per_dataset[name] = best_models
+            best_models = extract_best_history_models(dataset, history)
+            best_models_per_dataset[dataset_id] = best_models
         except Exception:
-            logging.exception(f'Train dataset "{name}"')
+            logging.exception(f'Train dataset "{dataset_id}"')
 
-    data_similarity_assessor, extractor = prepare_extractor_and_assessor(datasets_train)
+    data_similarity_assessor, extractor = prepare_extractor_and_assessor(dataset_ids_train)
     model_advisor = DiverseFEDOTPipelineAdvisor(data_similarity_assessor, n_best_to_advise=N_BEST_MODELS_TO_ADVISE,
                                                 minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
     model_advisor.fit(best_models_per_dataset)
 
-    for name in tqdm(datasets_test, 'MetaFEDOT, Test datasets', file=progress_file):
+    for dataset_id in tqdm(dataset_ids_test, 'MetaFEDOT, Test datasets', file=progress_file):
         try:
-            cache = datasets_cache[name]
-            data = cache.from_cache()
+            dataset = datasets[dataset_id]
 
             # Run meta AutoML
             # 1
             time_start = timeit.default_timer()
-            meta_features = extractor.extract([cache], fill_input_nans=True, use_cached=False, update_cached=True)
+            meta_features = extractor.extract([dataset], fill_input_nans=True, use_cached=False, update_cached=True)
             meta_features = meta_features.fillna(0)
             meta_learning_time_sec = timeit.default_timer() - time_start
             initial_assumptions = model_advisor.predict(meta_features)[0]
             assumption_pipelines = [model.predictor for model in initial_assumptions]
             # 2
-            fedot_meta, fedot_meta_results = fit_fedot(data=data, timeout=TEST_TIMEOUT, run_label='MetaFEDOT',
+            fedot_meta, fedot_meta_results = fit_fedot(dataset=dataset, timeout=TEST_TIMEOUT, run_label='MetaFEDOT',
                                                        initial_assumption=assumption_pipelines)
             fedot_meta_results['meta_learning_time_sec'] = meta_learning_time_sec
             evaluation_results.append(fedot_meta_results)
 
             # Fit & evaluate simple baseline
             baseline_metrics = get_pipeline_metrics(baseline_pipeline, fedot_meta.train_data)
-            baseline_res = get_result_data_row(dataset=data, run_label='simple baseline', pipeline=baseline_pipeline,
+            baseline_res = get_result_data_row(dataset=dataset, run_label='simple baseline', pipeline=baseline_pipeline,
                                                **baseline_metrics)
             evaluation_results.append(baseline_res)
 
@@ -236,11 +237,11 @@ def main():
             for i, assumption in enumerate(initial_assumptions):
                 pipeline = assumption.predictor
                 assumption_metrics = get_pipeline_metrics(pipeline, fedot_meta.train_data)
-                assumption_res = get_result_data_row(dataset=data, run_label=f'MetaFEDOT - initial assumption {i}',
+                assumption_res = get_result_data_row(dataset=dataset, run_label=f'MetaFEDOT - initial assumption {i}',
                                                      pipeline=pipeline, **assumption_metrics)
                 evaluation_results.append(assumption_res)
         except Exception:
-            logging.exception(f'Test dataset "{name}"')
+            logging.exception(f'Test dataset "{dataset_id}"')
     progress_file.close()
 
     # Save the accumulated results
@@ -250,11 +251,11 @@ def main():
     for res in evaluation_results:
         try:
             res['run_date'] = time_now
-            dataset_name = res['dataset_name']
+            dataset_id = res['dataset_id']
             run_label = res['run_label']
             # define saving paths
-            model_path = models_dir.joinpath(f'{dataset_name}_{run_label}')
-            history_path = history_dir.joinpath(f'{dataset_name}_{run_label}_history.json')
+            model_path = models_dir.joinpath(f'{dataset_id}_{run_label}')
+            history_path = history_dir.joinpath(f'{dataset_id}_{run_label}_history.json')
             # replace objects with export paths for csv
             res['model_path'] = str(model_path)
             res.pop('model_obj').save(res['model_path'])
@@ -271,12 +272,13 @@ def main():
     params = {
         'run_date': time_now_iso,
         'seed': SEED,
-        'n_datasets': N_DATASETS or len(dataset_ids),
+        'n_datasets': N_DATASETS or len(datasets),
         'test_size': TEST_SIZE,
-        'dataset_ids': dataset_ids,
-        'dataset_names': list(datasets_cache.keys()),
-        'dataset_names_train': datasets_train,
-        'dataset_names_test': datasets_test,
+        'dataset_ids': list(datasets.keys()),
+        'dataset_ids_train': dataset_ids_train,
+        'dataset_ids_test': dataset_ids_test,
+        'dataset_names_train': df_datasets_train['dataset_name'].to_list(),
+        'dataset_names_test': df_datasets_test['dataset_name'].to_list(),
         'train_timeout': TRAIN_TIMEOUT,
         'test_timeout': TEST_TIMEOUT,
         'n_best_dataset_models_to_memorize': N_BEST_DATASET_MODELS_TO_MEMORIZE,
