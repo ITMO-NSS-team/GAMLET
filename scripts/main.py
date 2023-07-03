@@ -1,10 +1,13 @@
-import argparse
-import sys
-
 import yaml
+import argparse
 
-# sys.path.append("..")
+# TODO: Maybe not the best solution. It enables code running not from PyCharm.
+import sys
+import os
+sys.path.append(os.getcwd())
+
 from surrogate import training
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
