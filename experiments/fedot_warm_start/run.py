@@ -1,6 +1,7 @@
 import functools
 import json
 import logging
+import os
 import timeit
 from datetime import datetime
 from itertools import chain
@@ -57,7 +58,7 @@ SAVE_DIR = None
 TIME_NOW = None
 TIME_NOW_FOR_PATH = None
 
-DEBUG = False
+DEBUG = True
 
 
 def setup_logging():
@@ -66,7 +67,9 @@ def setup_logging():
     global TIME_NOW_FOR_PATH
     TIME_NOW_FOR_PATH = time_now_for_path = time_now.replace(":", ".")
     global SAVE_DIR
-    SAVE_DIR = save_dir = Path(f'run_{time_now_for_path}')
+    SAVE_DIR = save_dir = Path(__file__).parent\
+        .resolve()\
+        .joinpath(f'run_{time_now_for_path}')
     save_dir.mkdir()
     log_file = save_dir.joinpath('log.txt')
     Log(log_file=log_file)
@@ -78,7 +81,7 @@ def setup_logging():
                         )
 
 
-def fetch_openml_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
+def fetch_openml_data() -> List[DatasetCache]:
     """Returns dictionary with dataset names and cached datasets downloaded from OpenML."""
     dataset_ids = openml.study.get_suite(99).data
     if N_DATASETS is not None:
@@ -86,8 +89,11 @@ def fetch_openml_data() -> Tuple[List[int], Dict[str, DatasetCache]]:
         dataset_ids = dataset_ids.sample(n=N_DATASETS, random_state=SEED)
         dataset_ids = list(dataset_ids)
 
-    datasets = {cache.name: cache for cache in OpenMLDatasetsLoader().load(dataset_ids)}
-    return dataset_ids, datasets
+    data = [cache for cache in OpenMLDatasetsLoader().load(dataset_ids)]
+    return data
+
+def mock_data_fetching() -> List[DatasetCache]:
+    return [cache for cache in OpenMLDatasetsLoader().load([1590, 1461, 1464, 1489, 40975, 40996, 41027, 54])]
 
 
 def transform_data_for_fedot(data: Dataset) -> (np.array, np.array):
@@ -176,27 +182,25 @@ def extract_best_history_models(dataset_cache, history):
     return best_models
 
 
-def prepare_data() -> Tuple[Tuple[List[int], Dict[str, DatasetCache]], Tuple[List[str], List[str]]]:
-    dataset_ids, datasets = fetch_openml_data()
+def ds_train_test_split() -> Tuple[Tuple[List[int], Dict[str, DatasetCache]], Tuple[List[str], List[str]]]:
+    openml_data = fetch_openml_data()
 
     train_data_names, test_data_names = train_test_split(
-        list(datasets.keys()),
+        [dataset.name for dataset in openml_data],
         test_size=TEST_SIZE,
         random_state=SEED
     )
-    return (dataset_ids, datasets), (train_data_names, test_data_names)
+    return train_data_names, test_data_names
 
 
 def main():
     baseline_pipeline = PipelineBuilder().add_node('rf').build()
 
-    ds_with_ids, dataset_names = prepare_data()
+    ds_with_ids, dataset_names = ds_train_test_split()
 
     train_ds_names, test_ds_names = dataset_names
 
     ds_ids, datasets = ds_with_ids
-
-    data_similarity_assessor, extractor = prepare_extractor_and_assessor(train_ds_names)
 
     results = []
     best_models_per_dataset = {}
@@ -221,7 +225,7 @@ def main():
         except Exception:
             logging.exception(f'Train dataset "{name}"')
 
-    data_similarity_assessor, extractor = prepare_extractor_and_assessor(datasets_train)
+    data_similarity_assessor, extractor = prepare_extractor_and_assessor(train_ds_names)
     model_advisor = DiverseFEDOTPipelineAdvisor(data_similarity_assessor, n_best_to_advise=N_BEST_MODELS_TO_ADVISE,
                                                 minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
     model_advisor.fit(best_models_per_dataset)
