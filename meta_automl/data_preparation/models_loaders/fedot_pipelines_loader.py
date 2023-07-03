@@ -15,7 +15,7 @@ from golem.core.log import default_log
 from tqdm import tqdm
 
 from meta_automl.data_preparation.data_manager import PathType
-from meta_automl.data_preparation.dataset import DatasetCache, NoCacheError
+from meta_automl.data_preparation.dataset import DatasetCache
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
@@ -37,10 +37,11 @@ def get_n_best_fedot_performers(dataset_cache: DatasetCache, pipelines: List[Pip
                            task=Task(TaskTypesEnum.classification))
     fitnesses = []
     models = []
+    metric_name = 'roc_auc'
     for pipeline in tqdm(pipelines, desc='Evaluating pipelines'):
         fitness = evaluate_classification_fedot_pipeline(pipeline, input_data)
         fitnesses.append(fitness)
-        models.append(Model(pipeline, fitness, dataset_cache))
+        models.append(Model(pipeline, fitness, metric_name, dataset_cache))
 
     best_models = [models.pop(np.argmax(fitnesses)) for _ in range(min(n_best, len(pipelines)))]
     return best_models

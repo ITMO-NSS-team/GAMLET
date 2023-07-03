@@ -26,7 +26,7 @@ from meta_automl.data_preparation.dataset import DatasetCache, Dataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.model import Model
-from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
+from meta_automl.meta_algorithm.datasets_similarity_assessors import KNNSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
 
 
@@ -92,8 +92,8 @@ def fetch_openml_data() -> List[DatasetCache]:
     data = [cache for cache in OpenMLDatasetsLoader().load(dataset_ids)]
     return data
 
-def mock_data_fetching() -> List[DatasetCache]:
-    return [cache for cache in OpenMLDatasetsLoader().load([1590, 1461, 1464, 1489, 40975, 40996, 41027, 54])]
+# def mock_data_fetching() -> List[DatasetCache]:
+#     return [cache for cache in OpenMLDatasetsLoader().load([1590, 1461, 1464, 1489, 40975, 40996, 41027, 54])]
 
 
 def transform_data_for_fedot(data: Dataset) -> (np.array, np.array):
@@ -134,7 +134,7 @@ def prepare_extractor_and_assessor(datasets_train: List[str]):
     extractor = PymfeExtractor(extractor_params=MF_EXTRACTOR_PARAMS)
     meta_features_train = extractor.extract(datasets_train, fill_input_nans=True)
     meta_features_train = meta_features_train.fillna(0)
-    data_similarity_assessor = KNeighborsBasedSimilarityAssessor(
+    data_similarity_assessor = KNNSimilarityAssessor(
         n_neighbors=min(len(datasets_train), N_CLOSEST_DATASETS_TO_PROPOSE))
     data_similarity_assessor.fit(meta_features_train, datasets_train)
     return data_similarity_assessor, extractor

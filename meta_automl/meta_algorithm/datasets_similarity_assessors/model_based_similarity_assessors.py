@@ -16,7 +16,7 @@ class ModelBasedSimilarityAssessor(ABC, DatasetsSimilarityAssessor):
         self._datasets: Optional[Iterable[str]] = None
 
 
-class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
+class KNNSimilarityAssessor(ModelBasedSimilarityAssessor):
     def __init__(self, n_neighbors: int = 1, **model_params):
         model = NearestNeighbors(n_neighbors=n_neighbors, **model_params)
         super().__init__(model, n_neighbors)
