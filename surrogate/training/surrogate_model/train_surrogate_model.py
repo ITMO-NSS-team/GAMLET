@@ -80,7 +80,7 @@ def preprocess_raw_files(path):
         pickle.dump(uniq_pipelines, f)
 
 
-def get_datasets(path):
+def get_datasets(path, is_pair = False):
     with open(path + "pipelines.pickle", "rb") as input_file:
         pipelines = pickle.load(input_file)
 
@@ -94,12 +94,18 @@ def get_datasets(path):
 
     train_task_set, val_task_set, test_task_set = train_test_split(datasets)
 
-
-    train_dataset = SingleDataset(
+    if is_pair:
+        train_dataset = PairDataset(
         task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)],
         GraphDataset(pipelines),
         datasets,
-    )
+        )
+    else:
+        train_dataset = SingleDataset(
+            task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)],
+            GraphDataset(pipelines),
+            datasets,
+        )
     val_dataset = SingleDataset(
         task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(val_task_set)],
         GraphDataset(pipelines),
@@ -144,7 +150,12 @@ def train_test_split(datasets):
 
 
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
-    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets('data/openml/')
+    is_pair = False
+    model_class = getattr(models, config["model"].pop("name"))
+    if model_class.__name__ == 'RankingSurrogateModel':
+        is_pair = True
+
+    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets('data/openml/', is_pair)
 
     train_loader = DataLoader(
         train_dataset,
@@ -163,7 +174,7 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
         num_workers=config["num_dataloader_workers"],
     )
 
-    model_class = getattr(models, config["model"].pop("name"))
+    
 
     config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
     config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
@@ -190,5 +201,11 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
         callbacks=[c for c in [model_checkpoint_callback, early_stopping_callback] if c is not None],
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        
+    checkpoint = torch.load(model_checkpoint_callback.best_model_path)
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    # model = model_class.load_from_checkpoint(model_checkpoint_callback.best_model_path)
+    
     test_results = trainer.test(model, dataloaders=test_loader)
     return test_results
