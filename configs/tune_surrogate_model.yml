@@ -8,7 +8,7 @@ batch_size: 256
 num_dataloader_workers: 8
 
 model:
-  name: "RankingSurrogateModel"
+  name: "RankingPipelineDatasetSurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
