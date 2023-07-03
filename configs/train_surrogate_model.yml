@@ -1,5 +1,5 @@
-training_method: train_surrogate_model
-batch_size: 32
+training_method: "train_surrogate_model"
+batch_size: 256
 
 model:
   name: "SurrogateModel"
@@ -7,23 +7,19 @@ model:
     in_size: null  # The parameter is inferred
     num_class: 1
     d_model: 64
-    n_dataset: 10
-    dim_feedforward: 256  # The parameter is inferred
+    dim_feedforward: null  # The parameter is inferred
     dropout: 0.2
     num_heads: 8
     num_layers: 2
     #    layer_norm: True
     batch_norm: False  # not LAYER_NORM
-    abs_pe: null
-    abs_pe_dim: 20
     gnn_type: "graphsage"
-    use_edge_attr: True
-    num_edge_features: 1
-    edge_dim: 32
     k_hop: 2
     se: "gnn"
     deg: null  # The parameter is inferred
     global_pool: "mean"
+    abs_pe: False
+    use_edge_attr: False
   loss_name: "l1_loss"
   lr: 0.001
   weight_decay: 0.00001
@@ -31,19 +27,24 @@ model:
 
 dataset_params:
   pipeline_graph_rename_path: 'data/openml/pipelines_graphs/pipeline_graph_rename.pickle'
-  y_pipeline_path: 'data/openml/pipelines_graphs/y.pickle'
   labels_path: 'data/openml/pipelines_graphs/labels.pickle'
   pipelines_path: 'data/openml/pipelines_graphs/pipelines.pickle'
   seed: 0
 
 trainer:
-  max_epochs: 1
+  num_sanity_val_steps: 0
+  max_epochs: 100
+  accelerator: "cpu"
   devices: "auto"
-
+  
 tensorboard_logger: null
 
 model_checkpoint_callback:
   save_top_k: 1
-  monitor: "val_loss"
+  monitor: "ndcg"
   save_last: True
   every_n_epochs: 1
+
+early_stopping_callback:
+  monitor: "ndcg"
+  min_delta: 0.00001

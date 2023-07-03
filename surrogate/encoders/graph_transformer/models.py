@@ -32,7 +32,7 @@ class GraphTransformerEncoder(nn.TransformerEncoder):
 
 
 class GraphTransformer(nn.Module):
-    def __init__(self, in_size, d_model, n_dataset, num_heads=8,
+    def __init__(self, in_size, d_model, num_heads=8,
                  dim_feedforward=512, dropout=0.0, num_layers=4,
                  batch_norm=False, abs_pe=False, abs_pe_dim=0,
                  gnn_type="graph", se="gnn", use_edge_attr=False, num_edge_features=4,
@@ -55,7 +55,6 @@ class GraphTransformer(nn.Module):
             self.embedding = nn.Linear(in_features=in_size,
                                        out_features=d_model,
                                        bias=False)
-
         self.use_edge_attr = use_edge_attr
         if use_edge_attr:
             edge_dim = kwargs.get('edge_dim', 32)
@@ -90,7 +89,7 @@ class GraphTransformer(nn.Module):
 
         
     def forward(self, data, return_attn=False):
-        x, edge_index, edge_attr, x_dataset = data.x, data.edge_index, data.edge_attr, data.d
+        x, edge_index, edge_attr = data.x.to(dtype=torch.long), data.edge_index, data.edge_attr
 
         node_depth = data.node_depth if hasattr(data, "node_depth") else None
 
@@ -106,9 +105,14 @@ class GraphTransformer(nn.Module):
             subgraph_indicator_index = None
             subgraph_edge_attr = None
 
+        # print(x)
+        
         complete_edge_index = data.complete_edge_index if hasattr(data, 'complete_edge_index') else None
         abs_pe = data.abs_pe if hasattr(data, 'abs_pe') else None
         degree = data.degree if hasattr(data, 'degree') else None
+        # print('node_depth', node_depth)
+        # print('x  ', x)
+        
         output = self.embedding(x) if node_depth is None else self.embedding(x, node_depth.view(-1, ))
 
         if self.abs_pe and abs_pe is not None:
