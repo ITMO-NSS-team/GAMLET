@@ -1,22 +1,22 @@
 """The module contains custom method to tune `surrogate.models.SurrogateModel`."""
 from copy import deepcopy
 from functools import partial
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 import optuna
+import torch
 from optuna.pruners import HyperbandPruner
 from optuna.samplers import TPESampler
 from optuna.trial import Trial
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
 from surrogate import models
+
 from .train_surrogate_model import get_datasets
 
-
-import torch
 
 def train_surrogate_model(
         config: Dict[str, Any],
@@ -162,6 +162,11 @@ def tune_surrogate_model(config: dict, n_trials: int):
 
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
         config["dataset_params"]["root_path"], is_pair)
+
+    # Not the best solution, that may lead to overfitting, but enables fair comparison with traditional models.
+    if len(val_dataset) == 0:
+        config["early_stopping_callback"]["monitor"] = "train_loss"
+        config["model_checkpoint_callback"]["monitor"] = "train_loss"
 
     train_loader = DataLoader(
         train_dataset,
