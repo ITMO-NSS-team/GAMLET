@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 
 from surrogate.encoders import GraphTransformer, MLPDatasetEncoder
+from sklearn.metrics import top_k_accuracy_score, average_precision_score
 
 
 def gr_ndcg(inp):
@@ -55,6 +56,7 @@ class SurrogateModel(LightningModule):
         # Migration to pytorch_lightning > 1.9.5
         self.validation_step_outputs = []
         self.test_step_outputs = []
+        self.save_hyperparameters()
 
     def forward(self, x_graph,  x_dset):
         z_pipeline = self.pipeline_encoder(x_graph)
@@ -114,7 +116,18 @@ class SurrogateModel(LightningModule):
 
     def on_test_epoch_end(self):
         ndcg_mean = self._get_ndcg(self.test_step_outputs)
+        
+        task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
+        for output in self.test_step_outputs:
+            y_preds.append(output['y_pred'])
+            y_trues.append(output['y_true'])
+        y_true = np.concatenate(y_trues)
+        y_score = np.concatenate(y_preds)
+        
+
         self.log("test_ndcg", ndcg_mean)
+        self.log("test_mrr", average_precision_score(y_true, y_score))
+        self.log("test_hits", top_k_accuracy_score(y_true, y_score, k=1))        
         self.test_step_outputs.clear()
 
     def configure_optimizers(self):
