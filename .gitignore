@@ -128,4 +128,9 @@ dmypy.json
 .pyre/
 
 # User data
-/data/cache
+data/
+
+# IDEs
+.idea/
+.vscode/
+
