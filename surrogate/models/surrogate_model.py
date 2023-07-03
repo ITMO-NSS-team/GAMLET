@@ -149,3 +149,53 @@ class RankingSurrogateModel(SurrogateModel):
         self.log("train_loss", loss)# batch_size=batch[0].shape[0])
         return loss
 
+class SurrogateModelNoMeta(SurrogateModel):
+    def __init__(
+            self,
+            model_parameters: Dict[str, Any],
+            loss_name: str,
+            lr: float = 1e-3,
+    ):
+        """loss_name: loss name from torch.nn.functional"""
+        LightningModule.__init__(self)
+
+        self.pipeline_encoder = GraphTransformer(
+            **{k: v for k, v in model_parameters.items() if k != "name"})
+
+        self.final_model = nn.Sequential(
+            nn.BatchNorm1d(model_parameters['d_model']),
+            nn.Linear(
+                model_parameters['d_model'], model_parameters['d_model'] * 2),
+            nn.ReLU(),
+            nn.Linear(model_parameters['d_model'] * 2, 1),
+        )
+
+        self.loss = getattr(F, loss_name)
+        self.lr = lr
+
+        # Migration to pytorch_lightning > 1.9.5
+        self.validation_step_outputs = []
+        self.test_step_outputs = []
+        self.save_hyperparameters()
+
+    def forward(self, x_graph,  x_dset):
+        z_pipeline = self.pipeline_encoder(x_graph)
+        return self.final_model(z_pipeline)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(list(self.pipeline_encoder.parameters()) +
+                                      list(self.final_model.parameters()),
+                                      lr=self.lr,
+                                      weight_decay=1e-5)
+        return optimizer
+
+class RankingSurrogateModelNoMeta(SurrogateModelNoMeta):
+    def training_step(self, batch, batch_idx):
+        x_pipe1, x_dset1, x_pipe2, x_dset2, y = batch
+
+        pred1 = torch.squeeze(self.forward(x_pipe1, x_dset1))
+        pred2 = torch.squeeze(self.forward(x_pipe2, x_dset2))
+
+        loss = ranknet_loss(pred1, pred2, y)
+        self.log("train_loss", loss)# batch_size=batch[0].shape[0])
+        return loss
