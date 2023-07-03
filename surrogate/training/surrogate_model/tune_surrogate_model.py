@@ -56,11 +56,11 @@ def train_surrogate_model(
         callbacks=[c for c in [model_checkpoint_callback, early_stopping_callback] if c is not None],
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    
+
     checkpoint = torch.load(model_checkpoint_callback.best_model_path)
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
-    
+
     test_results = trainer.test(model, dataloaders=test_loader)
     return test_results
 
@@ -140,7 +140,7 @@ def find_divisible_pairs(set1, set2):
 
 def tune_surrogate_model(config: dict, n_trials: int):
     study = optuna.create_study(
-        storage="sqlite:///optuna.db",
+        storage=config["path_to_optuna_db"],
         sampler=TPESampler(
             consider_prior=False,
             consider_magic_clip=True,
@@ -154,12 +154,12 @@ def tune_surrogate_model(config: dict, n_trials: int):
         direction=config["direction"],
         load_if_exists=True,
     )
-    
+
     is_pair = False
     model_class = getattr(models, config["model"]["name"])
     if model_class.__name__ == 'RankingSurrogateModel':
         is_pair = True
-    
+
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
         'data/openml/', is_pair)
 
