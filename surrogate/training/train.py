@@ -30,7 +30,7 @@ def train(config: Dict[str, Any]) -> List[Dict[str, float]]:
     model_checkpoint_callback = ModelCheckpoint(**config["model_checkpoint_callback"])
 
     if config["early_stopping_callback"] is not None:
-        early_stopping_callback = EarlyStopping(**config["early_stopping_callback"])
+        early_stopping_callback = EarlyStopping(**config["early_stopping_callback"], check_on_train_epoch_end=False)
     else:
         early_stopping_callback = None
 
