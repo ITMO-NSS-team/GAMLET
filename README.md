@@ -43,3 +43,11 @@ similarity measures. For example, one of implementations uses the "NearestNeighb
 
 Combines results from Models Loader and Datasets Similarity Assessor. Provides recommendations for models based on
 loaded data and similar datasets. Possible implementations allow for heuristic-based suggestions.
+
+
+# Surrogate training | hyperparameter_search running:
+From the repository root run:
+
+`python scripts/main.py <--train|--tune> --config <path_to_your_config>`.
+
+Follow `configs/train_surrogate_model.yml` and `configs/tune_surrogate_model.yml` as reference for training and hyperparameter search accordingly.
