@@ -8,36 +8,35 @@ model:
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
-    d_model: 64
+    d_model: 96
     dim_feedforward: null  # The parameter is inferred
-    dropout: 0.2
-    num_heads: 8
-    num_layers: 2
+    dropout: 0.30326810490592576
+    num_heads: 6
+    num_layers: 5
     #    layer_norm: True
-    batch_norm: False  # not LAYER_NORM
+    batch_norm: True  # not LAYER_NORM
     gnn_type: "graphsage"
-    k_hop: 2
+    k_hop: 1
     se: "gnn"
     deg: null  # The parameter is inferred
-    global_pool: "mean"
+    global_pool: "cls"
     use_edge_attr: False
-  loss_name: "mse_loss"
-  lr: 0.001
+  lr: 0.0006883061453706995
 
 dataset_params:
-  pipeline_graph_rename_path: 'data/openml/pipelines_graphs/pipeline_graph_rename.pickle'
-  labels_path: 'data/openml/pipelines_graphs/labels.pickle'
-  pipelines_path: 'data/openml/pipelines_graphs/pipelines.pickle'
-  seed: 0
+  root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+
 
 trainer:
-  log_every_n_steps: 50
+  log_every_n_steps: 1
   num_sanity_val_steps: 0
   max_epochs: 100
   accelerator: "cpu"
   devices: "auto"
 
-tensorboard_logger: null
+tensorboard_logger:
+  save_dir: "experiments/openml_meta_features_and_fedot_pipelines/train_surrogate_model_best"
+  name: "hyperparameter_tuning"
 
 model_checkpoint_callback:
   save_top_k: 1
