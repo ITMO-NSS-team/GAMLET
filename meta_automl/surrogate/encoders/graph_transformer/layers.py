@@ -6,7 +6,7 @@ from einops import rearrange
 from torch import nn
 from torch_geometric.utils import scatter
 
-from .gnn_layers import get_simple_gnn_layer, EDGE_GNN_TYPES
+from .gnn_layers import EDGE_GNN_TYPES, get_simple_gnn_layer
 from .utils import pad_batch, unpad_batch
 
 
@@ -84,7 +84,7 @@ class Attention(gnn.MessagePassing):
                 ptr=None,
                 return_attn=False):
         """
-        Compute attention layer. 
+        Compute attention layer.
 
         Args:
         ----------
@@ -92,7 +92,7 @@ class Attention(gnn.MessagePassing):
         edge_index:                 edge index from the graph
         complete_edge_index:        edge index from fully connected graph
         subgraph_node_index:        documents the node index in the k-hop subgraphs
-        subgraph_edge_index:        edge index of the extracted subgraphs 
+        subgraph_edge_index:        edge index of the extracted subgraphs
         subgraph_indicator_index:   indices to indicate to which subgraph corresponds to which node
         subgraph_edge_attr:         edge attributes of the extracted k-hop subgraphs
         edge_attr:                  edge attributes
@@ -103,7 +103,7 @@ class Attention(gnn.MessagePassing):
 
         v = self.to_v(x)
 
-        # Compute structure-aware node embeddings 
+        # Compute structure-aware node embeddings
         if self.se == 'khopgnn':  # k-subgraph SAT
             x_struct = self.khop_structure_extractor(
                 x=x,
