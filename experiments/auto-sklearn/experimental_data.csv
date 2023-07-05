@@ -1,17 +1,57 @@
-dataset_id,dataset_name,run_label,roc_auc,f1,accuracy,logloss,precision,fit_time,inference_time,model_str
-1590,adult,Auto-sklearn,-0.798,-0.923,-0.878,4.391,-0.897,596.2,0.1,"HistGradientBoostingClassifier(early_stopping=True, l2_regularization=1.7108930238344161e-10, learning_rate=0.010827728124541558, loss='auto', max_iter=512, max_leaf_nodes=25, min_samples_leaf=4, n_iter_no_change=19, random_state=1, validation_fraction=0.1759114608225653, warm_start=True)"
-1461,bank-marketing,Auto-sklearn,-0.695,-0.507,-0.9,3.587,-0.63,595.0,0.6,"RandomForestClassifier(max_features=4, n_estimators=512, n_jobs=1, random_state=1, warm_start=True)"
-1464,blood-transfusion-service-center,Auto-sklearn,-0.627,-0.415,-0.793,7.449,-0.688,593.6,0.0,"MLPClassifier(alpha=6.875656304664039e-05, beta_1=0.999, beta_2=0.9, hidden_layer_sizes=(224,), learning_rate_init=0.00011403871479850849, max_iter=256, n_iter_no_change=32, random_state=1, validation_fraction=0.0, verbose=0, warm_start=True)"
-1489,phoneme,Auto-sklearn,-0.881,-0.82,-0.891,3.934,-0.787,593.8,0.0,"HistGradientBoostingClassifier(early_stopping=True, l2_regularization=0.00030344870480744136, learning_rate=0.18318625129457267, loss='auto', max_iter=512, max_leaf_nodes=366, min_samples_leaf=2, n_iter_no_change=11, random_state=1, validation_fraction=None, warm_start=True)"
-40975,car,Auto-sklearn,-0.999,-0.949,-0.98,0.114,-0.93,598.1,0.0,"RandomForestClassifier(bootstrap=False, max_features=2, min_samples_split=3, n_estimators=512, n_jobs=1, random_state=1, warm_start=True)"
-40996,fashion-mnist,Auto-sklearn,-0.968,-0.866,-0.866,1.945,-0.866,596.9,0.8,"KNeighborsClassifier(n_neighbors=4, weights='distance')"
-41027,jungle_chess_2pcs_raw_endgame_complete,Auto-sklearn,-0.974,-0.82,-0.866,0.275,-0.826,596.7,0.2,"HistGradientBoostingClassifier(early_stopping=True, l2_regularization=9.674948183980905e-09, learning_rate=0.014247987845444413, loss='auto', max_iter=512, max_leaf_nodes=55, min_samples_leaf=164, n_iter_no_change=1, random_state=1, validation_fraction=0.11770489601182355, warm_start=True)"
-54,vehicle,Auto-sklearn,-0.965,-0.847,-0.859,0.896,-0.848,594.9,0.0,LinearDiscriminantAnalysis(tol=0.06932929810851429)roc_auc,f1,accuracy,logloss,precision,dataset_id,dataset_name,run_label,fit_time,inference_time,model_str
-1590,adult,Hist gradient boosting classifier,-0.806,-0.924,-0.88,4.313,-0.903,0.4,0.0,
-1461,bank-marketing,Hist gradient boosting classifier,-0.718,-0.544,-0.904,3.452,-0.639,0.7,0.0,
-1464,blood-transfusion-service-center,Hist gradient boosting classifier,-0.565,-0.328,-0.7,10.813,-0.367,0.1,0.0,
-1489,phoneme,Hist gradient boosting classifier,-0.876,-0.82,-0.894,3.834,-0.806,0.2,0.0,
-40975,car,Hist gradient boosting classifier,-1.0,-0.94,-0.986,0.025,-0.93,0.7,0.0,
-40996,fashion-mnist,Hist gradient boosting classifier,-0.993,-0.904,-0.904,0.267,-0.903,113.4,0.9,
-41027,jungle_chess_2pcs_raw_endgame_complete,Hist gradient boosting classifier,-0.976,-0.825,-0.87,0.272,-0.833,1.4,0.1,
-54,vehicle,Hist gradient boosting classifier,-0.928,-0.763,-0.782,0.778,-0.768,1.2,0.0,
+1461,bank-marketing,Auto-sklearn,-0.711,-0.535,-0.907,3.34,-0.648,598.0,0.1,"HistGradientBoostingClassifier(early_stopping=True,
+                               l2_regularization=1.7108930238344161e-10,
+                               learning_rate=0.010827728124541558, loss='auto',
+                               max_iter=512, max_leaf_nodes=25,
+                               min_samples_leaf=4, n_iter_no_change=19,
+                               random_state=1,
+                               validation_fraction=0.1759114608225653,
+                               warm_start=True)"
+179,adult,Auto-sklearn,-0.774,-0.91,-0.859,5.077,-0.885,595.3,0.1,"HistGradientBoostingClassifier(early_stopping=True,
+                               l2_regularization=1.7108930238344161e-10,
+                               learning_rate=0.010827728124541558, loss='auto',
+                               max_iter=512, max_leaf_nodes=25,
+                               min_samples_leaf=4, n_iter_no_change=19,
+                               random_state=1,
+                               validation_fraction=0.1759114608225653,
+                               warm_start=True)"
+1464,blood-transfusion-service-center,Auto-sklearn,-0.669,-0.5,-0.8,7.209,-0.625,597.6,0.0,"PassiveAggressiveClassifier(C=0.253246830865058, average=True, max_iter=16,
+                            random_state=1, tol=0.01676578241454229,
+                            warm_start=True)"
+991,car,Auto-sklearn,-1.0,-1.0,-1.0,0.0,-1.0,596.8,0.0,"HistGradientBoostingClassifier(early_stopping=True,
+                               l2_regularization=1.9280388598217333e-10,
+                               learning_rate=0.24233932723531437, loss='auto',
+                               max_iter=128, max_leaf_nodes=35,
+                               min_samples_leaf=17, n_iter_no_change=1,
+                               random_state=1, validation_fraction=None,
+                               warm_start=True)"
+1489,phoneme,Auto-sklearn,-0.848,-0.797,-0.887,4.068,-0.845,600.4,0.1,"AdaBoostClassifier(algorithm='SAMME',
+                   base_estimator=DecisionTreeClassifier(max_depth=10),
+                   learning_rate=1.1377640450285444, n_estimators=352,
+                   random_state=1)"
+41027,jungle_chess_2pcs_raw_endgame_complete,Auto-sklearn,-0.975,-0.816,-0.865,0.271,-0.824,595.1,0.2,"HistGradientBoostingClassifier(early_stopping=True,
+                               l2_regularization=9.674948183980905e-09,
+                               learning_rate=0.014247987845444413, loss='auto',
+                               max_iter=512, max_leaf_nodes=55,
+                               min_samples_leaf=164, n_iter_no_change=1,
+                               random_state=1,
+                               validation_fraction=0.11770489601182355,
+                               warm_start=True)"
+41166,volkert,Auto-sklearn,-0.874,-0.586,-0.644,1.829,-0.587,595.8,0.3,"LinearDiscriminantAnalysis(shrinkage='auto', solver='lsqr',
+                           tol=0.018821286956948503)"
+54,vehicle,Auto-sklearn,-0.964,-0.86,-0.859,0.408,-0.861,595.5,0.0,"MLPClassifier(activation='tanh', alpha=0.0002060405669905105, beta_1=0.999,
+              beta_2=0.9, hidden_layer_sizes=(87, 87, 87),
+              learning_rate_init=0.00040205833939989724, max_iter=256,
+              n_iter_no_change=32, random_state=1, validation_fraction=0.0,
+              verbose=0, warm_start=True)"
+40996,fashion-mnist,Auto-sklearn,-0.968,-0.864,-0.865,1.913,-0.866,296.1,1.2,"KNeighborsClassifier(n_neighbors=4, weights='distance')"
+40996,fashion-mnist,Auto-sklearn,-0.968,-0.864,-0.865,1.913,-0.866,595.5,0.8,"KNeighborsClassifier(n_neighbors=4, weights='distance')"
+42344,sf-police-incidents,Auto-sklearn,-0.574,-0.589,-0.574,15.367,-0.569,594.8,0.5,"HistGradientBoostingClassifier(early_stopping=True,
+                               l2_regularization=3.609412172481434e-10,
+                               learning_rate=0.05972079854295879, loss='auto',
+                               max_iter=512, max_leaf_nodes=4,
+                               min_samples_leaf=2, n_iter_no_change=14,
+                               random_state=1, validation_fraction=None,
+                               warm_start=True)"
+1240,airlinescodrnaadult,Auto-sklearn,-0.62,-0.683,-0.631,13.306,-0.658,594.3,0.1,"SGDClassifier(alpha=1.6992296128865824e-07, average=True, eta0=0.01, loss='log',
+              max_iter=512, penalty='l1', random_state=1,
+              tol=1.535384699341134e-05, warm_start=True)"
