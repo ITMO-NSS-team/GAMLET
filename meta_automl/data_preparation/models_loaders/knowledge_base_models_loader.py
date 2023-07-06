@@ -13,7 +13,7 @@ from meta_automl.data_preparation.file_system import get_data_dir
 from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 
-DEFAULT_KNOWLEDGE_BASE_PATH = get_data_dir().joinpath('knowledge_base_0')
+DEFAULT_KNOWLEDGE_BASE_PATH = get_data_dir() / 'knowledge_base_0'
 
 
 class KnowledgeBaseModelsLoader(ModelsLoader):

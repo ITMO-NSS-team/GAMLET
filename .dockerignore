@@ -10,4 +10,4 @@ notebooks
 test
 
 # User data
-data
+data/cache
