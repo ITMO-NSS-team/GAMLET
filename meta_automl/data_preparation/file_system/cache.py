@@ -19,12 +19,16 @@ class CacheOperator:
     pass
 
 
+def get_cache_dir() -> Path:
+    return ensure_dir_exists(get_data_dir().joinpath('cache'))
+
+
 def get_openml_cache_dir() -> Path:
-    return get_data_dir().joinpath('openml_cache')
+    return get_cache_dir().joinpath('openml_cache')
 
 
 def get_full_openml_cache_dir() -> Path:
-    return get_data_dir().joinpath('openml_cache/org/openml/www')
+    return get_cache_dir().joinpath('openml_cache/org/openml/www')
 
 
 def update_openml_cache_dir():
@@ -82,11 +86,11 @@ def get_cache_properties(class_name: str) -> CacheProperties:
             template='{id_}'),
         'CustomDataset': CacheProperties(
             type_=CacheType.file,
-            dir_=get_data_dir().joinpath('datasets/custom_dataset'),
+            dir_=get_cache_dir().joinpath('datasets/custom_dataset'),
             template='{id_}.pkl'),
         'PymfeExtractor': CacheProperties(
             type_=CacheType.file,
-            dir_=get_data_dir().joinpath('metafeatures/pymfe'),
+            dir_=get_cache_dir().joinpath('metafeatures/pymfe'),
             template='{id_}.pkl'),
     }
     try:
