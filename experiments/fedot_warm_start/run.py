@@ -2,6 +2,10 @@ import functools
 import json
 import logging
 import timeit
+from pathlib import Path
+
+import yaml
+
 from datetime import datetime
 from itertools import chain
 from typing import Dict, List, Tuple, Sequence
@@ -31,24 +35,32 @@ from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
 
-# Meta-alg hyperparameters
-SEED = 42
-# Datasets sampling
-N_DATASETS = 3
-TEST_SIZE = 0.33
-# Evaluation timeouts
-TRAIN_TIMEOUT = 0.01
-TEST_TIMEOUT = 0.01
-# Models & datasets
-N_BEST_DATASET_MODELS_TO_MEMORIZE = 10
-N_CLOSEST_DATASETS_TO_PROPOSE = 5
-MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS = 1
-N_BEST_MODELS_TO_ADVISE = 5
-# Meta-features
-MF_EXTRACTOR_PARAMS = {'groups': 'general'}
-COLLECT_METRICS = ['f1', 'roc_auc', 'accuracy', 'neg_log_loss', 'precision']
+
+CONFIG_PATH = 'config.yaml'
+
+
+with open(CONFIG_PATH, 'r') as config_file:
+    config = yaml.load(config_file, yaml.Loader)
+
+# Load constants
+SEED = config['seed']
+N_DATASETS = config['n_datasets']
+TEST_SIZE = config['test_size']
+TRAIN_TIMEOUT = config['train_timeout']
+TEST_TIMEOUT = config['test_timeout']
+N_BEST_DATASET_MODELS_TO_MEMORIZE = config['n_best_dataset_models_to_memorize']
+N_CLOSEST_DATASETS_TO_PROPOSE = config['n_closest_datasets_to_propose']
+MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS = config['minimal_distance_between_advised_models']
+N_BEST_MODELS_TO_ADVISE = config['n_best_models_to_advise']
+MF_EXTRACTOR_PARAMS = config['mf_extractor_params']
+COLLECT_METRICS = config['collect_metrics']
+COMMON_FEDOT_PARAMS = config['common_fedot_params']
+BASELINE_MODEL = config['baseline_model']
+
+# Postprocess constants
 COLLECT_METRICS_ENUM = tuple(map(MetricsRepository.metric_by_id, COLLECT_METRICS))
 COLLECT_METRICS[COLLECT_METRICS.index('neg_log_loss')] = 'logloss'
+COMMON_FEDOT_PARAMS['seed'] = SEED
 
 COMMON_FEDOT_PARAMS = dict(
     problem='classification',
