@@ -24,16 +24,12 @@ def get_cache_dir() -> Path:
 
 
 def get_openml_cache_dir() -> Path:
-    return get_cache_dir().joinpath('openml_cache')
-
-
-def get_full_openml_cache_dir() -> Path:
-    return get_cache_dir().joinpath('openml_cache/org/openml/www')
+    return Path(openml.config.get_cache_directory())
 
 
 def update_openml_cache_dir():
-    openml_cache_path = str(get_openml_cache_dir())
-    openml.config.set_cache_directory(openml_cache_path)
+    openml_cache_path = get_cache_dir().joinpath('openml_cache')
+    openml.config.set_root_cache_directory(str(openml_cache_path))
 
 
 def _get_cache_path(object_class: Type[CacheOperator], object_id: str, _create_parent_dir: bool = True) -> Path:
@@ -82,7 +78,7 @@ def get_cache_properties(class_name: str) -> CacheProperties:
     cache_properties_by_class_name = {
         'OpenMLDataset': CacheProperties(
             type_=CacheType.directory,
-            dir_=get_full_openml_cache_dir().joinpath('datasets'),
+            dir_=get_openml_cache_dir().joinpath('datasets'),
             template='{id_}'),
         'CustomDataset': CacheProperties(
             type_=CacheType.file,

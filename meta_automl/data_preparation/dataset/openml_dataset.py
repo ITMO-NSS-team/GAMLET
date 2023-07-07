@@ -20,6 +20,7 @@ class OpenMLDataset(DatasetBase):
             raise ValueError('Creating OpenMLDataset by dataset name is ambiguous. Please, use dataset id.'
                              f'Otherwise, you can perform search by f{self.__class__.__name__}.from_search().')
         self._openml_dataset = openml.datasets.get_dataset(id_, download_data=False, download_qualities=False,
+                                                           download_features_meta_data=False,
                                                            error_if_multiple=True)
         id_ = self._openml_dataset.id
         name = self._openml_dataset.name
@@ -28,6 +29,7 @@ class OpenMLDataset(DatasetBase):
     @classmethod
     def from_search(cls, id_: Union[OpenMLDatasetIDType, str], **get_dataset_kwargs) -> OpenMLDataset:
         openml_dataset = openml.datasets.get_dataset(id_, download_data=False, download_qualities=False,
+                                                     download_features_meta_data=False,
                                                      **get_dataset_kwargs)
         return cls(openml_dataset.id)
 
