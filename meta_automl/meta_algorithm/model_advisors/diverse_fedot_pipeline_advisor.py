@@ -12,8 +12,8 @@ class DiverseFEDOTPipelineAdvisor(SimpleSimilarityModelAdvisor):
     def __init__(self,
                  fitted_similarity_assessor: DatasetsSimilarityAssessor,
                  n_best_to_advise: Optional[int] = None,
-                 minimal_distance: int = 1,
-                 distance_func: Callable[[Pipeline, Pipeline], int] = get_distance_between):
+                 minimal_distance: float = 1,
+                 distance_func: Callable[[Pipeline, Pipeline], float] = get_distance_between):
         super().__init__(fitted_similarity_assessor)
         self.minimal_distance = minimal_distance
         self.n_best_to_advise = n_best_to_advise

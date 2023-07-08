@@ -9,8 +9,8 @@ def main():
     loader = OpenMLDatasetsLoader()
     extractor = PymfeExtractor(extractor_params={'groups': 'general'})
 
-    cached_datasets = loader.load(dataset_names)
-    meta_features = extractor.extract(cached_datasets)
+    datasets = loader.load(dataset_names, allow_names=True)
+    meta_features = extractor.extract(datasets)
     return meta_features
 
 
