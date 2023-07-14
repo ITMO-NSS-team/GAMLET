@@ -19,6 +19,7 @@ class FEDOTPipelineFeaturesExtractor:
     """
 
     default_operation_type2name = {
+        '': '',  # Empty string indicates that the node means <no_operation> as https://t.me/FGksjp67 requested.
         'scaling': 'ScalingImplementation',
         'normalization': 'NormalizationImplementation',
         'pca': 'PCAImplementation',
