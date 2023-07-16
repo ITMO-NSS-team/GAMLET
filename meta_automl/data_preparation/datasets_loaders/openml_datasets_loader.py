@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import List, Union, Optional, Sequence
 
-from golem.core.log import default_log
-
 from meta_automl.data_preparation.dataset import OpenMLDataset, OpenMLDatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 
@@ -37,7 +35,3 @@ class OpenMLDatasetsLoader(DatasetsLoader):
         self.dataset_ids.add(dataset.id_)
 
         return dataset
-
-    @property
-    def _log(self):
-        return default_log(self)
