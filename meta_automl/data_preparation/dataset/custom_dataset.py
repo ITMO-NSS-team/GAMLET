@@ -8,7 +8,6 @@ from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.dataset.dataset_base import DatasetData
 
 
-
 class DataNotFoundError(FileNotFoundError):
     pass
 
