@@ -38,7 +38,7 @@ from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsB
 from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
 
 
-CONFIG_PATH = 'config.yaml'
+CONFIG_PATH = Path(__file__).parent.joinpath('config.yaml')
 
 
 with open(CONFIG_PATH, 'r') as config_file:
