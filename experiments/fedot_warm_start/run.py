@@ -99,7 +99,7 @@ def fetch_datasets() -> Tuple[pd.DataFrame, pd.DataFrame, Dict[int, OpenMLDatase
         dataset_ids = pd.Series(dataset_ids)
         dataset_ids = dataset_ids.sample(n=N_DATASETS, random_state=SEED)
 
-    df_split_datasets = openml_datasets_train_test_split(dataset_ids, seed=SEED)
+    df_split_datasets = openml_datasets_train_test_split(dataset_ids, test_size=TEST_SIZE, seed=SEED)
     df_datasets_train = df_split_datasets[df_split_datasets['is_train'] == 1]
     df_datasets_test = df_split_datasets[df_split_datasets['is_train'] == 0]
 
