@@ -2,12 +2,15 @@ import openml
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
+from typing import List
+
+from meta_automl.data_preparation.dataset import OpenMLDatasetIDType
 
 
-def openml_datasets_train_test_split(dataset_ids, train_size: float = 0.7, seed: int = 42):
+def openml_datasets_train_test_split(dataset_ids: List[OpenMLDatasetIDType], test_size: float, seed=None):
     df_openml_datasets = openml.datasets.list_datasets(dataset_ids, output_format='dataframe')
     df_openml_datasets_split_features = df_openml_datasets[
-        ['name', 'NumberOfInstances', 'NumberOfFeatures', 'NumberOfClasses']]
+        ['name', 'NumberOfInstances', 'NumberOfFeatures', 'NumberOfClasses']].copy(deep=False)
     for column in df_openml_datasets_split_features.columns[1:]:
         if column != 'NumberOfClasses':
             median = df_openml_datasets_split_features[column].median()
@@ -31,7 +34,7 @@ def openml_datasets_train_test_split(dataset_ids, train_size: float = 0.7, seed:
     if not df_datasets_to_split.empty:
         df_train_datasets, df_test_datasets = train_test_split(
             df_datasets_to_split,
-            train_size=train_size,
+            test_size=test_size,
             shuffle=True,
             stratify=df_datasets_to_split['category'],
             random_state=seed
@@ -40,7 +43,7 @@ def openml_datasets_train_test_split(dataset_ids, train_size: float = 0.7, seed:
     else:
         df_train_datasets, df_test_datasets = train_test_split(
             df_split_categories,
-            train_size=train_size,
+            test_size=test_size,
             shuffle=True,
             random_state=seed
         )
@@ -56,7 +59,7 @@ def openml_datasets_train_test_split(dataset_ids, train_size: float = 0.7, seed:
 
 def main():
     dataset_ids = openml.study.get_suite(99).data
-    df_split_datasets = openml_datasets_train_test_split(dataset_ids)
+    df_split_datasets = openml_datasets_train_test_split(dataset_ids, test_size=0.3)
     df_split_datasets.to_csv('train_test_datasets_opencc18.csv')
 
 
