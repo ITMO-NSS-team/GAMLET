@@ -1,0 +1,417 @@
+02:36:39,254 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/study/99
+02:36:39,961 root INFO 0.7072883s taken for [get] request for the URL https://www.openml.org/api/v1/xml/study/99
+02:36:39,964 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/3
+02:36:40,470 root INFO 0.5052440s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/3
+02:36:40,471 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/3
+02:36:40,887 root INFO 0.4157300s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/3
+02:36:40,892 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/6
+02:36:41,398 root INFO 0.5050476s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/6
+02:36:41,399 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/6
+02:36:41,761 root INFO 0.3613400s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/6
+02:36:41,765 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/11
+02:36:42,101 root INFO 0.3357980s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/11
+02:36:42,102 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/11
+02:36:42,468 root INFO 0.3651357s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/11
+02:36:42,470 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/12
+02:36:42,840 root INFO 0.3697708s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/12
+02:36:42,842 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/12
+02:36:43,273 root INFO 0.4303894s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/12
+02:36:43,284 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/14
+02:36:43,744 root INFO 0.4602644s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/14
+02:36:43,746 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/14
+02:36:44,170 root INFO 0.4237771s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/14
+02:36:44,178 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/15
+02:36:44,622 root INFO 0.4440503s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/15
+02:36:44,623 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/15
+02:37:50,222 root INFO 65.5981917s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/15
+02:37:50,224 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/16
+02:37:50,821 root INFO 0.5960879s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/16
+02:37:50,839 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/16
+02:37:51,340 root INFO 0.5004630s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/16
+02:37:51,347 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/18
+02:37:51,719 root INFO 0.3717237s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/18
+02:37:51,720 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/18
+02:37:52,73 root INFO 0.3530543s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/18
+02:37:52,77 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/22
+02:37:52,436 root INFO 0.3597257s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/22
+02:37:52,438 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/22
+02:37:52,780 root INFO 0.3420010s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/22
+02:37:52,786 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/23
+02:37:53,128 root INFO 0.3418758s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/23
+02:37:53,130 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/23
+02:37:53,475 root INFO 0.3452911s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/23
+02:37:53,478 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/28
+02:37:53,966 root INFO 0.4872015s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/28
+02:37:53,967 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/28
+02:37:54,327 root INFO 0.3603780s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/28
+02:37:54,334 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/29
+02:37:54,668 root INFO 0.3334305s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/29
+02:37:54,670 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/29
+02:37:54,993 root INFO 0.3232687s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/29
+02:37:54,997 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/31
+02:38:06,596 root INFO 11.5984154s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/31
+02:38:06,597 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/31
+02:38:07,307 root INFO 0.7100828s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/31
+02:38:07,311 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/32
+02:38:07,752 root INFO 0.4412286s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/32
+02:38:07,753 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/32
+02:38:08,149 root INFO 0.3949239s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/32
+02:38:08,153 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/37
+02:38:08,563 root INFO 0.4103584s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/37
+02:38:08,564 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/37
+02:38:08,942 root INFO 0.3778870s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/37
+02:38:08,945 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/44
+02:38:09,347 root INFO 0.4019308s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/44
+02:38:09,349 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/44
+02:38:09,784 root INFO 0.4354587s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/44
+02:38:09,791 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/46
+02:38:10,215 root INFO 0.4237056s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/46
+02:38:10,216 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/46
+02:38:10,741 root INFO 0.5241964s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/46
+02:38:10,763 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/50
+02:38:11,89 root INFO 0.3260541s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/50
+02:38:11,90 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/50
+02:38:11,442 root INFO 0.3516295s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/50
+02:38:11,446 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/54
+02:38:11,834 root INFO 0.3883932s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/54
+02:38:11,837 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/54
+02:38:12,198 root INFO 0.3610258s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/54
+02:38:12,201 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/151
+02:38:12,575 root INFO 0.3736339s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/151
+02:38:12,576 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/151
+02:38:12,903 root INFO 0.3264360s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/151
+02:38:12,906 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/182
+02:38:13,291 root INFO 0.3847327s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/182
+02:38:13,292 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/182
+02:38:13,669 root INFO 0.3767438s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/182
+02:38:13,675 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/188
+02:38:14,41 root INFO 0.3654840s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/188
+02:38:14,42 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/188
+02:38:14,380 root INFO 0.3372157s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/188
+02:38:14,384 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/38
+02:38:14,782 root INFO 0.3983135s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/38
+02:38:14,784 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/38
+02:38:15,129 root INFO 0.3454156s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/38
+02:38:15,134 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/307
+02:38:15,541 root INFO 0.4071827s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/307
+02:38:15,543 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/307
+02:38:15,914 root INFO 0.3703737s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/307
+02:38:15,917 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/300
+02:38:16,257 root INFO 0.3400137s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/300
+02:38:16,259 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/300
+02:38:16,613 root INFO 0.3540781s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/300
+02:38:16,640 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/458
+02:38:17,5 root INFO 0.3658345s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/458
+02:38:17,24 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/458
+02:38:17,365 root INFO 0.3401458s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/458
+02:38:17,372 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/469
+02:38:17,725 root INFO 0.3530412s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/469
+02:38:17,727 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/469
+02:38:18,91 root INFO 0.3639605s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/469
+02:38:18,94 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/554
+02:38:18,429 root INFO 0.3346500s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/554
+02:38:18,430 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/554
+02:38:18,811 root INFO 0.3804398s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/554
+02:38:18,839 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1049
+02:38:19,204 root INFO 0.3645310s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1049
+02:38:19,205 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1049
+02:38:19,576 root INFO 0.3713486s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1049
+02:38:19,582 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1050
+02:38:19,942 root INFO 0.3599827s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1050
+02:38:19,943 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1050
+02:38:20,296 root INFO 0.3521616s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1050
+02:38:20,301 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1053
+02:38:20,678 root INFO 0.3763373s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1053
+02:38:20,680 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1053
+02:38:21,15 root INFO 0.3350141s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1053
+02:38:21,19 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1063
+02:38:21,353 root INFO 0.3335581s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1063
+02:38:21,355 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1063
+02:38:21,687 root INFO 0.3321338s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1063
+02:38:21,691 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1067
+02:38:22,37 root INFO 0.3453608s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1067
+02:38:22,40 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1067
+02:38:22,403 root INFO 0.3624313s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1067
+02:38:22,407 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1068
+02:38:22,746 root INFO 0.3389385s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1068
+02:38:22,748 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1068
+02:38:23,92 root INFO 0.3433435s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1068
+02:38:23,96 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1590
+02:38:23,462 root INFO 0.3664606s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1590
+02:38:23,464 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1590
+02:38:23,795 root INFO 0.3303595s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1590
+02:38:23,799 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/4134
+02:38:24,155 root INFO 0.3564382s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/4134
+02:38:24,156 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/4134
+02:38:24,580 root INFO 0.4235172s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/4134
+02:38:24,636 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1510
+02:38:24,978 root INFO 0.3418829s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1510
+02:38:24,979 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1510
+02:38:25,333 root INFO 0.3537614s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1510
+02:38:25,339 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1489
+02:38:25,682 root INFO 0.3429985s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1489
+02:38:25,683 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1489
+02:38:26,7 root INFO 0.3229744s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1489
+02:38:26,9 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1494
+02:38:26,352 root INFO 0.3431282s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1494
+02:38:26,354 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1494
+02:38:26,704 root INFO 0.3503954s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1494
+02:38:26,709 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1497
+02:38:27,43 root INFO 0.3331621s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1497
+02:38:27,61 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1497
+02:38:27,390 root INFO 0.3290350s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1497
+02:38:27,395 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1501
+02:38:27,731 root INFO 0.3361702s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1501
+02:38:27,732 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1501
+02:38:28,63 root INFO 0.3301408s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1501
+02:38:28,72 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1480
+02:38:28,426 root INFO 0.3541424s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1480
+02:38:28,428 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1480
+02:38:28,750 root INFO 0.3222458s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1480
+02:38:28,754 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1485
+02:38:29,97 root INFO 0.3428569s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1485
+02:38:29,99 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1485
+02:38:29,437 root INFO 0.3383851s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1485
+02:38:29,460 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1486
+02:38:29,789 root INFO 0.3281558s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1486
+02:38:29,791 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1486
+02:38:30,116 root INFO 0.3248980s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1486
+02:38:30,127 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1487
+02:38:30,448 root INFO 0.3203371s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1487
+02:38:30,449 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1487
+02:38:30,793 root INFO 0.3434370s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1487
+02:38:30,799 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1468
+02:38:31,129 root INFO 0.3295691s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1468
+02:38:31,130 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1468
+02:38:31,470 root INFO 0.3397255s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1468
+02:38:31,501 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1475
+02:38:31,825 root INFO 0.3237557s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1475
+02:38:31,826 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1475
+02:38:32,152 root INFO 0.3258352s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1475
+02:38:32,158 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1462
+02:38:32,479 root INFO 0.3204589s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1462
+02:38:32,480 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1462
+02:38:32,809 root INFO 0.3291278s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1462
+02:38:32,812 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1464
+02:38:33,137 root INFO 0.3247571s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1464
+02:38:33,139 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1464
+02:38:33,482 root INFO 0.3430898s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1464
+02:38:33,485 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/4534
+02:38:33,828 root INFO 0.3422101s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/4534
+02:38:33,829 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/4534
+02:38:34,161 root INFO 0.3312044s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/4534
+02:38:34,166 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/6332
+02:38:34,496 root INFO 0.3296623s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/6332
+02:38:34,498 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/6332
+02:38:34,843 root INFO 0.3454263s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/6332
+02:38:34,855 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1461
+02:38:35,193 root INFO 0.3375154s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1461
+02:38:35,194 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1461
+02:38:35,524 root INFO 0.3307261s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1461
+02:38:35,528 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/4538
+02:38:35,866 root INFO 0.3371248s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/4538
+02:38:35,867 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/4538
+02:38:36,182 root INFO 0.3156786s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/4538
+02:38:36,187 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/1478
+02:38:36,515 root INFO 0.3274572s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/1478
+02:38:36,517 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1478
+02:38:36,843 root INFO 0.3267119s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/1478
+02:38:36,865 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/23381
+02:38:37,201 root INFO 0.3360229s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/23381
+02:38:37,204 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/23381
+02:38:37,581 root INFO 0.3770621s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/23381
+02:38:37,586 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40499
+02:38:37,914 root INFO 0.3275661s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40499
+02:38:37,915 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40499
+02:38:38,257 root INFO 0.3411534s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40499
+02:38:38,262 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40668
+02:38:38,578 root INFO 0.3164423s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40668
+02:38:38,580 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40668
+02:38:38,917 root INFO 0.3373411s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40668
+02:38:38,924 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40966
+02:38:39,259 root INFO 0.3348632s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40966
+02:38:39,261 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40966
+02:38:39,616 root INFO 0.3546228s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40966
+02:38:39,631 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40982
+02:38:39,990 root INFO 0.3588452s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40982
+02:38:39,991 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40982
+02:38:40,316 root INFO 0.3250611s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40982
+02:38:40,320 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40994
+02:38:40,653 root INFO 0.3324881s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40994
+02:38:40,655 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40994
+02:38:40,982 root INFO 0.3271272s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40994
+02:38:40,984 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40983
+02:38:41,347 root INFO 0.3634045s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40983
+02:38:41,349 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40983
+02:38:41,855 root INFO 0.5065882s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40983
+02:38:41,857 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40975
+02:38:42,187 root INFO 0.3294644s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40975
+02:38:42,189 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40975
+02:38:42,532 root INFO 0.3428011s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40975
+02:38:42,535 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40984
+02:38:42,863 root INFO 0.3274910s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40984
+02:38:42,864 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40984
+02:38:43,178 root INFO 0.3143141s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40984
+02:38:43,182 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40979
+02:38:43,541 root INFO 0.3588817s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40979
+02:38:43,543 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40979
+02:38:43,863 root INFO 0.3205595s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40979
+02:38:43,879 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40996
+02:38:44,200 root INFO 0.3217328s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40996
+02:38:44,202 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40996
+02:38:44,544 root INFO 0.3424194s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40996
+02:38:44,575 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/41027
+02:38:44,896 root INFO 0.3213573s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/41027
+02:38:44,898 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/41027
+02:38:45,226 root INFO 0.3278213s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/41027
+02:38:45,228 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/23517
+02:38:45,545 root INFO 0.3159032s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/23517
+02:38:45,546 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/23517
+02:38:45,879 root INFO 0.3325562s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/23517
+02:38:45,883 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40923
+02:38:46,209 root INFO 0.3255634s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40923
+02:38:46,210 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40923
+02:38:46,559 root INFO 0.3484681s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40923
+02:38:46,593 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40927
+02:38:46,912 root INFO 0.3184729s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40927
+02:38:46,913 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40927
+02:38:47,365 root INFO 0.4514275s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40927
+02:38:47,463 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40978
+02:38:47,781 root INFO 0.3178036s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40978
+02:38:47,782 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40978
+02:38:48,234 root INFO 0.4521935s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40978
+02:38:48,301 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40670
+02:38:48,623 root INFO 0.3221462s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40670
+02:38:48,624 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40670
+02:38:48,956 root INFO 0.3318305s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40670
+02:38:48,972 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/40701
+02:38:49,309 root INFO 0.3370392s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/40701
+02:38:49,311 root INFO Starting [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40701
+02:38:49,656 root INFO 0.3450091s taken for [get] request for the URL https://www.openml.org/api/v1/xml/data/features/40701
+02:38:50,801 root Level 45 AssumptionsHandler - Memory consumption for fitting of the initial pipeline in main session: current 5.2 MiB, max: 10.5 MiB
+02:38:50,802 root CRITICAL ApiComposer - Initial pipeline was fitted in 0.7 sec.
+02:38:50,802 root CRITICAL AssumptionsHandler - Preset was changed to best_quality due to fit time estimation for initial model.
+02:38:50,807 root CRITICAL ApiComposer - AutoML configured. Parameters tuning: False. Time limit: 15 min. Set of candidate models: ['poly_features', 'rf', 'pca', 'logit', 'dt', 'bernb', 'resample', 'knn', 'qda', 'normalization', 'scaling', 'lgbm', 'fast_ica', 'mlp', 'isolation_forest_class'].
+02:38:50,808 root CRITICAL ApiComposer - Pipeline composition started.
+02:38:55,554 root CRITICAL MultiprocessingDispatcher - 2 individuals out of 2 in previous population were evaluated successfully.
+02:39:04,703 root CRITICAL MultiprocessingDispatcher - 21 individuals out of 21 in previous population were evaluated successfully.
+02:39:09,370 root CRITICAL MultiprocessingDispatcher - 12 individuals out of 12 in previous population were evaluated successfully.
+02:39:14,17 root CRITICAL MultiprocessingDispatcher - 12 individuals out of 12 in previous population were evaluated successfully.
+02:39:22,321 root CRITICAL MultiprocessingDispatcher - 20 individuals out of 20 in previous population were evaluated successfully.
+02:39:35,381 root CRITICAL MultiprocessingDispatcher - 32 individuals out of 32 in previous population were evaluated successfully.
+02:39:47,23 root CRITICAL MultiprocessingDispatcher - 32 individuals out of 32 in previous population were evaluated successfully.
+02:40:09,115 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:40:22,117 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:40:43,990 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:41:25,443 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:41:38,459 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:41:56,951 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:42:12,622 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:42:28,241 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:43:00,312 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:43:20,466 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:44:41,116 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:45:08,90 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:45:36,461 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:45:53,821 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:46:06,510 root CRITICAL ApiComposer - Model generation finished
+02:46:07,371 root CRITICAL FEDOT logger - Final pipeline was fitted
+02:46:07,371 root CRITICAL FEDOT logger - Final pipeline: {'depth': 1, 'length': 1, 'nodes': [rf]}
+rf - {'n_jobs': 8, 'criterion': 'entropy', 'max_features': 0.5079392481383013, 'min_samples_split': 8, 'min_samples_leaf': 2, 'bootstrap': False}
+02:46:40,792 root Level 45 AssumptionsHandler - Memory consumption for fitting of the initial pipeline in main session: current 199.5 MiB, max: 541.5 MiB
+02:46:40,823 root CRITICAL ApiComposer - Initial pipeline was fitted in 12.3 sec.
+02:46:40,824 root CRITICAL AssumptionsHandler - Preset was changed to best_quality due to fit time estimation for initial model.
+02:46:40,828 root CRITICAL ApiComposer - AutoML configured. Parameters tuning: False. Time limit: 15 min. Set of candidate models: ['poly_features', 'rf', 'pca', 'logit', 'dt', 'bernb', 'resample', 'knn', 'qda', 'normalization', 'scaling', 'lgbm', 'fast_ica', 'mlp', 'isolation_forest_class'].
+02:46:40,829 root CRITICAL ApiComposer - Pipeline composition started.
+02:47:27,303 root CRITICAL MultiprocessingDispatcher - 2 individuals out of 2 in previous population were evaluated successfully.
+02:48:03,63 concurrent.futures ERROR exception calling callback for <Future at 0x7f2520bdbd30 state=finished raised TerminatedWorkerError>
+Traceback (most recent call last):
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/externals/loky/_base.py", line 26, in _invoke_callbacks
+    callback(self)
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/parallel.py", line 385, in __call__
+    self.parallel.dispatch_next()
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/parallel.py", line 834, in dispatch_next
+    if not self.dispatch_one_batch(self._original_iterator):
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/parallel.py", line 901, in dispatch_one_batch
+    self._dispatch(tasks)
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/parallel.py", line 819, in _dispatch
+    job = self._backend.apply_async(batch, callback=cb)
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/_parallel_backends.py", line 556, in apply_async
+    future = self._workers.submit(SafeFunction(func))
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/externals/loky/reusable_executor.py", line 176, in submit
+    return super().submit(fn, *args, **kwargs)
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/joblib/externals/loky/process_executor.py", line 1129, in submit
+    raise self._flags.broken
+joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker.
+
+The exit codes of the workers are {SIGKILL(-9)}
+02:48:04,154 root CRITICAL ApiComposer - Model generation finished
+02:48:28,841 root CRITICAL FEDOT logger - Final pipeline was fitted
+02:48:28,842 root CRITICAL FEDOT logger - Final pipeline: {'depth': 2, 'length': 2, 'nodes': [rf, scaling]}
+rf - {'n_jobs': 8}
+scaling - {}
+02:48:28,842 root ERROR Train dataset "connect-4"
+Traceback (most recent call last):
+  File "/home/max/coding/assigned_projects/meta-automl-research/experiments/fedot_warm_start/run.py", line 211, in main
+    fedot, run_results = fit_fedot(data=data, timeout=timeout, run_label='FEDOT')
+  File "/home/max/coding/assigned_projects/meta-automl-research/experiments/fedot_warm_start/run.py", line 145, in fit_fedot
+    fedot.fit(x, y)
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/fedot/api/main.py", line 268, in fit
+    MemoryAnalytics.finish()
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/fedot/utilities/memory.py", line 23, in finish
+    cls.log(additional_info=f'finish',
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/fedot/utilities/memory.py", line 56, in log
+    print(message)
+BrokenPipeError: [Errno 32] Broken pipe
+02:48:51,553 root Level 45 AssumptionsHandler - Memory consumption for fitting of the initial pipeline in main session: current 283.7 MiB, max: 541.5 MiB
+02:48:51,556 root CRITICAL ApiComposer - Initial pipeline was fitted in 1.6 sec.
+02:48:51,556 root CRITICAL AssumptionsHandler - Preset was changed to best_quality due to fit time estimation for initial model.
+02:48:51,561 root CRITICAL ApiComposer - AutoML configured. Parameters tuning: False. Time limit: 15 min. Set of candidate models: ['poly_features', 'rf', 'pca', 'logit', 'dt', 'bernb', 'resample', 'knn', 'qda', 'normalization', 'scaling', 'lgbm', 'fast_ica', 'mlp', 'isolation_forest_class'].
+02:48:51,562 root CRITICAL ApiComposer - Pipeline composition started.
+02:48:58,584 root CRITICAL MultiprocessingDispatcher - 2 individuals out of 2 in previous population were evaluated successfully.
+02:49:35,317 root CRITICAL MultiprocessingDispatcher - 21 individuals out of 21 in previous population were evaluated successfully.
+02:50:29,648 root CRITICAL MultiprocessingDispatcher - 12 individuals out of 12 in previous population were evaluated successfully.
+02:50:49,356 root CRITICAL MultiprocessingDispatcher - 12 individuals out of 12 in previous population were evaluated successfully.
+02:51:28,427 root CRITICAL MultiprocessingDispatcher - 20 individuals out of 20 in previous population were evaluated successfully.
+02:52:07,273 root CRITICAL MultiprocessingDispatcher - 32 individuals out of 32 in previous population were evaluated successfully.
+02:52:54,335 root CRITICAL MultiprocessingDispatcher - 32 individuals out of 32 in previous population were evaluated successfully.
+02:53:25,437 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:54:20,622 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:55:29,511 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:56:38,847 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:57:54,16 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:58:39,432 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+02:59:26,192 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+03:00:08,367 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+03:00:08,474 root CRITICAL GroupedCondition - Optimisation finished: Early stopping iterations criteria was satisfied
+03:00:10,522 root CRITICAL ApiComposer - Model generation finished
+03:00:21,651 root CRITICAL FEDOT logger - Final pipeline was fitted
+03:00:21,651 root CRITICAL FEDOT logger - Final pipeline: {'depth': 1, 'length': 1, 'nodes': [mlp]}
+mlp - {}
+03:00:21,651 root ERROR Train dataset "phishingwebsites"
+Traceback (most recent call last):
+  File "/home/max/coding/assigned_projects/meta-automl-research/experiments/fedot_warm_start/run.py", line 211, in main
+    fedot, run_results = fit_fedot(data=data, timeout=timeout, run_label='FEDOT')
+  File "/home/max/coding/assigned_projects/meta-automl-research/experiments/fedot_warm_start/run.py", line 145, in fit_fedot
+    fedot.fit(x, y)
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/fedot/api/main.py", line 268, in fit
+    MemoryAnalytics.finish()
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/fedot/utilities/memory.py", line 23, in finish
+    cls.log(additional_info=f'finish',
+  File "/home/max/coding/assigned_projects/meta-automl-research/venv/lib/python3.8/site-packages/fedot/utilities/memory.py", line 56, in log
+    print(message)
+BrokenPipeError: [Errno 32] Broken pipe
+03:00:38,214 root Level 45 AssumptionsHandler - Memory consumption for fitting of the initial pipeline in main session: current 14.8 MiB, max: 541.5 MiB
+03:00:38,215 root CRITICAL ApiComposer - Initial pipeline was fitted in 0.4 sec.
+03:00:38,216 root CRITICAL AssumptionsHandler - Preset was changed to best_quality due to fit time estimation for initial model.
+03:00:38,220 root CRITICAL ApiComposer - AutoML configured. Parameters tuning: False. Time limit: 15 min. Set of candidate models: ['poly_features', 'rf', 'pca', 'logit', 'dt', 'bernb', 'resample', 'knn', 'qda', 'normalization', 'scaling', 'lgbm', 'fast_ica', 'mlp', 'isolation_forest_class'].
+03:00:38,222 root CRITICAL ApiComposer - Pipeline composition started.
+03:00:40,456 root CRITICAL MultiprocessingDispatcher - 2 individuals out of 2 in previous population were evaluated successfully.
+03:00:45,73 root CRITICAL MultiprocessingDispatcher - 21 individuals out of 21 in previous population were evaluated successfully.
+03:00:51,536 root CRITICAL MultiprocessingDispatcher - 20 individuals out of 20 in previous population were evaluated successfully.
+03:00:56,12 root CRITICAL MultiprocessingDispatcher - 20 individuals out of 20 in previous population were evaluated successfully.
+03:01:02,51 root CRITICAL MultiprocessingDispatcher - 32 individuals out of 32 in previous population were evaluated successfully.
+03:01:20,963 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+03:02:20,902 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+03:03:29,436 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.
+03:04:39,28 root CRITICAL MultiprocessingDispatcher - 54 individuals out of 54 in previous population were evaluated successfully.

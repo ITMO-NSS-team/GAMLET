@@ -1,41 +1,35 @@
 import functools
 import json
 import logging
+import os
 import timeit
-from pathlib import Path
-
-import yaml
-
 from datetime import datetime
 from itertools import chain
-from typing import Dict, List, Tuple, Sequence, Any
+from pathlib import Path
+
+from typing import Dict, List, Tuple
 
 import numpy as np
 import openml
 import pandas as pd
-
 from fedot.api.main import Fedot
-from fedot.core.data.data import InputData
 from fedot.core.optimisers.objective import MetricsObjective, PipelineObjectiveEvaluate
 from fedot.core.pipelines.adapters import PipelineAdapter
-from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
-from fedot.core.repository.quality_metrics_repository import QualityMetricsEnum, MetricsRepository
 from fedot.core.validation.split import tabular_cv_generator
 from golem.core.log import Log
+
 from golem.core.optimisers.fitness import SingleObjFitness
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 
-
 from meta_automl.data_preparation.dataset import OpenMLDataset, DatasetData, DatasetBase
+
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
-from meta_automl.data_preparation.file_system import get_cache_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.model import Model
-from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
+from meta_automl.meta_algorithm.datasets_similarity_assessors import KNNSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
 
 
@@ -97,33 +91,38 @@ def get_save_dir(time_now_for_path) -> Path:
     save_dir.mkdir(parents=True)
     return save_dir
 
-
-def fetch_datasets() -> Tuple[pd.DataFrame, pd.DataFrame, Dict[int, OpenMLDataset]]:
+def fetch_openml_data() -> List[DatasetCache]:
     """Returns dictionary with dataset names and cached datasets downloaded from OpenML."""
-
     dataset_ids = openml.study.get_suite(99).data
     if N_DATASETS is not None:
         dataset_ids = pd.Series(dataset_ids)
         dataset_ids = dataset_ids.sample(n=N_DATASETS, random_state=SEED)
+        dataset_ids = list(dataset_ids)
 
-    df_split_datasets = openml_datasets_train_test_split(dataset_ids, test_size=TEST_SIZE, seed=SEED)
-    df_datasets_train = df_split_datasets[df_split_datasets['is_train'] == 1]
-    df_datasets_test = df_split_datasets[df_split_datasets['is_train'] == 0]
+    data = [cache for cache in OpenMLDatasetsLoader().load(dataset_ids)]
+    return data
 
-    datasets = {dataset.id_: dataset for dataset in OpenMLDatasetsLoader().load(dataset_ids)}
-    return df_datasets_train, df_datasets_test, datasets
+def transform_data_for_fedot(data: Dataset) -> (np.array, np.array):
+    x = data.x
+    y = data.y
+    if len(y.shape) == 1:
+        y = y.reshape(-1, 1)
+    return x, y
 
 
-def evaluate_pipeline(pipeline: Pipeline,
-                      input_data: InputData,
-                      metrics: Sequence[QualityMetricsEnum] = COLLECT_METRICS_ENUM,
-                      metric_names: Sequence[str] = COLLECT_METRICS) -> Dict[str, float]:
+def get_pipeline_metrics(pipeline,
+                         input_data,
+                         metrics_obj) -> dict:
     """Gets quality metrics for the fitted pipeline.
     The function is based on `Fedot.get_metrics()`
 
     Returns:
         the values of quality metrics
     """
+    # print(str(metrics_obj))
+    metrics = metrics_obj.metric_functions
+    metric_names = metrics_obj.get_metric_names(metrics)
+
     data_producer = functools.partial(tabular_cv_generator, input_data, 10, StratifiedKFold)
 
     objective = MetricsObjective(metrics)
@@ -131,28 +130,20 @@ def evaluate_pipeline(pipeline: Pipeline,
                                          data_producer=data_producer,
                                          eval_n_jobs=-1)
 
-    metric_values = obj_eval.evaluate(pipeline).values
-    metric_values = {metric_name: round(value, 3) for (metric_name, value) in zip(metric_names, metric_values)}
+    metrics = obj_eval.evaluate(pipeline).values
+    metrics = {metric_name: round(metric, 3) for (metric_name, metric) in zip(metric_names, metrics)}
 
-    return metric_values
+    return metrics
 
 
-def fit_offline_meta_learning_components(best_models_per_dataset_id: Dict[int, Sequence[Model]]) \
-        -> (KNeighborsBasedSimilarityAssessor, PymfeExtractor, DiverseFEDOTPipelineAdvisor):
-    dataset_ids = list(best_models_per_dataset_id.keys())
-    # Meta Features
+def prepare_extractor_and_assessor(datasets_train: List[str]):
     extractor = PymfeExtractor(extractor_params=MF_EXTRACTOR_PARAMS)
-    meta_features_train = extractor.extract(dataset_ids, fill_input_nans=True)
+    meta_features_train = extractor.extract(datasets_train, fill_input_nans=True)
     meta_features_train = meta_features_train.fillna(0)
-    # Datasets similarity
-    data_similarity_assessor = KNeighborsBasedSimilarityAssessor(
-        n_neighbors=min(len(dataset_ids), N_CLOSEST_DATASETS_TO_PROPOSE))
-    data_similarity_assessor.fit(meta_features_train, dataset_ids)
-    # Model advisor
-    model_advisor = DiverseFEDOTPipelineAdvisor(data_similarity_assessor, n_best_to_advise=N_BEST_MODELS_TO_ADVISE,
-                                                minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
-    model_advisor.fit(best_models_per_dataset_id)
-    return extractor, model_advisor
+    data_similarity_assessor = KNNSimilarityAssessor(
+        n_neighbors=min(len(datasets_train), N_CLOSEST_DATASETS_TO_PROPOSE))
+    data_similarity_assessor.fit(meta_features_train, datasets_train)
+    return data_similarity_assessor, extractor
 
 
 def transform_data_for_fedot(data: DatasetData) -> (np.array, np.array):
@@ -174,17 +165,14 @@ def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_as
     fedot.fit(x, y)
     automl_time = timeit.default_timer() - time_start
 
-    metrics = evaluate_pipeline(fedot.current_pipeline, fedot.train_data)
+    metrics = get_pipeline_metrics(fedot.current_pipeline, fedot.train_data, fedot.metrics)
     pipeline = fedot.current_pipeline
-    run_results = get_result_data_row(dataset=dataset, run_label=run_label, pipeline=pipeline,
-                                      automl_time_sec=automl_time, automl_timeout_min=fedot.params.timeout,
-                                      history_obj=fedot.history, **metrics)
     return fedot, run_results
 
 
-def get_result_data_row(dataset: OpenMLDataset, run_label: str, pipeline, history_obj=None, automl_time_sec=0.,
-                        automl_timeout_min=0., **metrics) -> Dict[str, Any]:
-    run_results = dict(dataset_id=dataset.id_,
+def get_result_data_row(dataset, run_label: str, pipeline, history_obj=None, automl_time_sec=0., automl_timeout_min=0.,
+                        **metrics):
+    run_results = dict(dataset_id=dataset.id,
                        dataset_name=dataset.name,
                        run_label=run_label,
                        model_obj=pipeline,
@@ -192,10 +180,8 @@ def get_result_data_row(dataset: OpenMLDataset, run_label: str, pipeline, histor
                        history_obj=history_obj,
                        automl_time_sec=automl_time_sec,
                        automl_timeout_min=automl_timeout_min,
-                       task_type='classification',
                        **metrics)
     return run_results
-
 
 def extract_best_models_from_history(dataset: DatasetBase, history: OptHistory) -> List[Model]:
     if history.individuals:
@@ -266,7 +252,7 @@ def main():
     setup_logging(save_dir)
     progress_file_path = save_dir.joinpath('progress.txt')
 
-    df_datasets_train, df_datasets_test, datasets_dict = fetch_datasets()
+    train_ds_names, test_ds_names = dataset_names
 
     dataset_ids = list(datasets_dict.keys())
     dataset_ids_train = df_datasets_train.index.to_list()
@@ -309,7 +295,10 @@ def main():
             except Exception:
                 logging.exception(f'Train dataset "{dataset_id}"')
 
-    mf_extractor, model_advisor = fit_offline_meta_learning_components(best_models_per_dataset)
+    data_similarity_assessor, extractor = prepare_extractor_and_assessor(train_ds_names)
+    model_advisor = DiverseFEDOTPipelineAdvisor(data_similarity_assessor, n_best_to_advise=N_BEST_MODELS_TO_ADVISE,
+                                                minimal_distance=MINIMAL_DISTANCE_BETWEEN_ADVISED_MODELS)
+    model_advisor.fit(best_models_per_dataset)
 
     with open(progress_file_path, 'a') as progress_file:
         for dataset_id, dataset in tqdm(datasets_dict_test.items(), 'MetaFEDOT, Test datasets', file=progress_file):
@@ -351,10 +340,11 @@ def main():
             except Exception:
                 logging.exception(f'Test dataset "{dataset_id}"')
 
-
+         
 if __name__ == "__main__":
     try:
+        if DEBUG:
+            setup_logging()
         main()
-    except Exception as e:
-        logging.exception('Main level caught an error.')
-        raise
+    except Exception:
+        logging.exception(f'Main level cached the error')

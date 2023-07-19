@@ -26,7 +26,6 @@ class OpenMLDatasetsLoader(DatasetsLoader):
     def load_single(self, dataset_id: Union[OpenMLDatasetIDType, str],
                     allow_name: Optional[bool] = None) -> OpenMLDataset:
         allow_name = self._allow_names if allow_name is None else allow_name
-
         if allow_name:
             dataset = OpenMLDataset.from_search(dataset_id)
         else:
