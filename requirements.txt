@@ -1,4 +1,4 @@
-fedot @ git+https://github.com/aimclub/FEDOT@83a395a15d624fc2375a268144707d179e96594b#egg=fedot
+git+https://github.com/aimclub/FEDOT@83a395a15d624fc2375a268144707d179e96594b#egg=fedot
 numpy==1.24.2
 openml==0.13.0
 pandas==2.0.0
