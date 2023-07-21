@@ -7,12 +7,13 @@ import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.optimisers.fitness import SingleObjFitness
 
-from meta_automl.data_preparation.data_manager import DataManager
-from meta_automl.data_preparation.dataset import DatasetCache
+
+from meta_automl.data_preparation.dataset import OpenMLDataset
+from meta_automl.data_preparation.file_system import get_data_dir
 from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 
-DEFAULT_KNOWLEDGE_BASE_PATH = DataManager.get_data_dir().joinpath('knowledge_base_0')
+DEFAULT_KNOWLEDGE_BASE_PATH = get_data_dir() / 'knowledge_base_0'
 
 
 class KnowledgeBaseModelsLoader(ModelsLoader):
@@ -21,21 +22,21 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
         self.df_knowledge_base: Optional[pd.DataFrame] = None
         self.df_datasets: Optional[pd.DataFrame] = None
 
-    def load(self, dataset_names: Optional[Sequence[str]] = None,
+    def load(self, dataset_ids: Optional[Sequence[str]] = None,
              fitness_metric: str = 'f1') -> List[Model]:
         if self.df_knowledge_base is None:
             knowledge_base_split_file = self.knowledge_base_path.joinpath('knowledge_base.csv')
             self.df_knowledge_base = pd.read_csv(knowledge_base_split_file)
 
-        if dataset_names is None:
-            dataset_names = self.parse_datasets()['dataset_name']
+        if dataset_ids is None:
+            dataset_ids = self.parse_datasets()['dataset_id']
 
         df_knowledge_base = self.df_knowledge_base
-        df_knowledge_base = df_knowledge_base[df_knowledge_base['dataset_name'].isin(dataset_names)]
+        df_knowledge_base = df_knowledge_base[df_knowledge_base['dataset_id'].isin(dataset_ids)]
 
         cached_datasets = {}
-        for name in dataset_names:
-            cached_datasets[name] = DatasetCache(name)
+        for id_ in dataset_ids:
+            cached_datasets[id_] = OpenMLDataset(id_)
 
         models = []
         for _, row in df_knowledge_base.iterrows():
@@ -45,7 +46,7 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
             metric_value = row[fitness_metric]
             fitness = SingleObjFitness(metric_value)
             metadata = dict(row)
-            dataset_cache = cached_datasets[row['dataset_name']]
+            dataset_cache = cached_datasets[row['dataset_id']]
             model = Model(predictor, fitness, fitness_metric, dataset_cache, metadata)
             models.append(model)
         return models
