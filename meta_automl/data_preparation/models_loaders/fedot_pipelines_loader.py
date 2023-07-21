@@ -31,7 +31,7 @@ def evaluate_classification_fedot_pipeline(pipeline, input_data):
 
 def get_n_best_fedot_performers(dataset: DatasetBase, pipelines: List[Pipeline], n_best: int = 1) -> List[Model]:
     data = dataset.get_data()
-    X, y_test = data.x, data.y
+    X, y_test = data.x.to_numpy(), data.y.to_numpy()
     input_data = InputData(idx=np.arange(0, len(X)), features=X, target=y_test, data_type=DataTypesEnum.table,
                            task=Task(TaskTypesEnum.classification))
     fitnesses = []

@@ -39,10 +39,10 @@ class PymfeExtractor(MetaFeaturesExtractor):
                     (mfs := self._get_meta_features_cache(dataset.id_, meta_feature_names))):
                 meta_features[dataset.id_] = mfs
             else:
-                loaded_dataset = dataset.get_data(dataset_format='array')
-                cat_cols = [i for i, val in enumerate(loaded_dataset.categorical_indicator) if val]
-                x = loaded_dataset.x
-                y = loaded_dataset.y
+                dataset_data = dataset.get_data()
+                cat_cols = [i for i, val in enumerate(dataset_data.categorical_indicator) if val]
+                x = dataset_data.x.to_numpy()
+                y = dataset_data.y.to_numpy()
                 if fill_input_nans:
                     x = self.fill_nans(x)
                 mfe = self._extractor.fit(x, y, cat_cols=cat_cols)

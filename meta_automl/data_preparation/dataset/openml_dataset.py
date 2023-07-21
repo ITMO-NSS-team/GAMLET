@@ -33,9 +33,8 @@ class OpenMLDataset(DatasetBase):
                                                      **get_dataset_kwargs)
         return cls(openml_dataset.id)
 
-    def get_data(self, dataset_format: str = 'dataframe') -> DatasetData:
+    def get_data(self) -> DatasetData:
         X, y, categorical_indicator, attribute_names = self._openml_dataset.get_data(
-            target=self._openml_dataset.default_target_attribute,
-            dataset_format=dataset_format
+            target=self._openml_dataset.default_target_attribute
         )
         return DatasetData(X, y, categorical_indicator, attribute_names)
