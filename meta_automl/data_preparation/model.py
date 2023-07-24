@@ -3,13 +3,16 @@ from typing import Any, Dict, Optional
 
 from golem.core.optimisers.fitness import Fitness
 
-from meta_automl.data_preparation.dataset import DatasetCache
+from meta_automl.data_preparation.dataset import DatasetBase
+
+
+PredictorType = Any
 
 
 @dataclass
 class Model:
-    predictor: Any
+    predictor: PredictorType
     fitness: Fitness
     fitness_metric_name: str
-    dataset_cache: DatasetCache
+    dataset: DatasetBase
     metadata: Dict[str, Any] = field(default_factory=dict)

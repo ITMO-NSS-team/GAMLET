@@ -1,2 +1,2 @@
 from .datasets_similarity_assessor import DatasetsSimilarityAssessor
-from .predict_proba_similarity_assessors import KNNSimilarityAssessor, PredictProbaSimilarityAssessor
+from .model_based_similarity_assessors import KNeighborsBasedSimilarityAssessor, ModelBasedSimilarityAssessor
