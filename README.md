@@ -4,6 +4,8 @@
 [![package](https://badge.fury.io/py/metafedot.svg)](https://badge.fury.io/py/metafedot)
 ![build](https://github.com/aimclub/FEDOT/workflows/Build/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/itmo-nss-team/metafedot/branch/main/graph/badge.svg)](https://codecov.io/gh/ITMO-NSS-team/MetaFEDOT)
+[![ITMO](https://github.com/ITMO-NSS-team/open-source-ops/blob/add_badge/badges/ITMO_badge_rus.svg)](https://itmo.ru)
+[![NCCR](https://github.com/ITMO-NSS-team/open-source-ops/blob/add_badge/badges/NCCR_badge.svg)](https://actcognitive.org/)
 
 MetaFEDOT is an open platform for sharing meta-learning experiences in **AutoML** and more
 general **Graph Optimization**.
