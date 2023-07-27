@@ -42,7 +42,11 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 meta_features[dataset.id_] = mfs
             else:
                 dataset_data = dataset.get_data()
-                cat_cols = [i for i, val in enumerate(dataset_data.categorical_indicator) if val]
+                cat_cols_indicator = dataset_data.categorical_indicator
+                if cat_cols_indicator is not None:
+                    cat_cols = [i for i, val in enumerate(cat_cols_indicator) if val]
+                else:
+                    cat_cols = 'auto'
                 x = dataset_data.x.to_numpy()
                 y = dataset_data.y.to_numpy()
                 if fill_input_nans:
