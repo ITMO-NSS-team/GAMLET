@@ -3,11 +3,9 @@ from __future__ import annotations
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union, Optional, List, Any
+from typing import Optional, List, Any
 
-import numpy as np
 import pandas as pd
-import scipy as sp
 
 from meta_automl.data_preparation.file_system import CacheOperator, get_dataset_cache_path
 
@@ -16,8 +14,8 @@ DatasetIDType = Any
 
 @dataclass
 class DatasetData:
-    x: Union[np.ndarray, pd.DataFrame, sp.sparse.csr_matrix]
-    y: Optional[Union[np.ndarray, pd.DataFrame]] = None
+    x: pd.DataFrame
+    y: Optional[pd.DataFrame] = None
     categorical_indicator: Optional[List[bool]] = None
     attribute_names: Optional[List[str]] = None
 
