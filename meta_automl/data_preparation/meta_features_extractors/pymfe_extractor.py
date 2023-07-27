@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import warnings
+from functools import partial
 from typing import List, Union, Dict, Any
 
 import pandas as pd
@@ -26,7 +28,11 @@ class PymfeExtractor(MetaFeaturesExtractor):
         return self._datasets_loader
 
     def extract(self, datasets_or_ids: List[Union[DatasetBase, DatasetIDType]],
-                fill_input_nans: bool = False, use_cached: bool = True, update_cached: bool = True) -> pd.DataFrame:
+                fill_input_nans: bool = False, use_cached: bool = True, update_cached: bool = True,
+                fit_kwargs: Dict[str, Any] = None, extract_kwargs: Dict[str, Any] = None) -> pd.DataFrame:
+        fit_kwargs = fit_kwargs or {}
+        extract_kwargs = extract_kwargs or {}
+
         meta_features = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
 
@@ -40,13 +46,23 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 meta_features[dataset.id_] = mfs
             else:
                 dataset_data = dataset.get_data()
-                cat_cols = [i for i, val in enumerate(dataset_data.categorical_indicator) if val]
+                cat_cols_indicator = dataset_data.categorical_indicator
+                if cat_cols_indicator is not None:
+                    cat_cols = [i for i, val in enumerate(cat_cols_indicator) if val]
+                else:
+                    cat_cols = 'auto'
                 x = dataset_data.x.to_numpy()
                 y = dataset_data.y.to_numpy()
                 if fill_input_nans:
                     x = self.fill_nans(x)
-                mfe = self._extractor.fit(x, y, cat_cols=cat_cols)
-                feature_names, dataset_features = mfe.extract(out_type=tuple)
+                fit_extractor = self._extractor.fit
+                fit_extractor = partial(fit_extractor, x, y, cat_cols=cat_cols, **fit_kwargs)
+                try:
+                    mfe = fit_extractor()
+                except RecursionError:
+                    warnings.warn('PyMFE did not manage to do fit. Trying "one-hot" categorical encoder...')
+                    mfe = fit_extractor(transform_cat='one-hot')
+                feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
                 mfs = dict(zip(feature_names, dataset_features))
                 if update_cached:
                     self._update_meta_features_cache(dataset.id_, mfs)
