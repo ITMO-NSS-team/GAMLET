@@ -156,10 +156,8 @@ def fit_offline_meta_learning_components(best_models_per_dataset_id: Dict[int, S
 
 
 def transform_data_for_fedot(data: DatasetData) -> (np.array, np.array):
-    x = data.x
-    y = data.y
-    if len(y.shape) == 1:
-        y = y.reshape(-1, 1)
+    x = data.x.to_numpy()
+    y = data.y.to_numpy()
     return x, y
 
 
@@ -167,7 +165,7 @@ def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_as
         -> (Fedot, Dict[str, Any]):
     """ Runs Fedot evaluation on the dataset, the evaluates the final pipeline on the dataset.
      Returns Fedot instance & properties of the run along with the evaluated metrics. """
-    x, y = transform_data_for_fedot(dataset.get_data(dataset_format='array'))
+    x, y = transform_data_for_fedot(dataset.get_data())
 
     time_start = timeit.default_timer()
     fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **COMMON_FEDOT_PARAMS)
