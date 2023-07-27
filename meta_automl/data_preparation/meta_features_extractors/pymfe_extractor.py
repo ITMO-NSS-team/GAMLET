@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import warnings
+from functools import partial
 from typing import List, Union, Dict, Any
 
 import pandas as pd
@@ -45,7 +47,13 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 y = dataset_data.y.to_numpy()
                 if fill_input_nans:
                     x = self.fill_nans(x)
-                mfe = self._extractor.fit(x, y, cat_cols=cat_cols)
+                fit_extractor = self._extractor.fit
+                fit_extractor = partial(fit_extractor, x, y, cat_cols=cat_cols)
+                try:
+                    mfe = fit_extractor()
+                except RecursionError:
+                    warnings.warn('PyMFE did not manage to do fit. Trying "one-hot" categorical encoder...')
+                    mfe = fit_extractor(transform_cat='one-hot')
                 feature_names, dataset_features = mfe.extract(out_type=tuple)
                 mfs = dict(zip(feature_names, dataset_features))
                 if update_cached:
