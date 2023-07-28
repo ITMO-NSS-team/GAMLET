@@ -1,0 +1,26 @@
+---
+seed: 42
+#data_settings:
+n_datasets: 3 # null for all available datasets
+test_size: 0.33
+train_timeout: 0.01
+test_timeout: 0.01
+#meta_learning_params:
+n_best_dataset_models_to_memorize: 10
+n_closest_datasets_to_propose: 5
+minimal_distance_between_advised_models: 1
+n_best_models_to_advise: 5
+mf_extractor_params:
+  groups: general
+#evaluation_params:
+collect_metrics:
+  - f1
+  - roc_auc
+  - accuracy
+  - neg_log_loss
+  - precision
+common_fedot_params:
+  problem: classification
+  n_jobs: -1
+  show_progress: false
+baseline_model: 'xgboost'
