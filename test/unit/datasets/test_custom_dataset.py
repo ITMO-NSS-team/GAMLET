@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from meta_automl.data_preparation.dataset import DataNotFoundError, CustomDataset, DatasetData
@@ -8,8 +9,8 @@ from test.unit.datasets.general_checks import assert_cache_file_exists
 @pytest.fixture(scope='module')
 def new_dataset_data():
     dataset_data = DatasetData(
-        x=np.array([['a', 'b'], ['b', 'a']]),
-        y=np.array([5, 10]),
+        x=pd.DataFrame([['a', 'b'], ['b', 'a']]),
+        y=pd.DataFrame([[5], [10]]),
         categorical_indicator=[True, True],
         attribute_names=['foo', 'bar']
     )
@@ -18,7 +19,7 @@ def new_dataset_data():
 
 @pytest.fixture(scope='module')
 def new_dataset(new_dataset_data):
-    dataset = CustomDataset(42)
+    dataset = CustomDataset(42, 'custom_dataset_for_test')
     dataset.dump_data(new_dataset_data)
     yield dataset
     dataset.cache_path.unlink()
