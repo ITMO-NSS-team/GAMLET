@@ -2,7 +2,7 @@
 
 [![licence](https://img.shields.io/github/license/itmo-nss-team/metafedot)](https://github.com/itmo-nss-team/metafedot/blob/main/LICENSE)
 [![package](https://badge.fury.io/py/metafedot.svg)](https://badge.fury.io/py/metafedot)
-![build](https://github.com/aimclub/FEDOT/workflows/Build/badge.svg?branch=main)
+[![Build](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml/badge.svg)](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/itmo-nss-team/metafedot/branch/main/graph/badge.svg)](https://codecov.io/gh/ITMO-NSS-team/MetaFEDOT)
 [![ITMO](https://github.com/ITMO-NSS-team/open-source-ops/blob/add_badge/badges/ITMO_badge_rus.svg)](https://itmo.ru)
 
