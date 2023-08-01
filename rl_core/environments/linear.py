@@ -6,6 +6,7 @@ import torch
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from gym import spaces
 
+from rl_core.agent.agent import to_tensor
 from rl_core.environments.base import PipelineGenerationEnvironment
 
 
@@ -21,7 +22,7 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
         self.position = 0
 
     def init_state(self):
-        self.state = torch.tensor(np.zeros(self.state_dim))
+        self.state = to_tensor(np.zeros(self.state_dim))
         return self
 
     def update_state(self, action):
@@ -41,11 +42,12 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
         return deepcopy(self.state)
 
     def _train_step(self, action):
+        terminated, truncated = False, False
         self.last_action = action
 
         if self.primitives[action] == 'eop' or self.position == self.state_dim:
             self.time_step += 1
-            done = True
+            terminated = True
 
             if self._pipeline_constuction_validate(self.pipeline):
                 reward = self.pipeline_fitting_and_evaluating()
@@ -55,30 +57,28 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
         elif self.primitives[action] == 'pop':
             self.time_step += 1
             reward = -0.005
-            done = False
 
         else:
             self.time_step += 1
             reward = -0.001
-            done = False
 
             self.update_state(action)
 
             primitive = self.primitives[action]
             self.pipeline.add_node(primitive)
 
-        reward, done, info = self._environment_response(reward, done)
+        reward, info = self._environment_response(reward)
 
-        return deepcopy(self.state), reward, done, info
+        return deepcopy(self.state), reward, terminated, truncated, info
 
     def _inference_step(self, action):
         raise NotImplementedError()
 
-    def _environment_response(self, reward: float, done: bool) -> (int, bool, dict):
+    def _environment_response(self, reward: float) -> (int, bool, dict):
         info = {
             'pipeline': self.pipeline.build(),
             'time_step': self.time_step,
             'metric_value': self.metric_value,
         }
 
-        return reward, done, info
+        return reward, info

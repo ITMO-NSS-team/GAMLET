@@ -23,14 +23,14 @@ class PipelineGenerationEnvironment(gym.Env):
 
     def step(self, action: int, mode: str = 'train'):
         assert self.action_space.contains(action)
-        state, reward, done, info = None, 0, False, None
+        state, reward, truncated, terminated, info = None, 0, False, False, None
 
         if mode == 'train':
-            state, reward, done, info = self._train_step(action)
+            state, reward, terminated, truncated, info = self._train_step(action)
         elif mode == 'inference':
-            state, reward, done, info = self._inference_step(action)
+            state, reward, terminated, truncated, info = self._inference_step(action)
 
-        return state, reward, done, info
+        return state, reward, terminated, truncated, info
 
     def pipeline_fitting_and_evaluating(self) -> float:
         pipeline = self.pipeline.build()
