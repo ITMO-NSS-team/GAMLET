@@ -1,4 +1,5 @@
 from abc import ABC
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -33,12 +34,11 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
         self.pipeline = PipelineBuilder()
         self.time_step = 0
         self.metric_value = 0
-
         self.position = 0
 
         self.init_state()
 
-        return self.state
+        return deepcopy(self.state)
 
     def _train_step(self, action):
         self.last_action = action
@@ -69,7 +69,7 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
 
         reward, done, info = self._environment_response(reward, done)
 
-        return self.state, reward, done, info
+        return deepcopy(self.state), reward, done, info
 
     def _inference_step(self, action):
         raise NotImplementedError()

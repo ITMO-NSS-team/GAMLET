@@ -42,7 +42,10 @@ class PipelineGenerationEnvironment(gym.Env):
         y_pred = pred.predict
         y_true = self.val_data.target
 
-        self.metric_value = self.metric(y_score=y_pred, y_true=y_true)
+        try:
+            self.metric_value = self.metric(y_score=y_pred, y_true=y_true)
+        except:
+            self.metric_value = -0.999
 
         return self.metric_value
 
