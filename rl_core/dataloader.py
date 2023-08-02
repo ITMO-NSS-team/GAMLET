@@ -15,7 +15,11 @@ class DataLoader:
             dataset_name = random.choice(self.dataset_names)
 
         path = self.datasets[dataset_name]
-        data = InputData.from_csv(path)
+
+        return self.load_data(path)
+
+    def load_data(self, path_to_dataset):
+        data = InputData.from_csv(path_to_dataset)
 
         train_data, test_data = train_test_data_setup(data=data, split_ratio=self.split_ratio)
 

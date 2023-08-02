@@ -12,6 +12,7 @@ class PipelineGenerationEnvironment(gym.Env):
         self.state_dim = state_dim
         self.state = None
         self.pipeline = PipelineBuilder()
+        self.is_valid = False
 
         self.time_step = 0
         self.metric = roc_auc_score
@@ -44,6 +45,11 @@ class PipelineGenerationEnvironment(gym.Env):
 
         try:
             self.metric_value = self.metric(y_score=y_pred, y_true=y_true)
+            self.is_valid = True
+
+            if self.metric_value < 0.5:
+                self.metric_value = -0.999
+
         except:
             self.metric_value = -0.999
 

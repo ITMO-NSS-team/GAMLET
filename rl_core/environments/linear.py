@@ -79,6 +79,7 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
             'pipeline': self.pipeline.build(),
             'time_step': self.time_step,
             'metric_value': self.metric_value,
+            'is_valid': self.is_valid
         }
 
         return reward, info
