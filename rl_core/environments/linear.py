@@ -12,6 +12,9 @@ from rl_core.environments.base import PipelineGenerationEnvironment
 
 class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
     """ Linear Pipeline Generation Environment """
+    _meta_info = {
+        'name': 'linear',
+    }
     def __init__(self, state_dim: int, primitives: list):
         super().__init__(state_dim)
         self.primitives = ['pop'] + primitives + ['eop']
@@ -33,6 +36,7 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
 
     def reset(self, **kwargs):
         self.pipeline = PipelineBuilder()
+        self.is_valid = False
         self.time_step = 0
         self.metric_value = 0
         self.position = 0
