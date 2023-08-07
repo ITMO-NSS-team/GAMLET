@@ -47,10 +47,12 @@ class PipelineGenerationEnvironment(gym.Env):
             self.metric_value = self.metric(y_score=y_pred, y_true=y_true)
             self.is_valid = True
 
-            if self.metric_value < 0.5:
+            if self.metric_value <= 0.5:
+                self.is_valid = False
                 self.metric_value = -0.999
 
         except:
+            self.is_valid = False
             self.metric_value = -0.999
 
         return self.metric_value

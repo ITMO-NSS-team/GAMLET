@@ -122,10 +122,12 @@ class ActorCriticAgent:
 
     def update(self, rollout_size, critic_batch_size, critic_updates_per_actor):
         if len(self.actor_batch.q_values) < rollout_size:
-            return
+            return None, None
 
-        self.update_actor()
-        self.update_critic(critic_batch_size, critic_updates_per_actor)
+        actor_loss = self.update_actor()
+        critic_loss = self.update_critic(critic_batch_size, critic_updates_per_actor)
+
+        return actor_loss, critic_loss
 
     def update_actor(self):
         Q_s_a = to_tensor(self.actor_batch.q_values)
@@ -139,6 +141,8 @@ class ActorCriticAgent:
         self.actor_opt.step()
         self.actor_batch.clear()
 
+        return loss
+
     def update_critic(self, batch_size, n_updates=1):
         if len(self.critic_rb) < batch_size:
             return
@@ -151,6 +155,8 @@ class ActorCriticAgent:
             loss = self.compute_td_loss(states, actions, rewards, next_states, terminateds)
             loss.backward()
             self.critic_opt.step()
+
+        return loss
 
     def compute_td_loss(self, states, actions, rewards, next_states, terminated, regularizer=.1):
         s = to_tensor(states)
@@ -175,12 +181,11 @@ class ActorCriticAgent:
 
         return loss
 
+    def save(self, path):
+        torch.save(self.ac_model.state_dict(), path)
 
+    def load(self, path):
+        if self.ac_model is None:
+            raise 'Can\'t load weight before model assignment'
 
-
-
-
-
-
-
-
+        self.ac_model.load_state_dict(torch.load(path))
