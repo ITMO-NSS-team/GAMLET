@@ -51,7 +51,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """Map each Dataset ID type to best dataset pipelines.
 
         Args:
-            dataset_names_to_best_pipelines (Dict[DatasetIDType, Sequence[Model]]): Dataset names.
+            dataset_names_to_best_pipelines: Dataset names.
         """
         self.best_models.update(dataset_names_to_best_pipelines)
         return self
@@ -63,7 +63,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
             meta_features (pd.DataFrame): pandas dataframe of meta features.
 
         Returns:
-            List[List[Model]]: List of list of advised pipelines.
+            List: List of list of advised pipelines.
         """
         assessor_predictions = self.similarity_assessor.predict(meta_features)
         advised_pipelines = []
@@ -77,7 +77,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """Advises pipelines based on similarity of dataset ids.
 
         Args:
-            similar_dataset_ids (Iterable[DatasetIDType]): Iterable object of dataset ids types.
+            similar_dataset_ids: Iterable object of dataset ids types.
 
         Returns:
             List: List of dataset model pipelines.
