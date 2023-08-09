@@ -3,10 +3,12 @@ import os
 from meta_automl.utils import project_root
 from rl_core.generator import Generator
 
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
 if __name__ == '__main__':
     task_type = 'classification'
     pipeline_len = 5
-    n_episodes = 250
+    n_episodes = 500
 
     scoring_train_path = os.path.join(str(project_root()), 'MetaFEDOT/rl_core/data/scoring_train.csv')
     airlines_train_path = os.path.join(str(project_root()), 'MetaFEDOT/rl_core/data/airlines.csv')
@@ -16,10 +18,15 @@ if __name__ == '__main__':
         'airlines': airlines_train_path
     }
 
+    primitives = ['scaling', 'simple_imputation', 'normalization', 'dt', 'logit', 'rf', 'knn']
+
     gen = Generator(task_type, state_dim=pipeline_len, n_episodes=n_episodes) \
-        .set_environment(env_name='linear') \
+        .set_environment(env_name='linear', primitives=primitives) \
         .set_dataloader(train_datasets) \
-        .set_agent(eval_schedule=15) \
+        .set_agent(
+            eval_schedule=10,
+            critic_updates_per_actor=10,
+        ) \
         .set_writer()
 
     gen.fit()

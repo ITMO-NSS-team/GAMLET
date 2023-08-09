@@ -57,7 +57,6 @@ class Generator:
     def _get_default_environment(task_type, state_dim):
         # TODO: Adding tags "reinforce" into Fedot
         primitives = OperationTypesRepository('all').suitable_operation(task_type=task_type)
-        # primitives = ['rf', 'dt', 'scaling', 'knn']
 
         return LinearPipelineGenerationEnvironment(state_dim=state_dim, primitives=primitives)
 
@@ -76,7 +75,9 @@ class Generator:
 
         if not primitives:
             primitives = OperationTypesRepository('all').suitable_operation(task_type=self.task_type)
-            primitives.remove('lgbm')
+
+            for d_primitves in ['lgbm', 'knn']:
+                primitives.remove(d_primitves)
 
         self.env = env(state_dim=self.state_dim, primitives=primitives)
         return self
@@ -86,7 +87,7 @@ class Generator:
         return self
 
     def set_agent(self, hidden_dims=(128, 128), lr=1e-3, gamma=0.99, replay_buffer_size=500, train_schedule=32,
-                  eval_schedule=100, critic_updates_per_actor=4, path_to_wieghts=None):
+                  eval_schedule=100, critic_updates_per_actor=4, path_to_weights=None):
         self.hidden_dim = hidden_dims[-1]
         self.train_schedule = train_schedule
         self.eval_schedule = eval_schedule
@@ -101,8 +102,8 @@ class Generator:
             critic_rb_size=replay_buffer_size
         )
 
-        if path_to_wieghts:
-            self.load_agent(path_to_wieghts)
+        if path_to_weights:
+            self.load_agent(path_to_weights)
 
         return self
 
@@ -196,7 +197,7 @@ class Generator:
             return None, 0
 
     def save_agent(self):
-        name = f'{self.env._meta_info["name"]}_{self.state_dim}_a2c_{self.hidden_dim}'
+        name = f'{self.env._meta_info["name"]}_{self.state_dim}_a2c_{self.hidden_dim}_{self.n_episodes}'
         path = f'{project_root()}/MetaFEDOT/rl_core/agent/pretrained/{name}'
         self.agent.save(path)
 

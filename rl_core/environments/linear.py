@@ -15,6 +15,7 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
     _meta_info = {
         'name': 'linear',
     }
+
     def __init__(self, state_dim: int, primitives: list):
         super().__init__(state_dim)
         self.primitives = ['pop'] + primitives + ['eop']
