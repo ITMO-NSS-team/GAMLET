@@ -1,4 +1,5 @@
 from abc import ABC
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -10,6 +11,10 @@ from rl_core.environments.base import PipelineGenerationEnvironment
 
 class EnsemblePipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
     """ Linear Pipeline Generation Environment """
+    _meta_info = {
+        'name': 'ensemble',
+    }
+
     def __init__(self, state_dim: int, primitives: list):
         super().__init__(state_dim)
         self.primitives = ['pop'] + primitives + ['eop']
@@ -33,6 +38,7 @@ class EnsemblePipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
 
     def reset(self, **kwargs):
         self.pipeline = PipelineBuilder()
+        self.is_valid = False
         self.time_step = 0
         self.metric_value = 0
 
@@ -45,6 +51,7 @@ class EnsemblePipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
         return self.state
 
     def _train_step(self, action):
+        terminated, truncated = False, False
         self.last_action = action
 
         if self.primitives[action] == 'eop' or self.position == self.state_dim:
@@ -61,12 +68,10 @@ class EnsemblePipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
         elif self.primitives[action] == 'pop':
             self.time_step += 1
             reward = -0.005
-            done = False
 
         else:
             self.time_step += 1
             reward = -0.001
-            done = False
 
             self.update_state(action)
 
@@ -78,18 +83,19 @@ class EnsemblePipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
                 self.pipeline.add_branch(primitive, branch_idx=self.branch_idx)
                 self.branch_idx += 1
 
-        reward, done, info = self._environment_response(reward, done)
+        reward, info = self._environment_response(reward)
 
-        return self.state, reward, done, info
+        return deepcopy(self.state), reward, terminated, truncated, info
 
     def _inference_step(self, action):
         raise NotImplementedError()
 
-    def _environment_response(self, reward: float, done: bool) -> (int, bool, dict):
+    def _environment_response(self, reward: float) -> (int, bool, dict):
         info = {
             'pipeline': self.pipeline.build(),
             'time_step': self.time_step,
             'metric_value': self.metric_value,
+            'is_valid': self.is_valid
         }
 
-        return reward, done, info
+        return reward, info
