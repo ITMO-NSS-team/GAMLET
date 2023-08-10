@@ -5,9 +5,7 @@ import pandas as pd
 
 from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.data_preparation.model import Model
-from meta_automl.meta_algorithm.datasets_similarity_assessors import (
-    DatasetsSimilarityAssessor,
-)
+from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSimilarityAssessor
 
 
 class ModelAdvisor:
@@ -45,9 +43,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """
         return self.similarity_assessor.datasets
 
-    def fit(
-        self, dataset_names_to_best_pipelines: Dict[DatasetIDType, Sequence[Model]]
-    ) -> Self:
+    def fit(self, dataset_names_to_best_pipelines: Dict[DatasetIDType, Sequence[Model]]) -> Self:
         """Map each Dataset ID type to best dataset pipelines.
 
         Args:
@@ -71,9 +67,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
             advised_pipelines.append(self._predict_single(similar_datasets))
         return advised_pipelines
 
-    def _predict_single(
-        self, similar_dataset_ids: Iterable[DatasetIDType]
-    ) -> List[Model]:
+    def _predict_single(self, similar_dataset_ids: Iterable[DatasetIDType]) -> List[Model]:
         """Advises pipelines based on similarity of dataset ids.
 
         Args:
