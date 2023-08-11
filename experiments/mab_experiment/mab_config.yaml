@@ -1,0 +1,6 @@
+timeout: 10
+launch_num: 5
+agent: {
+  'FEDOT_Classic': 'default',
+  'FEDOT_MAB': 'contextual_bandit'
+}
