@@ -9,6 +9,8 @@ from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSim
 
 
 class ModelAdvisor:
+    """Abstract class of Model Advisor."""
+
     @abstractmethod
     def predict(self, *args, **kwargs) -> List[List[Model]]:
         raise NotImplementedError()
@@ -56,7 +58,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """Advises pipelines by meta features.
 
         Args:
-            meta_features (pd.DataFrame): pandas dataframe of meta features.
+            meta_features: pandas dataframe of meta features.
 
         Returns:
             List: List of list of advised pipelines.
