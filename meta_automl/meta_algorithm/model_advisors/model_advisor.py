@@ -9,7 +9,11 @@ from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSim
 
 
 class ModelAdvisor:
-    """Abstract class of Model Advisor."""
+    """Abstract class of Model Advisor.
+
+    Combines results from Models Loader and Datasets Similarity Assessor.
+    The first one provides a set of models for datasets, the second one provides similar datasets from "memorized" ones.
+    """
 
     @abstractmethod
     def predict(self, *args, **kwargs) -> List[List[Model]]:
@@ -19,7 +23,6 @@ class ModelAdvisor:
 class SimpleSimilarityModelAdvisor(ModelAdvisor):
     """Simple similarity model advisor.
 
-    Combines results from Models Loader and Datasets Similarity Assessor.
     Provides recommendations for models based on loaded data and similar datasets.
     Possible implementations allow for heuristic-based suggestions.
 
@@ -30,7 +33,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
     def __init__(self, fitted_similarity_assessor: DatasetsSimilarityAssessor) -> None:
         """
         Args:
-            fitted_similarity_assessor (DatasetsSimilarityAssessor): abstract dataset similarity assessor.
+            fitted_similarity_assessor: abstract dataset similarity assessor.
         """
         self.similarity_assessor = fitted_similarity_assessor
         self.best_models: Dict[DatasetIDType, Sequence[Model]] = {}
