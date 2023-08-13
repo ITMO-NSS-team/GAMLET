@@ -23,10 +23,14 @@ class DiverseFEDOTPipelineAdvisor(SimpleSimilarityModelAdvisor):
     ) -> None:
         """
         Args:
-            fitted_similarity_assessor: abstract dataset similarity assessor.
-            n_best_to_advise: number of dataset names to output.
-            minimal_distance: mininal distance between first model and others.
-            distance_func: function that calculates distance from `pipeline_1` to `pipeline_2`.
+            fitted_similarity_assessor:
+                Abstract dataset similarity assessor.
+            n_best_to_advise: default=None
+                Number of dataset names to output.
+            minimal_distance: default=1.0
+                Mininal distance between first model and others.
+            distance_func: default=`get_distance_between`
+                Function that calculates distance from `pipeline_1` to `pipeline_2`.
         """
         super().__init__(fitted_similarity_assessor)
         self.minimal_distance = minimal_distance
@@ -37,10 +41,10 @@ class DiverseFEDOTPipelineAdvisor(SimpleSimilarityModelAdvisor):
         """Advices dataset names closer to the first model in a function argument.
 
         Args:
-            similar_dataset_names: an iterable object of dataset names.
+            similar_dataset_names: Iterable object of dataset names.
 
         Returns:
-            List: list of divirsed dataset names.
+            List: List of divirsed dataset names.
         """
         dataset_advice = super()._predict_single(similar_dataset_names)
         first_model = dataset_advice[0]
