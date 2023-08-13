@@ -33,7 +33,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
     def __init__(self, fitted_similarity_assessor: DatasetsSimilarityAssessor) -> None:
         """
         Args:
-            fitted_similarity_assessor: abstract dataset similarity assessor.
+            fitted_similarity_assessor: Abstract dataset similarity assessor.
         """
         self.similarity_assessor = fitted_similarity_assessor
         self.best_models: Dict[DatasetIDType, Sequence[Model]] = {}
@@ -44,7 +44,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         Access names of dataset names.
 
         Returns:
-            List: list of datasets names.
+            List: List of datasets names.
         """
         return self.similarity_assessor.datasets
 
@@ -52,7 +52,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """Map each Dataset ID type to best dataset pipelines.
 
         Args:
-            dataset_names_to_best_pipelines: Dataset names.
+            dataset_names_to_best_pipelines: Dictionary of mapping a dataset name to a collection of models.
         """
         self.best_models.update(dataset_names_to_best_pipelines)
         return self
@@ -61,7 +61,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """Advises pipelines by meta features.
 
         Args:
-            meta_features: pandas dataframe of meta features.
+            meta_features: Pandas dataframe of meta features.
 
         Returns:
             List: List of list of advised pipelines.
