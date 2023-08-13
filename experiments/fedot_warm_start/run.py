@@ -154,10 +154,10 @@ def fit_offline_meta_learning_components(best_models_per_dataset_id: Dict[int, S
 
 
 def transform_data_for_fedot(data: DatasetData) -> (np.array, np.array):
-    x = data.x
+    x = data.x.values
     y = data.y
     if len(y.shape) == 1:
-        y = y.reshape(-1, 1)
+        y = np.array(y).reshape(-1, 1)
     return x, y
 
 
