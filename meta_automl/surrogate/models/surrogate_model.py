@@ -268,9 +268,9 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         Loss value.
         """
 
-        x_pipe1, x_dset1, x_pipe2, x_dset2, y = batch
-        pred1 = torch.squeeze(self.forward(x_pipe1, x_dset1))
-        pred2 = torch.squeeze(self.forward(x_pipe2, x_dset2))
+        x_dset, x_pipe1, x_pipe2, y = batch
+        pred1 = torch.squeeze(self.forward(x_pipe1, x_dset))
+        pred2 = torch.squeeze(self.forward(x_pipe2, x_dset))
         loss = self.loss(pred1, pred2, y)
         self.log("train_loss", loss)
         return loss
