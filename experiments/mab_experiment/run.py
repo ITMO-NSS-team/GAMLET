@@ -3,7 +3,7 @@ import os.path
 import timeit
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Tuple, Optional, Callable
 
 import openml
 import pandas as pd
@@ -18,12 +18,15 @@ from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
 from meta_automl.data_preparation.file_system import get_project_root, get_cache_dir
+import warnings
+warnings.filterwarnings("ignore")
 
 
-def get_save_dir(time_now_for_path) -> Path:
+def get_save_dir(dataset: str, experiment_name: str, launch_num: str) -> Path:
     save_dir = get_cache_dir(). \
-        joinpath('experiments').joinpath('mab_experiment').joinpath(f'run_{time_now_for_path}')
-    save_dir.mkdir(parents=True)
+        joinpath('experiments').joinpath(experiment_name).joinpath(dataset).joinpath(launch_num)
+    if not os.path.exists(save_dir):
+        save_dir.mkdir(parents=True)
     return save_dir
 
 
@@ -64,15 +67,11 @@ def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_as
     return fedot, run_results
 
 
-def run_experiment(path_to_config: str):
+def run(path_to_config: str):
     with open(path_to_config, "r") as input_stream:
         config_dict = yaml.safe_load(input_stream)
 
-    experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
-    save_dir = get_save_dir(experiment_date_for_path)
-    setup_logging(save_dir)
-    progress_file_path = save_dir.joinpath('progress.txt')
-
+    # Prepare data
     df_datasets_train, df_datasets_test, datasets_dict = fetch_datasets()
 
     dataset_ids = list(datasets_dict.keys())
@@ -85,70 +84,59 @@ def run_experiment(path_to_config: str):
     datasets_dict_test = dict(filter(lambda item: item[0] in dataset_ids_test, datasets_dict.items()))
 
     experiment_params_dict = dict(
-            experiment_start_date_iso=experiment_date_iso,
             input_config=config_dict,
             dataset_ids=dataset_ids,
             dataset_ids_train=dataset_ids_train,
             dataset_names_train=dataset_names_train,
             dataset_ids_test=dataset_ids_test,
-            dataset_names_test=dataset_names_test,
+            dataset_names_test=dataset_names_test
         )
-    save_experiment_params(experiment_params_dict, save_dir)
 
-    # run_classic_fedot(progress_file_path=progress_file_path, datasets_dict=datasets_dict,
-    #                   experiment_date=experiment_date, save_dir=save_dir,
-    #                   config=config_dict)
+    experiment_labels = list(config_dict['common_fedot_params'].keys())
 
-    run_mab_fedot(progress_file_path=progress_file_path, datasets_dict=datasets_dict,
-                  experiment_date=experiment_date, save_dir=save_dir,
-                  config=config_dict)
+    for label in experiment_labels:
+
+        run_experiment(experiment_params_dict=experiment_params_dict,
+                       datasets_dict=datasets_dict,
+                       experiment_label=label)
 
 
-def run_classic_fedot(progress_file_path, datasets_dict, experiment_date, save_dir, config):
+def run_experiment(experiment_params_dict: dict, datasets_dict: dict,
+                   experiment_label: str):
+    for dataset_id, dataset in tqdm(datasets_dict.items(), 'FEDOT, all datasets'):
+        experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
+
+        experiment_params_dict['experiment_start_date_iso'] = experiment_date_iso
+
+        run_experiment_per_launch(experiment_params_dict=experiment_params_dict,
+                                  experiment_date=experiment_date,
+                                  config=experiment_params_dict['input_config'],
+                                  dataset_id=dataset_id, dataset=dataset,
+                                  experiment_label=experiment_label)
+
+
+def run_experiment_per_launch(experiment_params_dict, experiment_date, config, dataset_id, dataset,
+                              experiment_label):
     best_models_per_dataset = {}
     launch_num = config['launch_num']
-    with open(progress_file_path, 'a') as progress_file:
-        for i in range(launch_num):
-            for dataset_id, dataset in tqdm(datasets_dict.items(), 'FEDOT, all datasets', file=progress_file):
-                try:
-                    timeout = config['timeout']
-                    run_date = datetime.now()
-                    fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT',
-                                                   **config['common_fedot_params'])
-                    save_evaluation(run_results, run_date, experiment_date, save_dir)
+    for i in tqdm(range(launch_num)):
+        save_dir = get_save_dir(experiment_name=experiment_label, dataset=dataset.name, launch_num=str(i))
+        print(f'Current launch save dir path: {save_dir}')
+        setup_logging(save_dir)
+        save_experiment_params(experiment_params_dict, save_dir)
+        timeout = config['timeout']
+        run_date = datetime.now()
+        fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT',
+                                       **config['common_fedot_params'][experiment_label])
+        save_evaluation(run_results, run_date, experiment_date, save_dir)
 
-                    # Filter out unique individuals with the best fitness
-                    history = fedot.history
-                    best_models = extract_best_models_from_history(dataset, history)
-                    best_models_per_dataset[dataset_id] = best_models
-                except Exception:
-                    logging.exception(f'Train dataset "{dataset_id}"')
-
-
-def run_mab_fedot(progress_file_path, datasets_dict, experiment_date, save_dir, config):
-    best_models_per_dataset = {}
-    launch_num = config['launch_num']
-    with open(progress_file_path, 'a') as progress_file:
-        for i in range(launch_num):
-            for dataset_id, dataset in tqdm(datasets_dict.items(), 'FEDOT, all datasets', file=progress_file):
-                try:
-                    timeout = config['timeout']
-                    agent = config['agent']
-                    run_date = datetime.now()
-                    config['common_fedot_params']['agent'] = agent
-                    fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='MAB_FEDOT',
-                                                   **config['common_fedot_params'])
-                    save_evaluation(run_results, run_date, experiment_date, save_dir)
-
-                    # Filter out unique individuals with the best fitness
-                    history = fedot.history
-                    best_models = extract_best_models_from_history(dataset, history)
-                    best_models_per_dataset[dataset_id] = best_models
-                except Exception:
-                    logging.exception(f'Train dataset "{dataset_id}"')
+        # Filter out unique individuals with the best fitness
+        history = fedot.history
+        best_models = extract_best_models_from_history(dataset, history)
+        best_models_per_dataset[dataset_id] = best_models
 
 
 if __name__ == '__main__':
     config_name = 'mab_config.yaml'
     path_to_config = os.path.join(get_project_root(), 'experiments', 'mab_experiment', config_name)
-    run_experiment(path_to_config=path_to_config)
+    run(path_to_config=path_to_config)
