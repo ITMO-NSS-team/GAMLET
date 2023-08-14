@@ -1,0 +1,15 @@
+timeout: 1
+launch_num: 3
+
+common_fedot_params:
+  FEDOT_MAB:
+    problem: classification
+    n_jobs: -1
+    show_progress: false
+    context_agent_type: nodes_num
+    adaptive_mutation_type: contextual_bandit
+
+  FEDOT_Classic:
+    problem: classification
+    n_jobs: -1
+    show_progress: false
