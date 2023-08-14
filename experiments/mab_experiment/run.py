@@ -1,9 +1,8 @@
-import logging
 import os.path
 import timeit
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Tuple, Optional, Callable
+from typing import Any, Dict, Tuple, Optional
 
 import openml
 import pandas as pd
@@ -54,7 +53,6 @@ def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_as
     x, y = transform_data_for_fedot(dataset.get_data())
 
     time_start = timeit.default_timer()
-    # TODO: specify agent and surrogate_model
     fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **params)
     fedot.fit(x, y)
     automl_time = timeit.default_timer() - time_start
@@ -81,7 +79,7 @@ def run(path_to_config: str):
     dataset_names_train = df_datasets_train['dataset_name'].to_list()
     dataset_names_test = df_datasets_test['dataset_name'].to_list()
 
-    datasets_dict_test = dict(filter(lambda item: item[0] in dataset_ids_test, datasets_dict.items()))
+    # datasets_dict_test = dict(filter(lambda item: item[0] in dataset_ids_test, datasets_dict.items()))
 
     experiment_params_dict = dict(
             input_config=config_dict,
@@ -126,6 +124,12 @@ def run_experiment_per_launch(experiment_params_dict, experiment_date, config, d
         save_experiment_params(experiment_params_dict, save_dir)
         timeout = config['timeout']
         run_date = datetime.now()
+
+        surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
+            checkpoint_path="./experiments/base/checkpoints/last.ckpt",
+            hparams_file="./experiments/base/hparams.yaml"
+        )
+        config['common_fedot_params']['FEDOT_MAB']['context_agent_type'] = S
         fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT',
                                        **config['common_fedot_params'][experiment_label])
         save_evaluation(run_results, run_date, experiment_date, save_dir)
