@@ -6,7 +6,7 @@ common_fedot_params:
     problem: classification
     n_jobs: -1
     show_progress: false
-    context_agent_type: nodes_num
+    context_agent_type: surrogate
     adaptive_mutation_type: contextual_bandit
 
   FEDOT_Classic:
