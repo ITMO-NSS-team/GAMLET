@@ -1,5 +1,6 @@
 import os.path
 import timeit
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Tuple, Optional
@@ -7,8 +8,6 @@ from typing import Any, Dict, Tuple, Optional
 import openml
 import pandas as pd
 from fedot.api.main import Fedot
-from fedot.core.pipelines.node import PrimaryNode
-from fedot.core.pipelines.pipeline import Pipeline
 from tqdm import tqdm
 import yaml
 
@@ -18,14 +17,12 @@ from experiments.fedot_warm_start.run import get_current_formatted_date, setup_l
 from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
-from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.file_system import get_project_root, get_cache_dir
 import warnings
 
-from meta_automl.data_preparation.meta_features_extractors import OpenMLDatasetMetaFeaturesExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from meta_automl.surrogate.models import RankingPipelineDatasetSurrogateModel
-from thegolem import DataPipelineSurrogate
+from thegolem.data_pipeline_surrogate import PipelineVectorizer
 
 warnings.filterwarnings("ignore")
 
@@ -88,8 +85,6 @@ def run(path_to_config: str):
     dataset_names_train = df_datasets_train['dataset_name'].to_list()
     dataset_names_test = df_datasets_test['dataset_name'].to_list()
 
-    # datasets_dict_test = dict(filter(lambda item: item[0] in dataset_ids_test, datasets_dict.items()))
-
     experiment_params_dict = dict(
             input_config=config_dict,
             dataset_ids=dataset_ids,
@@ -117,7 +112,7 @@ def run_experiment(experiment_params_dict: dict, datasets_dict: dict,
 
         run_experiment_per_launch(experiment_params_dict=experiment_params_dict,
                                   experiment_date=experiment_date,
-                                  config=experiment_params_dict['input_config'],
+                                  config=deepcopy(experiment_params_dict['input_config']),
                                   dataset_id=dataset_id, dataset=dataset,
                                   experiment_label=experiment_label)
 
@@ -138,7 +133,7 @@ def run_experiment_per_launch(experiment_params_dict, experiment_date, config, d
         if experiment_label == 'FEDOT_MAB':
             context_agent_type = config['common_fedot_params']['FEDOT_MAB']['context_agent_type']
             if context_agent_type == 'surrogate':
-                config['common_fedot_params']['FEDOT_MAB']['context_agent_type'] = _load_surrogate_model()
+                config['common_fedot_params']['FEDOT_MAB']['context_agent_type'] = _load_pipeline_vectorizer()
 
         fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT',
                                        **config['common_fedot_params'][experiment_label])
@@ -150,7 +145,8 @@ def run_experiment_per_launch(experiment_params_dict, experiment_date, config, d
         best_models_per_dataset[dataset_id] = best_models
 
 
-def _load_surrogate_model() -> RankingPipelineDatasetSurrogateModel:
+def _load_pipeline_vectorizer() -> PipelineVectorizer:
+    """ Loads pipeline vectorizer with surrogate model. """
     checkpoint_path = os.path.join(get_project_root(), 'experiments', 'base', 'checkpoints', 'last.ckpt')
     hparams_file = os.path.join(get_project_root(), 'experiments', 'base', 'hparams.yaml')
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
@@ -158,7 +154,14 @@ def _load_surrogate_model() -> RankingPipelineDatasetSurrogateModel:
         hparams_file=hparams_file
     )
 
-    return surrogate_model
+    pipeline_features_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
+                                                                 operation_encoding="ordinal")
+    pipeline_vectorizer = PipelineVectorizer(
+        pipeline_features_extractor=pipeline_features_extractor,
+        pipeline_estimator=surrogate_model
+    )
+
+    return pipeline_vectorizer
 
 
 if __name__ == '__main__':
