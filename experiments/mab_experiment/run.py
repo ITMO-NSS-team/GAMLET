@@ -5,9 +5,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Tuple, Optional
 
+import numpy as np
 import openml
 import pandas as pd
 from fedot.api.main import Fedot
+from fedot.core.data.data import InputData
+from fedot.core.repository.dataset_types import DataTypesEnum
+from fedot.core.repository.tasks import TaskTypesEnum, Task
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import yaml
 
@@ -52,25 +57,6 @@ def fetch_datasets(n_datasets: Optional[int] = None, seed: int = 42, test_size: 
     return df_datasets_train, df_datasets_test, datasets
 
 
-def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_assumption=None, **params) \
-        -> (Fedot, Dict[str, Any]):
-    """ Runs Fedot evaluation on the dataset, the evaluates the final pipeline on the dataset.
-     Returns Fedot instance & properties of the run along with the evaluated metrics. """
-    x, y = transform_data_for_fedot(dataset.get_data())
-
-    time_start = timeit.default_timer()
-    fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **params)
-    fedot.fit(x, y)
-    automl_time = timeit.default_timer() - time_start
-
-    metrics = evaluate_pipeline(fedot.current_pipeline, fedot.train_data)
-    pipeline = fedot.current_pipeline
-    run_results = get_result_data_row(dataset=dataset, run_label=run_label, pipeline=pipeline,
-                                      automl_time_sec=automl_time, automl_timeout_min=fedot.params.timeout,
-                                      history_obj=fedot.history, **metrics)
-    return fedot, run_results
-
-
 def run(path_to_config: str):
     with open(path_to_config, "r") as input_stream:
         config_dict = yaml.safe_load(input_stream)
@@ -80,18 +66,14 @@ def run(path_to_config: str):
 
     dataset_ids = list(datasets_dict.keys())
     dataset_ids_train = df_datasets_train.index.to_list()
-    dataset_ids_test = df_datasets_test.index.to_list()
 
     dataset_names_train = df_datasets_train['dataset_name'].to_list()
-    dataset_names_test = df_datasets_test['dataset_name'].to_list()
 
     experiment_params_dict = dict(
             input_config=config_dict,
             dataset_ids=dataset_ids,
             dataset_ids_train=dataset_ids_train,
             dataset_names_train=dataset_names_train,
-            dataset_ids_test=dataset_ids_test,
-            dataset_names_test=dataset_names_test
         )
 
     experiment_labels = list(config_dict['common_fedot_params'].keys())
@@ -119,6 +101,9 @@ def run_experiment(experiment_params_dict: dict, datasets_dict: dict,
 
 def run_experiment_per_launch(experiment_params_dict, experiment_date, config, dataset_id, dataset,
                               experiment_label):
+
+    train_data, test_data = _split_data_train_test(dataset=dataset)
+
     best_models_per_dataset = {}
     launch_num = config['launch_num']
     for i in tqdm(range(launch_num)):
@@ -135,14 +120,42 @@ def run_experiment_per_launch(experiment_params_dict, experiment_date, config, d
             if context_agent_type == 'surrogate':
                 config['common_fedot_params']['FEDOT_MAB']['context_agent_type'] = _load_pipeline_vectorizer()
 
-        fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT',
-                                       **config['common_fedot_params'][experiment_label])
+        # run fedot
+        time_start = timeit.default_timer()
+        fedot = Fedot(timeout=timeout, **config['common_fedot_params'][experiment_label])
+        fedot.fit(train_data)
+        automl_time = timeit.default_timer() - time_start
+
+        # test result on test data and save metrics
+        metrics = evaluate_pipeline(fedot.current_pipeline, test_data)
+        pipeline = fedot.current_pipeline
+        run_results = get_result_data_row(dataset=dataset, run_label=experiment_label, pipeline=pipeline,
+                                          automl_time_sec=automl_time, automl_timeout_min=fedot.params.timeout,
+                                          history_obj=fedot.history, **metrics)
+
         save_evaluation(run_results, run_date, experiment_date, save_dir)
 
         # Filter out unique individuals with the best fitness
         history = fedot.history
         best_models = extract_best_models_from_history(dataset, history)
         best_models_per_dataset[dataset_id] = best_models
+
+
+def _split_data_train_test(dataset: OpenMLDataset, seed: int = 42) -> Tuple[InputData, InputData]:
+    """ OpenMLDataset -> InputData """
+    x, y = transform_data_for_fedot(dataset.get_data())
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=seed,
+                                                        stratify=y)
+
+    train_data = InputData(idx=np.arange(0, len(x_train)), features=x_train,
+                           target=y_train, task=Task(TaskTypesEnum.classification),
+                           data_type=DataTypesEnum.table)
+
+    test_data = InputData(idx=np.arange(0, len(x_test)), features=x_test,
+                          target=y_test, task=Task(TaskTypesEnum.classification),
+                          data_type=DataTypesEnum.table)
+
+    return train_data, test_data
 
 
 def _load_pipeline_vectorizer() -> PipelineVectorizer:
