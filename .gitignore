@@ -130,3 +130,5 @@ dmypy.json
 
 # User data
 /data/cache
+/data/knowledge_base_1
+/data/knowledge_base_1_v2
