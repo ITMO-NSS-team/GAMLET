@@ -88,8 +88,13 @@ class FEDOTPipelineFeaturesExtractor:
                 operation_name = nodes[index]["operation_name"]
                 if operation_name is None:
                     operation_type = nodes[index]["operation_type"]
-                    operation_name = self.operation_type2name[operation_type]
+                    if operation_type in list(self.operation_type2name.keys()):
+                        operation_name = self.operation_type2name[operation_type]
+                    else:
+                        continue
                 operations_names.append(operation_name)
+        if not operations_names:
+            operations_names = [(self.operation_type2name.values())[0]]
         return operations_names
 
     def _operation_name2vec(self, operation_name: str) -> np.ndarray:
