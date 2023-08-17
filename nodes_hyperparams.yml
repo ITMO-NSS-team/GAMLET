@@ -1,0 +1,36 @@
+# pca:
+#   n_components: [1, 1000]  # Can be `mle`
+#   copy: [true, false]
+#   whiten: [true, false]
+#   svd_solver: ["auto", "full", "arpack", "randomized"]
+#   tol: [0.0, 1000]
+#   iterated_power: [1, 1000] # Can be "auto"
+#   n_oversamples: [0, 1000]
+#   power_iteration_normalizer: ["auto", "QR", "LU", "none"]
+#   random_state: [0, 1000]
+
+RandomForestClassifier:
+  n_estimators: [1, 1000]
+  criterion: ["gini", "entropy", "log_loss"]
+  max_depth: [1, 1000]  # Can be None
+  min_samples_split: [1, 1000] # Can be (0.0, 1.0]
+  min_samples_leaf: [1, 1000] # Can be (0.0, 1.0]
+  min_weight_fraction_leaf: [0.0, ?] # Not sure
+  max_features: ["sqrt", "log2", null] # Can be [1, 1000] or (0.0, 1.0]
+  max_leaf_nodes: [1, 1000]  # Can be None
+  min_impurity_decrease:  [0.0, ?]
+  bootstrap: [true, false]
+  oob_score: [true, false]  # Can be a callable object
+  # n_jobs  # Have no impact on prediction
+  random_state: [0, 1000]
+  # verbose # Have no impact on prediction
+  warm_start: [true, false]
+  # class_weight  # Decided to omit due complexity
+  # ccp_alpha  # Decided to omit due complexity
+  max_samples: [0, 1000], # Can be (0.0, 1.0]
+
+BernoulliNB:
+  alpha: [0.0, 1.0]  # Not sure about the range  # Can be array
+  force_alpha: [true, false]
+  # binarize  # Decided to omit due uknown range
+  fit_prior: [true, false]
