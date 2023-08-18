@@ -10,6 +10,8 @@ import openml
 import pandas as pd
 from fedot.api.main import Fedot
 from fedot.core.data.data import InputData
+from fedot.core.pipelines.node import PrimaryNode
+from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.tasks import TaskTypesEnum, Task
 from sklearn.model_selection import train_test_split
@@ -88,6 +90,8 @@ def run(path_to_config: str):
 def run_experiment(experiment_params_dict: dict, datasets_dict: dict,
                    experiment_label: str):
     for dataset_id, dataset in tqdm(datasets_dict.items(), 'FEDOT, all datasets'):
+        if dataset.name not in experiment_params_dict['input_config']['datasets']:
+            continue
         experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
 
         experiment_params_dict['experiment_start_date_iso'] = experiment_date_iso
@@ -122,7 +126,7 @@ def run_experiment_per_launch(experiment_params_dict, experiment_date, config, d
 
         # run fedot
         time_start = timeit.default_timer()
-        fedot = Fedot(timeout=timeout, **config['common_fedot_params'][experiment_label])
+        fedot = Fedot(timeout=timeout, logging_level=30, **config['common_fedot_params'][experiment_label])
         fedot.fit(train_data)
         automl_time = timeit.default_timer() - time_start
 
