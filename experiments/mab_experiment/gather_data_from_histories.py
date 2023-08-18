@@ -11,6 +11,7 @@ from golem.core.optimisers.genetic.operators.base_mutations import MutationTypes
 from typing import List
 
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
+from tqdm import tqdm
 
 from experiments.fedot_warm_start.run import MF_EXTRACTOR_PARAMS, fetch_datasets
 from experiments.mab_experiment.run import _load_pipeline_vectorizer
@@ -59,7 +60,7 @@ def gather_data_from_histories(path_to_dataset_similarity: str, datasets: List[s
 def train_bandit_on_histories(path_to_histories: List[str], bandit: ContextualMultiArmedBanditAgent):
     """ Retrieve data from histories and train bandit on it. """
     experience_buffer = ExperienceBuffer()
-    for path_to_history in path_to_histories:
+    for path_to_history in tqdm(path_to_histories):
         history = OptHistory.load(path_to_history)
         for i, gen in enumerate(history.individuals):
             individuals = gen.data
@@ -75,8 +76,8 @@ def train_bandit_on_histories(path_to_histories: List[str], bandit: ContextualMu
                     operator = _get_mutation_class(operator)
                     parent_individual = ind.parent_operator.parent_individuals[0]
                     fitness_difference = ind.fitness.value - parent_individual.fitness.value
-
-                    experience_buffer.collect_experience(obs=ind.graph, action=operator, reward=fitness_difference)
+                    if ind.graph and operator and fitness_difference:
+                        experience_buffer.collect_experience(obs=ind.graph, action=operator, reward=fitness_difference)
                 # since some individuals have None fitness
                 except TypeError:
                     continue
