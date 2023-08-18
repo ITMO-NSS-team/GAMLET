@@ -63,6 +63,8 @@ def train_bandit_on_histories(path_to_histories: List[str], bandit: ContextualMu
     for path_to_history in tqdm(path_to_histories):
         history = OptHistory.load(path_to_history)
         for i, gen in enumerate(history.individuals):
+            if i == 10:
+                break
             individuals = gen.data
             for ind in individuals:
                 # simplify and use only the first operator and parent

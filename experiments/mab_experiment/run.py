@@ -21,6 +21,7 @@ import yaml
 from experiments.fedot_warm_start.run import get_current_formatted_date, setup_logging, \
     save_experiment_params, extract_best_models_from_history, save_evaluation, \
     get_result_data_row, evaluate_pipeline, transform_data_for_fedot
+from experiments.mab_experiment.gather_data_from_histories import gather_data_from_histories
 from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
@@ -100,11 +101,12 @@ def run_experiment(experiment_params_dict: dict, datasets_dict: dict,
                                   experiment_date=experiment_date,
                                   config=deepcopy(experiment_params_dict['input_config']),
                                   dataset_id=dataset_id, dataset=dataset,
+                                  datasets_dict=datasets_dict,
                                   experiment_label=experiment_label)
 
 
 def run_experiment_per_launch(experiment_params_dict, experiment_date, config, dataset_id, dataset,
-                              experiment_label):
+                              datasets_dict, experiment_label):
 
     train_data, test_data = _split_data_train_test(dataset=dataset)
 
@@ -123,6 +125,13 @@ def run_experiment_per_launch(experiment_params_dict, experiment_date, config, d
             context_agent_type = config['common_fedot_params']['FEDOT_MAB']['context_agent_type']
             if context_agent_type == 'surrogate':
                 config['common_fedot_params']['FEDOT_MAB']['context_agent_type'] = _load_pipeline_vectorizer()
+
+        # if pretrained bandit is specified
+        if experiment_label == 'FEDOT_MAB':
+            adaptive_mutation_type = config['common_fedot_params']['FEDOT_MAB']['adaptive_mutation_type']
+            if adaptive_mutation_type == 'pretrained_contextual_mab':
+                bandit = _get_pretrained_bandit(dataset=dataset.name, datasets_dict=datasets_dict)
+                config['common_fedot_params']['FEDOT_MAB']['adaptive_mutation_type'] = bandit
 
         # run fedot
         time_start = timeit.default_timer()
@@ -143,6 +152,22 @@ def run_experiment_per_launch(experiment_params_dict, experiment_date, config, d
         history = fedot.history
         best_models = extract_best_models_from_history(dataset, history)
         best_models_per_dataset[dataset_id] = best_models
+
+
+def _get_pretrained_bandit(dataset: str, datasets_dict: dict):
+    """ Return pretrained bandit on similar to specified datasets. """
+    base_path = os.path.join(get_project_root(), 'experiments',
+                             'mab_experiment')
+    dataset_similaruty_path = os.path.join(base_path, 'dataset_similarity.csv')
+
+    path_to_knowledge_base = os.path.join(base_path, 'knowledge_base.csv')
+    knowledge_base = pd.read_csv(path_to_knowledge_base)
+
+    bandit = gather_data_from_histories(path_to_dataset_similarity=dataset_similaruty_path,
+                                        datasets=[dataset],
+                                        knowledge_base=knowledge_base,
+                                        datasets_dict=datasets_dict)[dataset]
+    return bandit
 
 
 def _split_data_train_test(dataset: OpenMLDataset, seed: int = 42) -> Tuple[InputData, InputData]:
