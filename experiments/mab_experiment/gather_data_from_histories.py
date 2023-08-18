@@ -6,10 +6,14 @@ from fedot.core.composer.gp_composer.specific_operators import parameter_change_
 from fedot.core.repository.operation_types_repository import OperationTypesRepository
 from golem.core.optimisers.adaptive.context_agents import ContextAgentTypeEnum
 from golem.core.optimisers.adaptive.mab_agents.contextual_mab_agent import ContextualMultiArmedBanditAgent
+from golem.core.optimisers.adaptive.operator_agent import ExperienceBuffer
 from golem.core.optimisers.genetic.operators.base_mutations import MutationTypesEnum
 from typing import List
 
+from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
+
 from experiments.fedot_warm_start.run import MF_EXTRACTOR_PARAMS, fetch_datasets
+from experiments.mab_experiment.run import _load_pipeline_vectorizer
 from meta_automl.data_preparation.file_system import get_project_root
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
@@ -18,12 +22,13 @@ from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdviso
 
 def get_contextual_bandit():
     repo = OperationTypesRepository.assign_repo('model', 'model_repository.json')
+    context_agent_type = _load_pipeline_vectorizer()
     mab = ContextualMultiArmedBanditAgent(actions=[parameter_change_mutation,
                                                    MutationTypesEnum.single_change,
                                                    MutationTypesEnum.single_drop,
                                                    MutationTypesEnum.single_add,
                                                    MutationTypesEnum.single_edge],
-                                          context_agent_type=ContextAgentTypeEnum.nodes_num,
+                                          context_agent_type=context_agent_type,
                                           available_operations=repo.operations)
     return mab
 
@@ -31,6 +36,8 @@ def get_contextual_bandit():
 def gather_data_from_histories(path_to_dataset_similarity: str, datasets: List[str],
                                knowledge_base, datasets_dict):
     dataset_similarity = pd.read_csv(path_to_dataset_similarity)
+
+    mab_per_dataset = dict.fromkeys(datasets, None)
 
     for original_dataset_name in datasets:
         similar = dataset_similarity[dataset_similarity['dataset'] == original_dataset_name]['similar_datasets'].tolist()[0]\
@@ -43,7 +50,48 @@ def gather_data_from_histories(path_to_dataset_similarity: str, datasets: List[s
                 if dataset_name == original_dataset_name or dataset_name not in list(set(knowledge_base['dataset_name'].tolist())):
                     continue
                 path_to_histories = list(set(list(knowledge_base[knowledge_base['dataset_name'] == dataset_name]['history_path'])))
-                print(len(path_to_histories))
+                if len(path_to_histories) == 0:
+                    continue
+                mab_per_dataset[original_dataset_name] = \
+                    train_bandit_on_histories(path_to_histories, get_contextual_bandit())
+
+
+def train_bandit_on_histories(path_to_histories: List[str], bandit: ContextualMultiArmedBanditAgent):
+    """ Retrieve data from histories and train bandit on it. """
+    experience_buffer = ExperienceBuffer()
+    for path_to_history in path_to_histories:
+        history = OptHistory.load(path_to_history)
+        for i, gen in enumerate(history.individuals):
+            individuals = gen.data
+            for ind in individuals:
+                # simplify and use only the first operator and parent
+                if not ind.parent_operator or \
+                        not ind.parent_operator.operators or not ind.parent_operator.parent_individuals:
+                    continue
+
+                try:
+                    operator = ind.parent_operator.operators[0]
+                    # get mutation class since it is stored as str
+                    operator = _get_mutation_class(operator)
+                    parent_individual = ind.parent_operator.parent_individuals[0]
+                    fitness_difference = ind.fitness.value - parent_individual.fitness.value
+
+                    experience_buffer.collect_experience(obs=ind.graph, action=operator, reward=fitness_difference)
+                # since some individuals have None fitness
+                except TypeError:
+                    continue
+
+            # check if the is any experience collected
+            if experience_buffer._observations:
+                bandit.partial_fit(experience=experience_buffer)
+    return bandit
+
+
+def _get_mutation_class(mutation_str: str):
+    if 'parameter_change_mutation' in mutation_str:
+        return parameter_change_mutation
+    if 'MutationTypesEnum' in mutation_str:
+        return MutationTypesEnum[mutation_str.split('.')[1]]
 
 
 def get_similar_datasets(path_to_save: str, datasets_dict) \
@@ -99,4 +147,3 @@ if __name__ == '__main__':
                                datasets=datasets,
                                knowledge_base=knowledge_base,
                                datasets_dict=datasets_dict)
-    print('a')
