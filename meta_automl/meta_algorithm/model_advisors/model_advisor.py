@@ -9,10 +9,9 @@ from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSim
 
 
 class ModelAdvisor:
-    """Abstract class of Model Advisor.
+    """Root class for model recommendation.
 
-    Combines results from Models Loader and Datasets Similarity Assessor.
-    The first one provides a set of models for datasets, the second one provides similar datasets from "memorized" ones.
+    Suggests pre-saved models for for the most similar datasets.
     """
 
     @abstractmethod
@@ -21,10 +20,9 @@ class ModelAdvisor:
 
 
 class SimpleSimilarityModelAdvisor(ModelAdvisor):
-    """Simple similarity model advisor.
+    """Dataset similarity-based model advisor.
 
-    Provides recommendations for models based on loaded data and similar datasets.
-    Possible implementations allow for heuristic-based suggestions.
+    Recommends stored models that are correlated with similar datasets.
 
     Example:
         >>> ???
@@ -33,7 +31,7 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
     def __init__(self, fitted_similarity_assessor: DatasetsSimilarityAssessor) -> None:
         """
         Args:
-            fitted_similarity_assessor: Abstract dataset similarity assessor.
+            fitted_similarity_assessor: dataset similarity assessor.
         """
         self.similarity_assessor = fitted_similarity_assessor
         self.best_models: Dict[DatasetIDType, Sequence[Model]] = {}
@@ -41,30 +39,30 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
     @property
     def datasets(self) -> List[str]:
         """
-        Access names of dataset names.
+        Get the names of the datasets.
 
         Returns:
-            List: List of datasets names.
+            List of dataset names.
         """
         return self.similarity_assessor.datasets
 
     def fit(self, dataset_names_to_best_pipelines: Dict[DatasetIDType, Sequence[Model]]) -> Self:
-        """Map each Dataset ID type to best dataset pipelines.
+        """Update the collection of recommended pipelines.
 
         Args:
-            dataset_names_to_best_pipelines: Dictionary of mapping a dataset name to a collection of models.
+            dataset_names_to_best_pipelines: Dictionary of mapped dataset names to a collection of models.
         """
         self.best_models.update(dataset_names_to_best_pipelines)
         return self
 
     def predict(self, meta_features: pd.DataFrame) -> List[List[Model]]:
-        """Advises pipelines by meta features.
+        """Advises pipelines based on meta-learning.
 
         Args:
             meta_features: Pandas dataframe of meta features.
 
         Returns:
-            List: List of list of advised pipelines.
+            List of lists of advised pipelines.
         """
         assessor_predictions = self.similarity_assessor.predict(meta_features)
         advised_pipelines = []
@@ -73,13 +71,13 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         return advised_pipelines
 
     def _predict_single(self, similar_dataset_ids: Iterable[DatasetIDType]) -> List[Model]:
-        """Advises pipelines based on similarity of dataset ids.
+        """Advises pipelines based on identifiers of similar datasets.
 
         Args:
-            similar_dataset_ids: Iterable object of dataset ids types.
+            similar_dataset_ids: Iterable object of dataset ids.
 
         Returns:
-            List: List of dataset model pipelines.
+            List of recommended models.
         """
         dataset_pipelines = []
         for dataset_id in similar_dataset_ids:

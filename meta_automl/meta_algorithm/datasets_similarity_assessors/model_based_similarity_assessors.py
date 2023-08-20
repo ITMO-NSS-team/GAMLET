@@ -13,15 +13,15 @@ from meta_automl.meta_algorithm.datasets_similarity_assessors.datasets_similarit
 
 class ModelBasedSimilarityAssessor(ABC, DatasetsSimilarityAssessor):
     """
-    Assesses dataset similarity based on Model meta-features.
-    For a given dataset, provides list of similar datasets and optionally calculates similarity measures.
+    Assesses the similarity of datasets based on the meta-features of the dataset.
+    For a given dataset, provides a list of similar datasets and optionally provides similarity measures.
     """
 
     def __init__(self, model, n_best: int = 1):
         """
         Args:
             model:
-                Model used to calculate neighbor searches.
+                Model used to implement neighbor searches.
             n_best: default=1
                 Number of neighbors to use.
         """
@@ -44,7 +44,7 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         """Fit the meta features to the model.
 
         Args:
-            meta_features: Pandas dataframe of model meta features.
+            meta_features: Pandas dataframe with the dataset meta-features.
             datasets: Iterable object of dataset names.
         """
         meta_features = self.preprocess_meta_features(meta_features)
@@ -56,7 +56,7 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         """Remove missing values from meta features.
 
         Args:
-            meta_features: Pandas dataframe of model meta features.
+            meta_features: Pandas dataframe with the dataset meta-features.
         Returns:
             Pandas dataframe cleared of missing values.
         """
@@ -64,14 +64,14 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
 
     def predict(self, meta_features: pd.DataFrame, return_distance: bool = False) -> Iterable[Iterable[DatasetIDType]]:
         dataset_indexes = self._inner_model.kneighbors(meta_features, return_distance=return_distance)
-        """Predict the closest dataset names to the passed meta features.
+        """Find the closest dataset names to the passed meta features.
 
         Args:
             meta_features:
-                Pandas dataframe of model meta features.
+                Pandas dataframe with the dataset meta-features.
             return_distance: default=False
                 Whether or not to return the distances.
-        Return:
+        Returns:
             Returns iterable object of dataset names.
             Optionally when 'return_distance' == True returns measure of similarity to the neighbors of each point.
         """

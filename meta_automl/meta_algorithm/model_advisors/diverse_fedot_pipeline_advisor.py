@@ -38,13 +38,13 @@ class DiverseFEDOTPipelineAdvisor(SimpleSimilarityModelAdvisor):
         self.distance_func = distance_func
 
     def _predict_single(self, similar_dataset_names: Iterable[str]) -> List[Model]:
-        """Advices dataset names closer to the first model in a function argument.
+        """Advices list of dataset names closer to the most similar dataset.
 
         Args:
             similar_dataset_names: Iterable object of dataset names.
 
         Returns:
-            List: List of divirsed dataset names.
+            List of divirsed dataset names.
         """
         dataset_advice = super()._predict_single(similar_dataset_names)
         first_model = dataset_advice[0]
