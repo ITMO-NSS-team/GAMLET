@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Iterable, List, Self, Sequence
+from typing import Dict, Iterable, List, Sequence
 
 import pandas as pd
 
@@ -46,11 +46,13 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """
         return self.similarity_assessor.datasets
 
-    def fit(self, dataset_names_to_best_pipelines: Dict[DatasetIDType, Sequence[Model]]) -> Self:
+    def fit(self, dataset_names_to_best_pipelines: Dict[DatasetIDType, Sequence[Model]]):
         """Update the collection of recommended pipelines.
 
         Args:
             dataset_names_to_best_pipelines: Dictionary of mapped dataset names to a collection of models.
+        Returns:
+            Self instance.
         """
         self.best_models.update(dataset_names_to_best_pipelines)
         return self
