@@ -67,13 +67,14 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         """
         return meta_features.dropna(axis=1, how="any")
 
-    def predict(self, meta_features: pd.DataFrame, **kwargs) -> Iterable[Iterable[DatasetIDType]]:
+    def predict(self, meta_features: pd.DataFrame, return_distance: bool = False) -> Iterable[Iterable[DatasetIDType]]:
         """Find the closest dataset names to the passed meta features.
 
         Args:
             meta_features:
                 Pandas dataframe with the dataset meta-features.
-            **kwargs:
+            return_distance: default=False:
+                Whether or not to return the distances.
                 See the documentation of `sklearn.neighbors.NearestNeighbors.kneighbors
                 <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.NearestNeighbors.html>`_
                 for more information.
@@ -81,8 +82,8 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
             Returns iterable object of dataset names.
             If 'return_distance == True' is specified, the function returns a measure of similarity to the neighbours.
         """
-        dataset_indexes = self._inner_model.kneighbors(X=meta_features, **kwargs)
-        if kwargs.get("return_distance", False):
+        dataset_indexes = self._inner_model.kneighbors(X=meta_features, return_distance=return_distance)
+        if return_distance:
             distances, dataset_indexes = dataset_indexes
             dataset_names = np.take(self._datasets, dataset_indexes, axis=0)
             return distances, dataset_names
