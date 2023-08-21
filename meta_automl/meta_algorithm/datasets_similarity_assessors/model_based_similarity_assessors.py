@@ -34,8 +34,13 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
     def __init__(self, n_neighbors: int = 1, **model_params):
         """
         Args:
-            n_neighbors: Number of neighbors to use for queries.
-            **model_params: Additional parameters passed to `NearestNeighbors` classifier.
+            n_neighbors:
+                Number of neighbors to use for queries.
+            **model_params:
+                Additional parameters passed to `NearestNeighbors` classifier.
+                See the documentation of `sklearn.neighbors.NearestNeighbors
+                <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.NearestNeighbors.html>`_
+                for more information.
         """
         model = NearestNeighbors(n_neighbors=n_neighbors, **model_params)
         super().__init__(model, n_neighbors)
@@ -62,20 +67,22 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         """
         return meta_features.dropna(axis=1, how="any")
 
-    def predict(self, meta_features: pd.DataFrame, return_distance: bool = False) -> Iterable[Iterable[DatasetIDType]]:
-        dataset_indexes = self._inner_model.kneighbors(meta_features, return_distance=return_distance)
+    def predict(self, meta_features: pd.DataFrame, **kwargs) -> Iterable[Iterable[DatasetIDType]]:
         """Find the closest dataset names to the passed meta features.
 
         Args:
             meta_features:
                 Pandas dataframe with the dataset meta-features.
-            return_distance: default=False
-                Whether or not to return the distances.
+            **kwargs:
+                See the documentation of `sklearn.neighbors.NearestNeighbors.kneighbors
+                <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.NearestNeighbors.html>`_
+                for more information.
         Returns:
             Returns iterable object of dataset names.
-            Optionally when 'return_distance' == True returns measure of similarity to the neighbors of each point.
+            If 'return_distance == True' is specified, the function returns a measure of similarity to the neighbours.
         """
-        if return_distance:
+        dataset_indexes = self._inner_model.kneighbors(X=meta_features, **kwargs)
+        if kwargs.get("return_distance", False):
             distances, dataset_indexes = dataset_indexes
             dataset_names = np.take(self._datasets, dataset_indexes, axis=0)
             return distances, dataset_names
