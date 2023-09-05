@@ -46,7 +46,7 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         super().__init__(model, n_neighbors)
 
     def fit(self, meta_features: pd.DataFrame, datasets: Iterable[DatasetIDType]) -> None:
-        """Fit the meta features to the model.
+        """Fit the meta features to the model. The DataFrame should be indexed by dataset identifier
 
         Args:
             meta_features: Pandas dataframe with the dataset meta-features.
