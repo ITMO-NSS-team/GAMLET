@@ -7,8 +7,7 @@ import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.optimisers.fitness import SingleObjFitness
 
-
-from meta_automl.data_preparation.dataset import OpenMLDataset
+from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.file_system import get_data_dir
 from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
@@ -17,10 +16,12 @@ DEFAULT_KNOWLEDGE_BASE_PATH = get_data_dir() / 'knowledge_base_0'
 
 
 class KnowledgeBaseModelsLoader(ModelsLoader):
-    def __init__(self, knowledge_base_path: Union[str, PathLike] = DEFAULT_KNOWLEDGE_BASE_PATH):
+    def __init__(self, knowledge_base_path: Union[str, PathLike] = DEFAULT_KNOWLEDGE_BASE_PATH,
+                 datasets_loader: DatasetsLoader = OpenMLDatasetsLoader):
         self.knowledge_base_path: Path = Path(knowledge_base_path)
         self.df_knowledge_base: Optional[pd.DataFrame] = None
         self.df_datasets: Optional[pd.DataFrame] = None
+        self.datasets_loader = datasets_loader
 
     def load(self, dataset_ids: Optional[Sequence[str]] = None,
              fitness_metric: str = 'f1') -> List[Model]:
@@ -36,7 +37,7 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
 
         cached_datasets = {}
         for id_ in dataset_ids:
-            cached_datasets[id_] = OpenMLDataset(id_)
+            cached_datasets[id_] = self.datasets_loader.load_single(id_)
 
         models = []
         for _, row in df_knowledge_base.iterrows():
@@ -59,14 +60,10 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
             train_test_split_file = self.knowledge_base_path.joinpath(train_test_split_file)
             self.df_datasets = pd.read_csv(train_test_split_file)
 
-        if train_test == 'train':
-            train_test = 1
-        elif train_test == 'test':
-            train_test = 0
-
         df_datasets = self.df_datasets
-        if train_test in (0, 1):
-            df_datasets = df_datasets[df_datasets['is_train'] == train_test]
+        if train_test in ('train', 'test'):
+            is_train = (train_test == 'train')
+            df_datasets = df_datasets[df_datasets['is_train'] == is_train]
             df_datasets = df_datasets.drop(columns='is_train')
 
         return df_datasets
