@@ -4,19 +4,19 @@ from test.constants import OPENML_CACHED_DATASETS
 from test.unit.datasets.general_checks import check_dataset_cache
 
 
-def test_openml_dataset_creation(openml_dataset_ids):
-    for dataset_id in openml_dataset_ids:
-        dataset = OpenMLDataset(dataset_id)
-
-        assert dataset.id_ == dataset_id
-
-
-def test_openml_dataset_is_cached_cached(openml_dataset_ids):
+def test_openml_dataset_cache_exists_only_if_preloaded(openml_dataset_ids):
     for dataset_id in openml_dataset_ids:
         cache_path = get_dataset_cache_path_by_id(OpenMLDataset, dataset_id)
 
         is_exist = dataset_id in OPENML_CACHED_DATASETS
         assert is_exist == cache_path.exists()
+
+
+def test_openml_dataset_creation(openml_dataset_ids):
+    for dataset_id in openml_dataset_ids:
+        dataset = OpenMLDataset(dataset_id)
+
+        assert dataset.id_ == dataset_id
 
 
 def test_openml_dataset_data_loading(openml_dataset_ids):
