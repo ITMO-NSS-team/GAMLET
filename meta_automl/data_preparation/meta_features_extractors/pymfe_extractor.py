@@ -42,7 +42,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
 
             logging.critical(f'Extracting meta features of the dataset {dataset}...')
             if (use_cached and
-                    (mfs := self._get_meta_features_cache(dataset.id_, meta_feature_names))):
+                    (mfs := self._get_meta_features_cache(dataset, meta_feature_names))):
                 meta_features[dataset.id_] = mfs
             else:
                 dataset_data = dataset.get_data()
@@ -65,7 +65,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
                 mfs = dict(zip(feature_names, dataset_features))
                 if update_cached:
-                    self._update_meta_features_cache(dataset.id_, mfs)
+                    self._update_meta_features_cache(dataset, mfs)
                 meta_features[dataset.id_] = mfs
         meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features

@@ -32,10 +32,11 @@ def update_openml_cache_dir():
     openml.config.set_root_cache_directory(str(openml_cache_path))
 
 
-def _get_cache_path(object_class: Type[CacheOperator], object_id: str, _create_parent_dir: bool = True) -> Path:
+def _get_cache_path(object_class: Type[CacheOperator], object_id: str, _create_parent_dir: bool = True,
+                    **path_kwargs) -> Path:
     cache_properties = get_cache_properties(object_class.__name__)
-    directory = cache_properties.dir_
-    path = cache_properties.template.format(id_=object_id)
+    directory = cache_properties.dir
+    path = cache_properties.path_template.format(id=object_id, **path_kwargs)
     path = directory.joinpath(path)
     if _create_parent_dir:
         ensure_dir_exists(directory)
@@ -52,12 +53,14 @@ def get_dataset_cache_path_by_id(class_: Type[DatasetBase], id_: Any) -> Path:
     return _get_cache_path(class_, str(id_))
 
 
-def get_meta_features_cache_path(extractor_class: Type[MetaFeaturesExtractor], dataset_id: Any) -> Path:
-    return _get_cache_path(extractor_class, str(dataset_id))
+def get_meta_features_cache_path(extractor_class: Type[MetaFeaturesExtractor], dataset_class: Type[DatasetBase],
+                                 dataset_id: Any) -> Path:
+    return _get_cache_path(extractor_class, str(dataset_id), dataset_class=dataset_class.__name__)
 
 
-def get_local_meta_features(extractor_class: Type[MetaFeaturesExtractor], dataset_id: Any) -> Dict[str, Any]:
-    meta_features_file = get_meta_features_cache_path(extractor_class, dataset_id)
+def get_local_meta_features(extractor_class: Type[MetaFeaturesExtractor], dataset_class: Type[DatasetBase],
+                            dataset_id: Any) -> Dict[str, Any]:
+    meta_features_file = get_meta_features_cache_path(extractor_class, dataset_class, dataset_id)
     if not meta_features_file.exists():
         return {}
     with open(meta_features_file, 'rb') as f:
@@ -65,10 +68,10 @@ def get_local_meta_features(extractor_class: Type[MetaFeaturesExtractor], datase
     return meta_features
 
 
-def update_local_meta_features(extractor_class: Type[MetaFeaturesExtractor],
+def update_local_meta_features(extractor_class: Type[MetaFeaturesExtractor], dataset_class: Type[DatasetBase],
                                dataset_id: Any, meta_features: Dict[str, Any]):
-    meta_features_file = get_meta_features_cache_path(extractor_class, dataset_id)
-    meta_features_old = get_local_meta_features(extractor_class, dataset_id)
+    meta_features_file = get_meta_features_cache_path(extractor_class, dataset_class, dataset_id)
+    meta_features_old = get_local_meta_features(extractor_class, dataset_class, dataset_id)
     with open(meta_features_file, 'wb') as f:
         meta_features_old.update(meta_features)
         pickle.dump(meta_features_old, f)
@@ -77,17 +80,17 @@ def update_local_meta_features(extractor_class: Type[MetaFeaturesExtractor],
 def get_cache_properties(class_name: str) -> CacheProperties:
     cache_properties_by_class_name = {
         'OpenMLDataset': CacheProperties(
-            type_=CacheType.directory,
-            dir_=get_openml_cache_dir().joinpath('datasets'),
-            template='{id_}'),
+            type=CacheType.file,
+            dir=get_openml_cache_dir().joinpath('datasets'),
+            path_template='{id}/dataset.arff'),
         'CustomDataset': CacheProperties(
-            type_=CacheType.file,
-            dir_=get_cache_dir().joinpath('datasets/custom_dataset'),
-            template='{id_}.pkl'),
+            type=CacheType.file,
+            dir=get_cache_dir().joinpath('datasets/custom_dataset'),
+            path_template='{id}.pkl'),
         'PymfeExtractor': CacheProperties(
-            type_=CacheType.file,
-            dir_=get_cache_dir().joinpath('metafeatures/pymfe'),
-            template='{id_}.pkl'),
+            type=CacheType.file,
+            dir=get_cache_dir().joinpath('metafeatures/pymfe'),
+            path_template='{dataset_class}_{id}.pkl'),
     }
     try:
         return cache_properties_by_class_name[class_name]
