@@ -5,7 +5,7 @@ from typing import Optional, Iterable, Dict, Any
 
 import pandas as pd
 
-from meta_automl.data_preparation.dataset import DatasetIDType, DatasetBase
+from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.file_system import (CacheOperator, get_local_meta_features,
                                                       update_local_meta_features)
 
