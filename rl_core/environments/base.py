@@ -90,7 +90,7 @@ class PipelineGenerationEnvironment(gym.Env):
         raise NotImplementedError()
 
     @staticmethod
-    def _pipeline_constuction_validate(pipeline):
+    def _pipeline_construction_validate(pipeline):
         try:
             if pipeline.build():
                 return True

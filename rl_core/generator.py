@@ -10,6 +10,7 @@ from meta_automl.utils import project_root
 from rl_core.agent.agent import ActorCriticAgent
 from rl_core.dataloader import DataLoader
 from rl_core.environments.embedding import EmbeddingPipelineGenerationEnvironment
+from rl_core.environments.ensemble import EnsemblePipelineGenerationEnvironment
 from rl_core.environments.linear import LinearPipelineGenerationEnvironment
 
 SUCCESS_RET = 0.75
@@ -18,6 +19,7 @@ SUCCESS_RET = 0.75
 class Generator:
     __env_dict = {
         'linear': LinearPipelineGenerationEnvironment,
+        'ensemble': EnsemblePipelineGenerationEnvironment,
         'embedding': EmbeddingPipelineGenerationEnvironment,
     }
 
@@ -76,7 +78,7 @@ class Generator:
         if not primitives:
             primitives = OperationTypesRepository('all').suitable_operation(task_type=self.task_type)
 
-            for d_primitves in ['lgbm', 'knn']:
+            for d_primitves in ['lgbm']:
                 primitives.remove(d_primitves)
 
         self.env = env(state_dim=self.state_dim, primitives=primitives)
@@ -185,7 +187,7 @@ class Generator:
 
         while not done:
             a = self.agent.act(s)
-            s_next, r, terminated, truncated, info = self.env.step(a)
+            s_next, r, terminated, truncated, info = self.env.step(a, mode='inference')
             done = terminated or truncated
 
             s = s_next

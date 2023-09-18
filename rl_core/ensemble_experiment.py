@@ -6,7 +6,9 @@ from rl_core.generator import Generator
 if __name__ == '__main__':
     task_type = 'classification'
     pipeline_len = 5
-    n_episodes = 15000
+    n_episodes = 1000
+
+    path_to_agent = os.path.join(str(project_root()), 'MetaFEDOT/rl_core/agent/pretrained/ensemble_5_a2c_128_1000')
 
     data_folder_path = os.path.join(str(project_root()), 'MetaFEDOT/rl_core/data/')
 
@@ -19,20 +21,22 @@ if __name__ == '__main__':
         'kc1': os.path.join(data_folder_path, 'kc1_train.csv'),
     }
 
-    primitives = ['scaling', 'simple_imputation', 'normalization', 'dt', 'logit', 'rf']
+    primitives = ['scaling', 'simple_imputation', 'normalization', 'dt', 'logit', 'rf', 'knn']
 
     gen = Generator(task_type, state_dim=pipeline_len, n_episodes=n_episodes) \
         .set_environment(env_name='ensemble', primitives=primitives) \
         .set_dataloader(train_datasets) \
         .set_agent(
-            eval_schedule=15,
-            critic_updates_per_actor=10,
+            eval_schedule=25,
+            critic_updates_per_actor=25,
         ) \
         .set_writer()
 
-    gen.fit()
-
-    gen.save_agent()
+    if path_to_agent:
+        gen.load_agent(path=path_to_agent)
+    else:
+        gen.fit()
+        gen.save_agent()
 
     test_datasets = {
         'amazon': os.path.join(data_folder_path, 'amazon_test.csv'),
@@ -43,14 +47,14 @@ if __name__ == '__main__':
         'kc1': os.path.join(data_folder_path, 'kc1_test.csv'),
     }
 
-    for name, dataset in test_datasets:
+    for name, dataset in test_datasets.items():
         valid, not_valid = 0, 0
 
         for _ in range(25):
             pipeline, metric_value = gen.generate(path_to_dataset=dataset)
 
             if pipeline:
-                pipeline.show()
+                pipeline.build().show()
                 print('Test metric:', metric_value)
                 valid += 1
             else:
