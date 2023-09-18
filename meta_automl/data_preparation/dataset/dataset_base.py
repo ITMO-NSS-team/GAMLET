@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Any
 
+import numpy as np
 import pandas as pd
 
 from meta_automl.data_preparation.file_system import CacheOperator, get_dataset_cache_path
@@ -18,6 +19,14 @@ class DatasetData:
     y: Optional[pd.DataFrame] = None
     categorical_indicator: Optional[List[bool]] = None
     attribute_names: Optional[List[str]] = None
+
+
+@dataclass
+class TimeSeriesData:
+    x: np.array
+    # time series has already split
+    y: np.array
+    forecast_length: int = 1
 
 
 class DatasetBase(ABC, CacheOperator):
