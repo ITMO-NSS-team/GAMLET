@@ -47,6 +47,7 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
         return deepcopy(self.state)
 
     def _train_step(self, action):
+        return_pipeline = False
         terminated, truncated = False, False
         self.last_action = action
 
@@ -54,8 +55,9 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
             self.time_step += 1
             terminated = True
 
-            if self._pipeline_constuction_validate(self.pipeline):
+            if self._pipeline_construction_validate(self.pipeline):
                 reward = self.pipeline_fitting_and_evaluating()
+                return_pipeline = True
             else:
                 reward = -0.999
 
@@ -72,16 +74,16 @@ class LinearPipelineGenerationEnvironment(PipelineGenerationEnvironment, ABC):
             primitive = self.primitives[action]
             self.pipeline.add_node(primitive)
 
-        reward, info = self._environment_response(reward)
+        reward, info = self._environment_response(reward, return_pipeline)
 
         return deepcopy(self.state), reward, terminated, truncated, info
 
     def _inference_step(self, action):
         raise NotImplementedError()
 
-    def _environment_response(self, reward: float) -> (int, bool, dict):
+    def _environment_response(self, reward: float, return_pipeline: bool) -> (int, bool, dict):
         info = {
-            'pipeline': self.pipeline.build(),
+            'pipeline': self.pipeline if return_pipeline else None,
             'time_step': self.time_step,
             'metric_value': self.metric_value,
             'is_valid': self.is_valid
