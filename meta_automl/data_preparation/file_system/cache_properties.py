@@ -16,6 +16,6 @@ class CacheType(Enum):
 
 @dataclass
 class CacheProperties:
-    type_: Optional[CacheType] = None
-    dir_: Optional[Path] = None
-    template: Optional[PathType] = None
+    type: Optional[CacheType] = None
+    dir: Optional[Path] = None
+    path_template: Optional[PathType] = None
