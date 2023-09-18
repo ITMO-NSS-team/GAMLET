@@ -15,4 +15,4 @@ def openml_dataset_ids():
         if dataset_id in OPENML_CACHED_DATASETS:
             continue
         cache_path = get_dataset_cache_path_by_id(OpenMLDataset, dataset_id)
-        shutil.rmtree(cache_path, ignore_errors=True)
+        shutil.rmtree(cache_path.parent, ignore_errors=True)
