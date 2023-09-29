@@ -23,9 +23,6 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
     """Dataset similarity-based model advisor.
 
     Recommends stored models that are correlated with similar datasets.
-
-    Example:
-        >>> ???
     """
 
     def __init__(self, fitted_similarity_assessor: DatasetsSimilarityAssessor) -> None:
