@@ -130,3 +130,6 @@ dmypy.json
 
 # User data
 /data/cache
+
+# VSCode user setting
+.vscode
