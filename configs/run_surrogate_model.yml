@@ -1,0 +1,11 @@
+batch_size: 1
+num_dataloader_workers: 8
+
+model:
+  name: "RankingPipelineDatasetSurrogateModel"
+
+pipelines_data:
+  root_path: "./data/openml_meta_features_and_fedot_pipelines/all/"
+
+model_data:
+  save_dir: "./experiments/base/"

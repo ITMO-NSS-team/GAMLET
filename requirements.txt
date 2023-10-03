@@ -12,3 +12,4 @@ thegolem==0.3.2
 torch==2.0.1+cpu
 torch_geometric==2.3.0
 pytorch-lightning==2.0.5
+yaml==6.0.1
