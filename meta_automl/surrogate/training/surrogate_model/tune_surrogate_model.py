@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 import optuna
 import torch
+import numpy as np
 from optuna.pruners import HyperbandPruner
 from optuna.samplers import TPESampler
 from optuna.trial import Trial
@@ -29,13 +30,16 @@ def train_surrogate_model(
     `surrogate.training.surrogate_model.train_surrogate_model.train_surrogate_model.
     Data loading is moved outside the function to avoid the data reloading.
     """
-    model_class = getattr(models, config["model"].pop("name"))
+    model_class = getattr(models, config["model"]["name"])
 
     config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
     config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
     dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
     config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
-    model = model_class(**config["model"])
+    
+    model_config = config["model"].copy()
+    model_config.pop("name")
+    model = model_class(**model_config)
 
     if config["tensorboard_logger"] is not None:
         logger = TensorBoardLogger(**config["tensorboard_logger"])
@@ -87,10 +91,10 @@ def objective(
         "num_layers",
         *config["model"]["model_parameters"]["num_layers"],
     )
-    config["model"]["model_parameters"]["batch_norm"] = trial.suggest_categorical(
-        "batch_norm",
-        config["model"]["model_parameters"]["batch_norm"],
-    )
+    # config["model"]["model_parameters"]["batch_norm"] = trial.suggest_categorical(
+    #     "batch_norm",
+    #     config["model"]["model_parameters"]["batch_norm"],
+    # )
     config["model"]["model_parameters"]["gnn_type"] = trial.suggest_categorical(
         "gnn_type",
         config["model"]["model_parameters"]["gnn_type"],
@@ -104,25 +108,32 @@ def objective(
         config["model"]["model_parameters"]["global_pool"],
     )
     # Optimizer parameters
-    config["model"]["lr"] = trial.suggest_float(
+    config["model"]["lr"] = trial.suggest_loguniform(
         "lr",
         *config["model"]["lr"],
     )
+    config["model"]["weight_decay"] = trial.suggest_loguniform(
+        "weight_decay",
+        *config["model"]["weight_decay"],
+    )
+    
     if config["tensorboard_logger"] is not None:
         config["tensorboard_logger"]["name"] = (
             config["tensorboard_logger"]["name"]
             + f"__trial_id_{trial._trial_id}"
         )
-
-    test_result = train_surrogate_model(
-        config=config,
-        meta_data=meta_data,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        test_loader=test_loader,
-    )
-    test_metric = test_result[0]["test_ndcg"]
-    return test_metric
+    
+    test_metric = []
+    for i_it in range(5):
+        test_result = train_surrogate_model(
+            config=config,
+            meta_data=meta_data,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            test_loader=test_loader,
+        )
+        test_metric.append(test_result[0]["test_ndcg"])
+    return np.mean(test_metric)
 
 
 def find_divisible_pairs(set1, set2):
