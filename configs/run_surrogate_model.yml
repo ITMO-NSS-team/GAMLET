@@ -1,8 +1,14 @@
+training_method: "test_ranking"
+
+
 batch_size: 1
 num_dataloader_workers: 8
 
 model:
-  name: "RankingPipelineDatasetSurrogateModel"
+  name: "PipelineDatasetSurrogateModel"
+
+dataset_params:
+  root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
 
 pipelines_data:
   root_path: "./data/openml_meta_features_and_fedot_pipelines/all/"
