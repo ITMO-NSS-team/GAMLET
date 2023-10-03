@@ -160,7 +160,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.test_step_outputs.append(output)
 
     def _get_metrics(self, outputs: Dict[str, np.ndarray]) -> Any:
-        """Calculate mean NDCG score value over multiple predictions.
+        """Calculate mean metrics score value over multiple predictions.
 
         Parameters:
         -----------
@@ -168,21 +168,23 @@ class PipelineDatasetSurrogateModel(LightningModule):
 
         Returns:
         --------
-        Mean NDCG score.
+        Mean metrics score.
         """
 
         def gr_calc(inp):
             y_true = inp['y_true'].values.reshape(1, -1)
             y_pred = inp['y_pred'].values.reshape(1, -1)
-            res = {}
             
+            res = {}        
+            # MRR
             idx_y_pred_sorted = np.argsort(y_pred.flatten())[::-1]
             mask = y_true.flatten()[idx_y_pred_sorted]>0
             rank_max = idx_y_pred_sorted[mask][0]
-            
-            res['ndcg'] = ndcg_score(y_true, y_pred, k=3)
-            res['hits'] = top_k_accuracy_score(y_true.flatten(), y_pred.flatten(), k=1)
             res['mrr'] = 1./(rank_max+1)#average_precision_score(y_true.flatten(), y_pred.flatten())
+            # NDCG
+            res['ndcg'] = ndcg_score(y_true, y_pred, k=3)
+            # HITS
+            res['hits'] = top_k_accuracy_score(y_true.flatten(), y_pred.flatten(), k=1)  
             return pd.Series(res, index=['ndcg', 'hits', 'mrr'])
 
         task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
