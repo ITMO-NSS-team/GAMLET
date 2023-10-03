@@ -6,7 +6,7 @@ import pickle
 import random
 import warnings
 from typing import Any, Dict, List, Tuple, Union
-
+from collections import defaultdict
 
 import time
 
@@ -55,10 +55,17 @@ def get_datasets(path, is_pair = False, binary_y = True, index_col = 0):
                                         (VAL_R,TEST_R) )
    
     if len(val_task_set) == 0:
-        # train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), 
-        #                                 (VAL_R,) )
-        test_task_set, val_task_set = random_train_val_test_split(list(test_task_set), 
-                                        (0.5,) )
+        dataset_types = defaultdict(list)
+        for t in train_task_set:
+            dataset_types[t.split('_')[0]].append(t)
+        train_task_types, val_task_types = random_train_val_test_split(list(dataset_types.keys()), 
+                                        (VAL_R,) )
+        train_task_set = set([item for d_type in train_task_types for item in dataset_types[d_type]])
+        val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
+        
+        # test_task_set, val_task_set = random_train_val_test_split(list(test_task_set), 
+        #                                 (0.5,) )
+        
     if is_pair:
         train_dataset = PairDataset(
         task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -196,9 +203,13 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
 
 def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     """Test surrogate model"""    
-
+    if config["model"]["model_parameters"]["dataset_encoder_type"] == "column":
+        index_col = [0,1]
+    else:
+        index_col = 0
+        
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
-        config["dataset_params"]["root_path"], False, False)
+        config["dataset_params"]["root_path"], False, False, index_col = index_col)
 
     test_loader = DataLoader(
         test_dataset,
@@ -207,8 +218,9 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     )
 
     model_class = getattr(models, config["model"].pop("name"))    
+    chpoint_dir = config["model_data"]["save_dir"]+"checkpoints/"
     surrogate_model = model_class.load_from_checkpoint(
-            checkpoint_path=config["model_data"]["save_dir"]+"checkpoints/last.ckpt",
+            checkpoint_path=chpoint_dir + os.listdir(chpoint_dir)[0],
             hparams_file=config["model_data"]["save_dir"]+"hparams.yaml"
         )
     surrogate_model.eval()
@@ -216,17 +228,27 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
     with torch.no_grad():
         for batch in test_loader:
-            task_id, pipe_id, x_graph, x_dset, y_true = batch
-            y_pred = surrogate_model(x_graph, x_dset)
-            y_pred = torch.squeeze(y_pred)
-            task_ids.append(task_id)
-            pipe_ids.append(pipe_id)
-            y_preds.append(y_pred)
-            y_trues.append(y_true)
+            surrogate_model.test_step(batch)
+            res = surrogate_model.test_step_outputs.pop()
+            task_ids.append(res['task_id'])
+            pipe_ids.append(res['pipe_id'])
+            y_preds.append(res['y_pred'])
+            y_trues.append(res['y_true'])
+
             
     df = pd.DataFrame({'task_id': np.concatenate(task_ids),
                            'pipe_id': np.concatenate(pipe_ids),
                            'y_pred': np.concatenate(y_preds),
                            'y_true': np.concatenate(y_trues)})
-    df.to_csv('results.csv')
+    
+    with open(config["dataset_params"]["root_path"] +"/pipelines_fedot.pickle", "rb") as input_file:
+        pipelines_fedot = pickle.load(input_file)   
+        
+    res = df.loc[df.groupby(['task_id'])['y_pred'].idxmax()]
+    res['model_str'] = [str(pipelines_fedot[i]) for i in res.pipe_id.values]
+    res = res[['task_id','y_true','model_str']]
+    res['y_true'] = -res['y_true']
+    res.columns = ['dataset','fitness','model_str']
+
+    res.to_csv('surrogate_test_set_prediction.csv', index=False)
 

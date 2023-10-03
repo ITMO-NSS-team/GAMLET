@@ -95,8 +95,8 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.test_step_outputs = []
         self.save_hyperparameters()  # TODO: is it required? We have config file.
         
-        K_TOP = 3
-        self.to_labels = partial(to_labels_k, klim=K_TOP)
+        self.K_TOP = 3
+        self.to_labels = partial(to_labels_k, klim=self.K_TOP)
         
         
     def forward(self, x_graph: Batch, dset) -> Tensor:
