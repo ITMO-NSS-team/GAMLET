@@ -1,7 +1,0 @@
-{
-    "features": 
-            ["attr_ent", "class_ent", "eq_num_attr", "joint_ent", "mut_inf", "ns_ratio", "can_cor", "cor", "cov", "eigenvalues", "g_mean", "gravity", "kurtosis", "lh_trace",
-            "max", "mean", "min", "nr_cor_attr", "nr_disc", "nr_norm", "p_trace", "range",
-            "roy_root", "sd_ratio", "skewness", "var", "w_lambda", "attr_to_inst", "cat_to_num",
-            "freq_class", "inst_to_attr", "nr_attr", "nr_cat", "nr_class", "nr_inst", "nr_num", "num_to_cat"]
-}
