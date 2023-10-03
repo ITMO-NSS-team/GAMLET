@@ -3,7 +3,7 @@ from typing import Dict, Iterable, Optional, Union
 import numpy as np
 import pandas as pd
 
-from .feature_preprocessors import FeaturesPreprocessor
+from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 
 
 class DatasetMetaFeaturesExtractor:
