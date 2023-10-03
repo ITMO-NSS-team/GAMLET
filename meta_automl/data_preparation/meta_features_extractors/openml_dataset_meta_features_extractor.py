@@ -46,17 +46,14 @@ class OpenMLDatasetMetaFeaturesExtractor:
             self.meta_features = self._get_features(dataset_id)
 
     def _get_features(self, dataset_id: int) -> Dict[str, int]:
-        if dataset_id is not None:
-            dataset_info = openml.datasets.list_datasets([dataset_id,], output_format="dataframe").iloc[0].to_dict()
-            meta_features = {}
-            for key in self.meta_features_data_columns:
-                try:
-                    meta_features[key] = dataset_info[key]
-                except KeyError:
-                     meta_features[key] = -1
-            return meta_features
-        else:
-            return None # ?? self.meta_features
+        dataset_info = openml.datasets.list_datasets([dataset_id,], output_format="dataframe").iloc[0].to_dict()
+        meta_features = {}
+        for key in self.meta_features_data_columns:
+            try:
+                meta_features[key] = dataset_info[key]
+            except KeyError:
+                 meta_features[key] = -1
+        return meta_features
 
     def __call__(self, dataset_id: int = None) -> Dict[str, int]:
         features = self._get_features(dataset_id)
