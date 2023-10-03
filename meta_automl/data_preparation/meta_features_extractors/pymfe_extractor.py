@@ -12,7 +12,7 @@ from pymfe.mfe import MFE
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
-
+import json
 
 class PymfeExtractor(MetaFeaturesExtractor):
     default_params = {'groups': 'default'}
@@ -37,12 +37,14 @@ class PymfeExtractor(MetaFeaturesExtractor):
         meta_features = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
 
+        # rzz = []
+        
         is_sum_none = True if "summary" in self.extractor_params and self.extractor_params["summary"] is None else False
         if is_sum_none:
             meta_features["dataset"] = []
             meta_features["feature"] = []
             meta_features["value"] = []
-
+            meta_features["variable"] = []
         for dataset in datasets_or_ids:
             if not isinstance(dataset, DatasetBase):
                 dataset = self._datasets_loader.load_single(dataset)
@@ -74,18 +76,49 @@ class PymfeExtractor(MetaFeaturesExtractor):
                     mfe = fit_extractor(transform_cat='one-hot')
                 feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
                 mfs = dict(zip(feature_names, dataset_features))
+                # print(mfs)
+                # dd = dict()
+                # for k,v in mfs.items():
+                #     vv = v
+                #     if isinstance(v, np.ndarray):
+                #         vv = v.tolist()
+                #     dd[k] = vv
+                # rzz.append(dd)
+                
                 if update_cached:
                     self._update_meta_features_cache(dataset.id_, mfs)
                 if is_sum_none:
+                    dim_dataset = x.shape[1]
+                    # l = max([len(v) for v in mfs.values() if isinstance(v, np.ndarray)])
+                    
                     for key, value in mfs.items():
-                        l = len(value) if isinstance(value, np.ndarray) and len(value) > 0 else 1
-                        value = value if isinstance(value, np.ndarray) else [value]
-                        value = value if len(value) > 0 else [np.nan]
-                        meta_features["dataset"].extend([dataset.id_] * l)
-                        meta_features["feature"].extend([key] * l)
+                        # l = len(value) if isinstance(value, np.ndarray) and len(value) > 0 else 1
+                        # value = value.tolist() if isinstance(value, np.ndarray) else [value]
+                        # value = value if len(value) > 0 else [np.nan]
+                        
+                        value = value.tolist() if (isinstance(value, np.ndarray)) else [value]* dim_dataset
+                        if len(value) == 0 or len(value) >dim_dataset:
+                            value = [np.nan]* dim_dataset
+                        if len(value) < dim_dataset:
+                            value = [value[0]]* dim_dataset
+
+                        # print(key, value)    
+                        
+                        meta_features["dataset"].extend([dataset.id_] * dim_dataset)
+                        meta_features["variable"].extend(list(range(dim_dataset)))
+                        meta_features["feature"].extend([key] * dim_dataset)
                         meta_features["value"].extend(value)
+                        # if len(value)>1:
+                        #     meta_features["value"].extend(value.tolist())
+                        # else:
+                        #     meta_features["value"].extend([value[0]] * l)
                 else:
                     meta_features[dataset.id_] = mfs
+        # for k,v in meta_features.items():
+        #     print(k, len(v))
+        # with open('tmp.json', 'w') as json_out:
+        #     json_out.write(json.dumps(rzz))
+    
         meta_features = pd.DataFrame.from_dict(meta_features) if is_sum_none else pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features
 

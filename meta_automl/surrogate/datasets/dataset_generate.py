@@ -133,10 +133,11 @@ class KnowledgeBaseToDataset:
             )
             transformed = self.meta_features_preprocessors.transform(datasets_meta_features, single=False)
             # df = pd.DataFrame.from_dict({k: v.reshape(-1) for k,v in transformed.items()})
+        transformed = transformed.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x:pd.Series(x))
         transformed.to_csv(
             os.path.join(self.dataset_directory, self.split, "datasets.csv"),
             header=True,
-            index=True,
+            index=False,
         )
 
     def _save_pipelines_objects(self, pipelines: List[Any]):
