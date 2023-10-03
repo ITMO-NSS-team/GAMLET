@@ -6,7 +6,7 @@ import pickle
 import random
 import warnings
 from functools import partial
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -18,8 +18,28 @@ from torch_geometric.loader import DataLoader
 
 from meta_automl.surrogate import models
 from meta_automl.surrogate.datasets import GraphDataset, PairDataset, SingleDataset
+from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+
+from fedot.core.pipelines.pipeline import Pipeline
+
+from torch_geometric.data import Data
 
 
+def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor, 
+                          pipeline: Pipeline) -> Data:
+    pipeline_json_string = pipeline.save()[0].encode()
+    return pipeline_extractor(pipeline_json_string)  
+
+def get_pipelines_dataset(path: Union[str,os.PathLike]):
+    with open(os.path.join(path, "pipelines_fedot.pickle"), "rb") as input_file:
+        pipelines = pickle.load(input_file)
+        
+    pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
+                                                                 operation_encoding="ordinal")
+    return [get_pipeline_features(pipeline_extractor, pl) for pl in pipelines],\
+        pipelines,
+    
+        
 def get_datasets(path, is_pair = False):
     """Loading preprocessed data and creating Dataset objects for model training 
     Parameters:
@@ -27,9 +47,9 @@ def get_datasets(path, is_pair = False):
     is_pair: create dataset with or without pipeline pairs.
     
     """
-    with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
-        pipelines = pickle.load(input_file)
-
+    # with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
+    #     pipelines = pickle.load(input_file)
+    pipelines, _ = get_pipelines_dataset(path)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'), index_col=0)
     datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=None, header=0).to_numpy()
 
