@@ -16,6 +16,9 @@ scikit-learn = "*"
 networkx = "*"
 openml = "==0.13.0"
 jupyter = "*"
+tqdm = "*"
+tensorboard = "*"
+einops = "*"
 
 [dev-packages]
 
