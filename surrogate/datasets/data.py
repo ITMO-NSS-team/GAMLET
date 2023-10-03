@@ -36,7 +36,7 @@ class GraphDataset(object):
         if self.se == 'khopgnn':
             Data.__inc__ = my_inc
             self.extract_subgraphs()
-        
+
     def compute_degree(self):
         if not self.degree:
             self.degree_list = None
@@ -123,6 +123,9 @@ class GraphDataset(object):
 
         if self.n_features == 1:
             data.x = data.x.squeeze(-1)
+        # Fix for FEDOT data. In OpenML data minimal number of nodes is 2 but in FEDOT is 1.
+        if len(data.x.shape) == 0:
+            data.x = data.x.unsqueeze(0)
         n = data.num_nodes
         s = torch.arange(n)
         if self.return_complete_index:
@@ -157,34 +160,40 @@ class GraphDataset(object):
             data.subgraph_indicator = None
 
         return data
-    
+
 class SingleDataset(Dataset):
     def __init__(self, indxs, data_pipe, data_dset):
         self.indxs = indxs
         self.data_pipe = data_pipe
-        self.data_dset = torch.tensor(data_dset, dtype=torch.float32)    
-        
+        self.data_dset = torch.tensor(data_dset, dtype=torch.float32)
+
     def __len__(self):
         return len(self.indxs)
 
-    def __getitem__(self, idx):     
+    def __getitem__(self, idx):
         task_id = torch.tensor(self.indxs['task_id'].iloc[idx])
         pipe_id = torch.tensor(self.indxs['pipeline_id'].iloc[idx])
 
-        y = torch.tensor(self.indxs['y'].iloc[idx], dtype=torch.float32)  
+        y = torch.tensor(self.indxs['y'].iloc[idx], dtype=torch.float32)
         return task_id, pipe_id, self.data_pipe.__getitem__(pipe_id), self.data_dset[task_id], y
-    
-    
+
+
 class PairDataset(SingleDataset):
     def __init__(self, indxs, data_pipe, data_dset):
         super().__init__(indxs, data_pipe, data_dset)
-        self.task_pipe_dict = indxs.groupby('task_id')['pipeline_id'].apply(list).to_dict()
+        self.task_pipe_dict = self.indxs.groupby('task_id')['pipeline_id'].apply(list).to_dict()
+
+    def _get_pair(self, idx):
+        task_id = torch.tensor(self.indxs['task_id'].loc[idx])
+        pipe_id = torch.tensor(self.indxs['pipeline_id'].loc[idx])
+
+        y = torch.tensor(self.indxs['y'].loc[idx], dtype=torch.float32)
+        return task_id, pipe_id, self.data_pipe.__getitem__(pipe_id), self.data_dset[task_id], y
 
     def __getitem__(self, idx):
         t1, p1, x_pipe1, x_dset1, y1 = super().__getitem__(idx)
-        
+
         idx2 = choice(self.task_pipe_dict[t1.item()])
-            
-        t2, p2, x_pipe2, x_dset2, y2 = super().__getitem__(idx2)
-        return x_pipe1, x_dset1, x_pipe2, x_dset2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)    
-    
+
+        t2, p2, x_pipe2, x_dset2, y2 = self._get_pair(idx2)
+        return x_pipe1, x_dset1, x_pipe2, x_dset2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
