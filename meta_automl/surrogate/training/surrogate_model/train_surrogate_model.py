@@ -31,9 +31,11 @@ def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor,
     return pipeline_extractor(pipeline_json_string)  
 
 def get_pipelines_dataset(path: Union[str,os.PathLike]):
-    with open(os.path.join(path, "pipelines_fedot.pickle"), "rb") as input_file:
+    with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)
-        
+    if isinstance(pipelines[0], Data):    
+        return pipelines, None
+    
     pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")
     return [get_pipeline_features(pipeline_extractor, pl) for pl in pipelines],\
@@ -66,6 +68,7 @@ def get_datasets(path, is_pair = False):
     except FileNotFoundError:
         train_task_set, val_task_set, test_task_set = random_train_val_test_split(datasets)
 
+    
     if is_pair:
         train_dataset = PairDataset(
         task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -145,8 +148,7 @@ def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[i
 
 
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
-    """Create surrogate model and do training according to config parameters"""
-    
+    """Create surrogate model and do training according to config parameters"""    
     is_pair = False
     model_class = getattr(models, config["model"].pop("name"))
     if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
