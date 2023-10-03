@@ -158,10 +158,4 @@ class GraphTransformer(nn.Module):
                 output = output[-bsz:]
             else:
                 output = self.pooling(output, data.batch)
-        if self.max_seq_len is not None:
-            pred_list = []
-            for i in range(self.max_seq_len):
-                pred_list.append(self.classifier[i](output))
-            return pred_list
-
         return output
