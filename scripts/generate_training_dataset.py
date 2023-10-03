@@ -69,7 +69,7 @@ def main():
     meta_features_preprocessor = FeaturesPreprocessor()
 
     converter = KnowledgeBaseToDataset(
-        knowledge_base_directory = "data/knowledge_base_1_v2",
+        knowledge_base_directory = "data/knowledge_base_1",
         dataset_directory = "data/pymfe_meta_features_and_fedot_pipelines",
         meta_features_extractor = meta_features_extractor,
         train_test_split_name = "train_test_datasets_classification.csv",
@@ -78,7 +78,8 @@ def main():
         meta_features_preprocessors=meta_features_preprocessor,
         models_loader_kwargs={"datasets_loader": datasets_loader_builder()}
     )
-    converter.convert()
+    converter.convert_pipelines()
+    converter.convert_datasets()
 
 if __name__ == '__main__':
     main()
