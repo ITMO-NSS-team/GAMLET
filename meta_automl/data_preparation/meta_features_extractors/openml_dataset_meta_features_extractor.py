@@ -56,7 +56,7 @@ class OpenMLDatasetMetaFeaturesExtractor:
                      meta_features[key] = -1
             return meta_features
         else:
-            return self.meta_features
+            return None # ?? self.meta_features
 
     def __call__(self, dataset_id: int = None) -> Dict[str, int]:
         features = self._get_features(dataset_id)
