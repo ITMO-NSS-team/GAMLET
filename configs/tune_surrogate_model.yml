@@ -25,6 +25,7 @@ model:
     deg: null  # The parameter is inferred
     global_pool: ["mean", "add", "cls"]
     use_edge_attr: False
+    pipe_encoder_type: ["graph_transformer", "simple_graph_encoder"]
   lr: [0.0001, 0.01]
   weight_decay: [0.00001, 0.0001]
   
