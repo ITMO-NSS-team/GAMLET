@@ -112,14 +112,7 @@ class KnowledgeBaseToDataset:
         pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")
         pipelines_data = [get_pipeline_features(pipeline_extractor, pl) for pl in pipelines_fedot]
-
-
-        datasets_meta_features = self.meta_features_extractor.extract(self.df_datasets['dataset_id'].values.tolist(), fill_input_nans=True)    
-        # For PyMFE. OpenML provides a dictionary of floats.
-        # if isinstance(datasets_meta_features[0], pd.DataFrame):
-        #     datasets_meta_features = [df.iloc[0].to_dict() for df in datasets_meta_features]
         return task_pipe_comb[["task_id", "pipeline_id", "y"]], \
-               datasets_meta_features, \
                pipelines_fedot, \
                pipelines_data, \
                self.df_datasets[['dataset_id','is_train']].set_index('dataset_id')['is_train'].to_dict()
@@ -167,11 +160,18 @@ class KnowledgeBaseToDataset:
         with open(os.path.join(self.dataset_directory, self.split, "split.json"), "w") as f:
             json.dump(split, f)
 
-    def convert(self):
-        task_pipe_comb, datasets_meta_features, pipelines_fedot, pipelines_data, is_train_flags = self._process()
+    def convert_pipelines(self):
+        task_pipe_comb, pipelines_fedot, pipelines_data, is_train_flags = self._process()
 
         self._save_split(is_train_flags)
         self._save_pipelines_objects(pipelines_fedot)
         self._save_pipelines_data(pipelines_data)
-        self._save_datasets_meta_features(datasets_meta_features)
         self._save_task_pipe_comb(task_pipe_comb)
+        
+    def convert_datasets(self):
+        datasets_meta_features = self.meta_features_extractor.extract(self.df_datasets['dataset_id'].values.tolist(), \
+                                                                      fill_input_nans=True)    
+        # For PyMFE. OpenML provides a dictionary of floats.
+        # if isinstance(datasets_meta_features[0], pd.DataFrame):
+        #     datasets_meta_features = [df.iloc[0].to_dict() for df in datasets_meta_features]
+        self._save_datasets_meta_features(datasets_meta_features)
