@@ -8,6 +8,8 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 class FeaturesPreprocessor:
     """Wrapper over features preporcessors.
 
+    If a feature preprocessor is not defined, use `sklearn.preprocessing.StandartScaler` by default during fit.
+
     Parameters:
     -----------
     preprocessors: Dict of features preprocessor. Preprocessors should implement `fit` and `transform` methods.
