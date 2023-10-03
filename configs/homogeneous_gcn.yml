@@ -1,0 +1,57 @@
+training_method: train
+
+batch_size: 1024
+
+model:
+  name: "HomogeneousGCN"
+  model_parameters:
+    in_channels: 15
+    out_channels: 2
+    gnn_hidden_channels: 8
+    gnn_num_layers: 3
+    mlp_hidden_channels: 8
+    mlp_num_layers: 2
+    aggregation: "sum"
+    clip_output: null
+  loss_name: "mse_loss"
+  lr: 0.001
+
+train_dataset:
+  name: "HomogeneousPipelineDataset"
+  parameters:
+    root: null  # TODO: specify path
+    split: "train"
+    direction: "reversed"
+    use_operations_hyperparameters: False
+
+val_dataset:
+  name: "HomogeneousPipelineDataset"
+  parameters:
+    root: null  # TODO: specify path
+    split: "val"
+    direction: "reversed"
+    use_operations_hyperparameters: False
+
+test_dataset:
+  name: "HomogeneousPipelineDataset"
+  parameters:
+    root: null  # TODO: specify path
+    split: "test"
+    direction: "reversed"
+    use_operations_hyperparameters: False
+
+trainer:
+  max_epochs: 1000
+  devices: "auto"
+  log_every_n_steps: 4
+  check_val_every_n_epoch: 1
+
+tensorboard_logger:
+  save_dir: null # TODO: specify path
+  name: null # TODO: specify experiment name
+
+model_checkpoint_callback:
+  save_top_k: 1
+  monitor: "val_loss"
+  save_last: True
+  every_n_epochs: 1

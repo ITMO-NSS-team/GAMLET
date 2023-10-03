@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pandas = "*"
+torch = "*"
+torchvision = "*"
+torchaudio = "*"
+pytorch-lightning = "*"
+fedot = "*"
+thegolem = "*"
+torch-geometric = "*"
+scikit-learn = "*"
+networkx = "*"
+openml = "==0.13.0"
+jupyter = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"
