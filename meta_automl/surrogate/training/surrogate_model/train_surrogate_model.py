@@ -26,7 +26,7 @@ from meta_automl.surrogate.datasets import GraphDataset, PairDataset, SingleData
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 
  
-def get_datasets(path, is_pair = False, binary_y = True):
+def get_datasets(path, is_pair = False, binary_y = True, index_col = 0):
     """Loading preprocessed data and creating Dataset objects for model training 
     Parameters:
     -----------
@@ -35,16 +35,13 @@ def get_datasets(path, is_pair = False, binary_y = True):
     """      
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)   
-    datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=0).fillna(0)
+    datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=index_col).fillna(0)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'))
+    task_pipe_comb = task_pipe_comb[task_pipe_comb.y < 10]
     
-    # task_pipe_comb_bin = task_pipe_comb.sort_values(by = 'y', ascending = False)
-    # task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(to_labels)
-    # task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(lambda x: x)
-
     VAL_R = 0.15
     TEST_R = 0.15
-    tasks_in_file = set(datasets.index)
+    tasks_in_file = set(datasets.index.get_level_values(0))
     try:
         with open(os.path.join(path, "split.json")) as f:
             splits = json.load(f)
@@ -56,9 +53,12 @@ def get_datasets(path, is_pair = False, binary_y = True):
         train_task_set, val_task_set, test_task_set = \
             random_train_val_test_split(list(tasks_in_file), 
                                         (VAL_R,TEST_R) )
+   
     if len(val_task_set) == 0:
-        train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), 
-                                        (VAL_R,) )
+        # train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), 
+        #                                 (VAL_R,) )
+        test_task_set, val_task_set = random_train_val_test_split(list(test_task_set), 
+                                        (0.5,) )
     if is_pair:
         train_dataset = PairDataset(
         task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -85,12 +85,10 @@ def get_datasets(path, is_pair = False, binary_y = True):
 
     # Infer parameters
     meta_data = dict()
-    # xs = []
-    # for dset in pipelines:
-    #     for item in list(dset.x):
-    #         xs.append(int(item))
-    # n_tags = len(set(xs))
-    meta_data["in_size"] = pipelines[0].in_size
+    if isinstance(pipelines[0].in_size, int):
+        meta_data["in_size"] = pipelines[0].in_size
+    else:
+        meta_data["in_size"] = len(pipelines[0].in_size)
     meta_data["dim_dataset"] = datasets.shape[1]
     return train_dataset, val_dataset, test_dataset, meta_data
 
@@ -135,8 +133,13 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
         is_pair = True
 
+    if config["model"]["model_parameters"]["dataset_encoder_type"] == "column":
+        index_col = [0,1]
+    else:
+        index_col = 0
+        
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
-        config["dataset_params"]["root_path"], is_pair)
+        config["dataset_params"]["root_path"], is_pair, index_col = index_col)
     
     train_loader = DataLoader(
         train_dataset,
@@ -177,14 +180,16 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
         **config["trainer"],
         logger=logger,
         callbacks=[c for c in [model_checkpoint_callback, early_stopping_callback] if c is not None],
+        gradient_clip_val=0.5,
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
     checkpoint = torch.load(model_checkpoint_callback.best_model_path)
-    model.load_state_dict(checkpoint["state_dict"])
-    model.eval()
-    # model = model_class.load_from_checkpoint(model_checkpoint_callback.best_model_path)
-
+    # model.load_state_dict(checkpoint["state_dict"])
+    # model.eval()
+    model = model_class.load_from_checkpoint(model_checkpoint_callback.best_model_path)
+    print(model_checkpoint_callback.best_model_path)
+    
     test_results = trainer.test(model, dataloaders=test_loader)
     return test_results
 
