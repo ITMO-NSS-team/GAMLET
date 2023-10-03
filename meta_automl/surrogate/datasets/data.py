@@ -227,7 +227,7 @@ class PairDataset(SingleDataset):
             y: 1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5.
         """
         t1, p1, x_pipe1, x_dset, y1 = super().__getitem__(idx)
-        other_indexes = list(self.task_pipe_dict[t1.item()]- {idx}) 
+        other_indexes = list(self.task_pipe_dict[t1]- {idx}) 
         idx2 = choice(other_indexes)
         # idx2 = self.indxs.index[(self.indxs["pipeline_id"] == p2) & (self.indxs["task_id"] == t1.item())].to_list()[0]  
         _, p2, x_pipe2, _, y2 = super().__getitem__(idx2)     
