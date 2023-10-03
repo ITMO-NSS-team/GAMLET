@@ -74,7 +74,11 @@ def get_datasets(path, is_pair = False):
 
 def to_labels_k(x, klim):
     vals = np.zeros(len(x))
-    vals[:klim] = 1
+    if len(x) == 1 or len(x) >= 2 * klim:
+        vals[:klim] = 1
+    else:
+        adjusted_klim = len(x) // 2
+        vals[:adjusted_klim] = 1
     x['y'] = vals
     return x
 
