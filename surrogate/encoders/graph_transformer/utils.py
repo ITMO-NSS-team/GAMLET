@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import torch
-from torch_scatter import scatter
+from torch_geometric.utils import scatter
 
 
 def count_parameters(model):

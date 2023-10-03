@@ -4,7 +4,7 @@ import torch_geometric.nn as gnn
 import torch_geometric.utils as utils
 from einops import rearrange
 from torch import nn
-from torch_scatter import scatter_add, scatter_mean
+from torch_geometric.utils import scatter
 
 from .gnn_layers import get_simple_gnn_layer, EDGE_GNN_TYPES
 from .utils import pad_batch, unpad_batch
@@ -241,9 +241,9 @@ class StructureExtractor(nn.Module):
 
         if self.khopgnn:
             if agg == "sum":
-                x = scatter_add(x, subgraph_indicator_index, dim=0)
+                x = scatter(x, subgraph_indicator_index, dim=0, reduce="sum")
             elif agg == "mean":
-                x = scatter_mean(x, subgraph_indicator_index, dim=0)
+                x = scatter(x, subgraph_indicator_index, dim=0, reduce="mean")
             return x
 
         if self.num_layers > 0 and self.batch_norm:
