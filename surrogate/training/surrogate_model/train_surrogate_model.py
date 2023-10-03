@@ -117,7 +117,8 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     if model_class.__name__ == 'RankingSurrogateModel':
         is_pair = True
 
-    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets('data/openml/', is_pair)
+    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
+        config["dataset_params"]["root_path"], is_pair)
 
     # Not the best solution, that may lead to overfitting, but enables fair comparison with traditional models.
     if len(val_dataset) == 0:
