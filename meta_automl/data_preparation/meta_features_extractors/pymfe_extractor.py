@@ -43,6 +43,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             meta_features["feature"] = []
             meta_features["value"] = []
             meta_features["variable"] = []
+            
         for dataset in datasets_or_ids:
             if not isinstance(dataset, DatasetBase):
                 dataset = self._datasets_loader.load_single(dataset)
@@ -92,17 +93,9 @@ class PymfeExtractor(MetaFeaturesExtractor):
                         meta_features["variable"].extend(list(range(dim_dataset)))
                         meta_features["feature"].extend([key] * dim_dataset)
                         meta_features["value"].extend(value)
-                        # if len(value)>1:
-                        #     meta_features["value"].extend(value.tolist())
-                        # else:
-                        #     meta_features["value"].extend([value[0]] * l)
                 else:
                     meta_features[dataset.id_] = mfs
-        # for k,v in meta_features.items():
-        #     print(k, len(v))
-        # with open('tmp.json', 'w') as json_out:
-        #     json_out.write(json.dumps(rzz))
-    
+
         meta_features = pd.DataFrame.from_dict(meta_features) if is_sum_none else pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features
 
