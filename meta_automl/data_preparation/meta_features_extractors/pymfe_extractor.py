@@ -6,6 +6,7 @@ from functools import partial
 from typing import List, Union, Dict, Any
 
 import pandas as pd
+import numpy as np
 from pymfe.mfe import MFE
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
@@ -36,6 +37,12 @@ class PymfeExtractor(MetaFeaturesExtractor):
         meta_features = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
 
+        is_sum_none = True if "summary" in self.extractor_params and self.extractor_params["summary"] is None else False
+        if is_sum_none:
+            meta_features["dataset"] = []
+            meta_features["feature"] = []
+            meta_features["value"] = []
+
         for dataset in datasets_or_ids:
             if not isinstance(dataset, DatasetBase):
                 dataset = self._datasets_loader.load_single(dataset)
@@ -61,16 +68,25 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 fit_extractor = self._extractor.fit
                 fit_extractor = partial(fit_extractor, x, y, cat_cols=cat_cols, **fit_kwargs)
                 try:
-                    mfe = fit_extractor()
+                    mfe = fit_extractor(transform_cat=None)
                 except RecursionError:
                     warnings.warn('PyMFE did not manage to do fit. Trying "one-hot" categorical encoder...')
                     mfe = fit_extractor(transform_cat='one-hot')
                 feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
                 mfs = dict(zip(feature_names, dataset_features))
                 if update_cached:
-                    self._update_meta_features_cache(dataset, mfs)
-                meta_features[dataset.id_] = mfs
-        meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
+                    self._update_meta_features_cache(dataset.id_, mfs)
+                if is_sum_none:
+                    for key, value in mfs.items():
+                        l = len(value) if isinstance(value, np.ndarray) and len(value) > 0 else 1
+                        value = value if isinstance(value, np.ndarray) else [value]
+                        value = value if len(value) > 0 else [np.nan]
+                        meta_features["dataset"].extend([dataset.id_] * l)
+                        meta_features["feature"].extend([key] * l)
+                        meta_features["value"].extend(value)
+                else:
+                    meta_features[dataset.id_] = mfs
+        meta_features = pd.DataFrame.from_dict(meta_features) if is_sum_none else pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features
 
     @staticmethod
