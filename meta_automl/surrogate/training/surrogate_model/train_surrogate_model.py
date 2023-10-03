@@ -119,7 +119,7 @@ def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[i
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     is_pair = False
     model_class = getattr(models, config["model"].pop("name"))
-    if model_class.__name__ == 'RankingSurrogateModel':
+    if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
         is_pair = True
 
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
@@ -151,7 +151,6 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
     dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
     config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
-    config["model"]["model_parameters"]["meta_data"] = {}
     model = model_class(**config["model"])
 
     if config["tensorboard_logger"] is not None:
