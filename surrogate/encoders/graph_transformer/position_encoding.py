@@ -1,9 +1,7 @@
-import os
-import pickle
-import torch
-from torch_scatter import scatter_add
-import torch_geometric.utils as utils
 import numpy as np
+import torch
+import torch_geometric.utils as utils
+from torch_scatter import scatter_add
 
 
 class PositionEncoding(object):
@@ -32,9 +30,9 @@ class LapEncoding(PositionEncoding):
             num_nodes=graph.num_nodes)
         L = utils.to_scipy_sparse_matrix(edge_index, edge_attr).tocsc()
         EigVal, EigVec = np.linalg.eig(L.toarray())
-        idx = EigVal.argsort() # increasing order
-        EigVal, EigVec = np.real(EigVal[idx]), np.real(EigVec[:,idx])
-        return torch.from_numpy(EigVec[:, 1:self.pos_enc_dim+1]).float()
+        idx = EigVal.argsort()  # increasing order
+        EigVal, EigVec = np.real(EigVal[idx]), np.real(EigVec[:, idx])
+        return torch.from_numpy(EigVec[:, 1:self.pos_enc_dim + 1]).float()
 
 
 class RWEncoding(PositionEncoding):
