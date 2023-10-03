@@ -16,9 +16,9 @@ from fedot.core.pipelines.pipeline import Pipeline
 
 from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.data_preparation.meta_features_extractors import OpenMLDatasetMetaFeaturesExtractor
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.model import Model
+from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 
 def calc_pipeline_hash(pl: Pipeline)-> Tuple[str]:
     return tuple(str(pl.get_edges())+str(pl.nodes))
@@ -29,7 +29,7 @@ class KnowledgeBaseToDataset:
         self,
         knowledge_base_directory: str,
         dataset_directory: str,
-        meta_features_data_columns: List[str],
+        meta_features_extractor: MetaFeaturesExtractor,
         split: Optional[str] = "all", # Can be train, test, all
         train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
         task_type: Optional[str] = "classification",
@@ -47,7 +47,6 @@ class KnowledgeBaseToDataset:
         
         self.knowledge_base_directory = knowledge_base_directory
         self.dataset_directory = dataset_directory
-        self.meta_features_data_columns = meta_features_data_columns
         self.train_test_split_name = train_test_split_name
         self.task_type = task_type
         self.split = split
@@ -58,12 +57,14 @@ class KnowledgeBaseToDataset:
         self._maybe_create_dataset_directory(os.path.join(self.dataset_directory, self.split))
 
         self.pipeline_extractor = FEDOTPipelineFeaturesExtractor()
-        self.meta_features_extractor = OpenMLDatasetMetaFeaturesExtractor(meta_features_data_columns=self.meta_features_data_columns)
+        self.meta_features_extractor = meta_features_extractor
 
         self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory)
         df_datasets = self.models_loader.parse_datasets(self.split, self.task_type)
         
-        self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x not in self.exclude_datasets)]
+        # self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x not in self.exclude_datasets)]
+        self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x in  ['sylvine','jasmine'])]
+        
         self._check_for_duplicated_datasets()
         
         self.use_hyperpar = use_hyperpar
@@ -96,7 +97,8 @@ class KnowledgeBaseToDataset:
         
         for task_id in tqdm(self.df_datasets.index):
             dataset = self.df_datasets.loc[task_id]
-            datasets_meta_features.append(self.meta_features_extractor(dataset.dataset_id))
+            # datasets_meta_features.append(self.meta_features_extractor(dataset.dataset_id))
+            datasets_meta_features.append(self.meta_features_extractor.extract([int(dataset.dataset_id)], fill_input_nans=True))
             is_train_flags.append(dataset.is_train)
 
             dataset_models = self.models_loader.load(

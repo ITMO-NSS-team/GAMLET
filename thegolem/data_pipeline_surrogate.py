@@ -42,14 +42,14 @@ class DataPipelineSurrogate(SurrogateModel):
         self.pipeline_estimator = pipeline_estimator
         self.pipeline_estimator.eval()
         self.pipeline_adapter = PipelineAdapter()
-
+        
     def _graph2pipeline_string(self, graph: Graph) -> str:
         pipeline = self.pipeline_adapter._restore(graph)
         pipeline.unfit()
         pipline_string = pipeline.save()[0].encode()
         return pipline_string
 
-    def __call__(self, graph: Graph, **kwargs: Any) -> float:      
+    def __call__(self, graph: Graph, **kwargs: Any) -> float:        
         pipline_string = self._graph2pipeline_string(graph)
         pipeline_features = self.pipeline_features_extractor(pipline_string)        
         pipeline_features.x = pipeline_features.x.view(-1)  # change if use model's hyperparameters!!!!
@@ -63,3 +63,37 @@ class DataPipelineSurrogate(SurrogateModel):
             score = self.pipeline_estimator(batch, self.dataset_meta_features)
         score = score.view(-1).item()        
         return [score]
+
+              
+class PipelineVectorizer:              
+    def __init__(
+            self,
+            pipeline_features_extractor: Callable,
+            pipeline_estimator: Callable,
+        ):
+        self.pipeline_features_extractor = pipeline_features_extractor
+        self.pipeline_estimator = pipeline_estimator
+        self.pipeline_estimator.eval()
+        self.pipeline_adapter = PipelineAdapter()
+
+    def _graph2pipeline_string(self, graph: Graph) -> str:
+        pipeline = self.pipeline_adapter._restore(graph)
+        pipeline.unfit()
+        pipline_string = pipeline.save()[0].encode()
+        return pipline_string
+
+    def _pipeline_to_batch(self, graph: Graph) -> Any:
+        pipline_string = self._graph2pipeline_string(graph)
+        pipeline_features = self.pipeline_features_extractor(pipline_string)        
+        pipeline_features.x = pipeline_features.x.view(-1)  # change if use model's hyperparameters!!!!
+        if not pipeline_features.edge_index.shape[0]:
+            pipeline_features.edge_index = torch.tensor([[0],[0]], dtype=torch.long)
+        
+        loader = DataLoader([pipeline_features], batch_size=1)
+        batch = next(iter(loader))
+        return batch
+        
+    def __call__(self, graph: Graph, **kwargs: Any) -> torch.Tensor:          
+        batch = self._pipeline_to_batch(graph)     
+        with torch.no_grad():
+            return self.pipeline_estimator.pipeline_encoder(batch)
