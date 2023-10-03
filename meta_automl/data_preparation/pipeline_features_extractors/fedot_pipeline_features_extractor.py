@@ -18,26 +18,6 @@ class FEDOTPipelineFeaturesExtractor:
     operation_type2name: Mapping of operation type to its implementation name. Default mapping is adapted from FEDOT.
     operation_encoding: Type of operation encoding. Can be `"ordinal"` or `"onehot"`. Default: `"ordinal"`.
     """
-
-    # default_operation_type2name = {
-    #     # '': '',  # Empty string indicates that the node means <no_operation> as https://t.me/FGksjp67 requested.
-    #     'scaling': 'ScalingImplementation',
-    #     'normalization': 'NormalizationImplementation',
-    #     'pca': 'PCAImplementation',
-    #     'lgbm': 'LGBMClassifier',
-    #     'mlp': 'MLPClassifier',
-    #     'bernb': 'BernoulliNB',
-    #     'isolation_forest_class': 'IsolationForestClassImplementation',
-    #     'fast_ica': 'FastICAImplementation',
-    #     'rf': 'RandomForestClassifier',
-    #     'dt': 'DecisionTreeClassifier',
-    #     'qda': 'QDAImplementation',
-    #     'knn': 'FedotKnnClassImplementation',
-    #     'resample': 'ResampleImplementation',
-    #     'logit': 'LogisticRegression',
-    #     'poly_features': 'PolyFeaturesImplementation'
-    # }
-
     def __init__(
             self,
             include_operations_hyperparameters: Optional[bool] = False,
@@ -48,6 +28,7 @@ class FEDOTPipelineFeaturesExtractor:
         for k in models_repo.__initialized_repositories__.keys():
             for o in models_repo.__initialized_repositories__[k]:
                 self.operation_types.append(o.id)
+        self.operation_types += ['dataset']
         self.operations_count = len(self.operation_types)
         
         possible_operation_encodings = ["ordinal", "onehot"]
@@ -62,7 +43,7 @@ class FEDOTPipelineFeaturesExtractor:
         result = {}
         for i, operation_name in enumerate(self.operation_types):
             if self.operation_encoding == "onehot":
-                vector = np.zeros(len(self.operation_types))
+                vector = np.zeros(self.operations_count)
                 vector[i] = 1
                 result[operation_name] = vector
             elif self.operation_encoding == "ordinal":
@@ -126,12 +107,22 @@ class FEDOTPipelineFeaturesExtractor:
 
     def _get_edge_index_tensor(self, nodes: List[Dict[str, Any]]) -> torch.LongTensor:
         edges = []
+        
+        # add dataset node!!!
+        max_op_id = max([node['operation_id'] for node in nodes]) +1
+        for node in nodes:
+            if not node["nodes_from"]:
+                node["nodes_from"] = [max_op_id]
+        dataset_node = [{'operation_id': max_op_id, 'operation_type': 'dataset', 'custom_params': {}, 'params': {}, 'nodes_from': []}]
+        nodes = dataset_node + nodes
+        
         for node in nodes:
             nodes_from = node["nodes_from"]
             if len(nodes_from) > 0:
                 target = node["operation_id"]
                 for source in nodes_from:
                     edges.append([source, target])
+            
         return torch.LongTensor(edges).T
 
     def _get_data(self, pipeline_json_string: str) -> Data:
@@ -141,7 +132,7 @@ class FEDOTPipelineFeaturesExtractor:
         operations_parameters = self._get_operations_parameters(nodes, operations_ids)
         operations_tensor = self._operations2tensor(operations_names, operations_parameters)
         edge_index = self._get_edge_index_tensor(nodes)
-        data = Data(operations_tensor, edge_index)
+        data = Data(x=operations_tensor, edge_index = edge_index, in_size = self.operations_count)
         return data
 
 
