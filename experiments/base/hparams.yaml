@@ -1,18 +1,20 @@
 loss_name: null
-lr: 0.0006883061453706995
+lr: 0.0001
 model_parameters:
   batch_norm: true
-  d_model: 96
+  d_model: 64
+  d_model_dset: 64
   deg: null
-  dim_dataset: 10
-  dim_feedforward: 192
-  dropout: 0.30326810490592576
-  global_pool: cls
+  dim_dataset: 12
+  dim_feedforward: 128
+  dropout: 0.3
+  global_pool: mean
   gnn_type: graphsage
-  in_size: 15
-  k_hop: 1
+  in_size: 74
+  k_hop: 2
   num_class: 1
-  num_heads: 6
-  num_layers: 5
+  num_heads: 8
+  num_layers: 2
   se: gnn
   use_edge_attr: false
+weight_decay: 0.0001
