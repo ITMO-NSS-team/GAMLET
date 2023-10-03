@@ -184,10 +184,10 @@ class PairDataset(SingleDataset):
         self.task_pipe_dict = self.indxs.groupby('task_id')['pipeline_id'].apply(list).to_dict()
 
     def __getitem__(self, idx):
-        t1, p1, x_pipe1, x_dset1, y1 = super().__getitem__(idx)
+        t1, _, x_pipe1, x_dset1, y1 = super().__getitem__(idx)
 
         p2 = choice(self.task_pipe_dict[t1.item()])
         idx2 = self.indxs.index[(self.indxs["pipeline_id"] == p2) & (self.indxs["task_id"] == t1.item())].to_list()[0]
 
-        t2, p2, x_pipe2, x_dset2, y2 = super().__getitem__(idx2)
+        _, p2, x_pipe2, x_dset2, y2 = super().__getitem__(idx2)
         return x_pipe1, x_dset1, x_pipe2, x_dset2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
