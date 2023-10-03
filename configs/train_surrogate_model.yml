@@ -21,6 +21,7 @@ model:
     deg: null  # The parameter is inferred
     global_pool: "cls"
     use_edge_attr: False
+    pipe_encoder_type: "graph_transformer"
   weight_decay: 0.0001
   lr: 0.001
   
