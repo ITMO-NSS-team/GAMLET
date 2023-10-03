@@ -164,6 +164,9 @@ class GraphDataset(object):
         return data
 
 class SingleDataset(Dataset):
+    """Dataset for surrogate model. Stores dataset-pipeline experiments data.
+
+    """
     def __init__(self, indxs, data_pipe, data_dset):
         self.indxs = indxs
         self.data_pipe = data_pipe
@@ -173,6 +176,16 @@ class SingleDataset(Dataset):
         return len(self.indxs)
 
     def __getitem__(self, idx):
+        """
+        Args:
+            idx: index of dataset-pipeline pair.
+        Returns:
+            task_id: index of dataset.
+            pipe_id: index of pipeline.
+            x_pipeline: Data object of pipeline.
+            x_dataset: vector of dataset meta-features.
+            y: value of quality metric.
+        """
         task_id = torch.tensor(self.indxs['task_id'].iloc[idx])
         pipe_id = torch.tensor(self.indxs['pipeline_id'].iloc[idx])
 
@@ -181,15 +194,26 @@ class SingleDataset(Dataset):
 
 
 class PairDataset(SingleDataset):
+    """Dataset for surrogate model. Used to train on ranking objective.
+    Returns pair of pipelines for chosen dataset.
+
+    """
     def __init__(self, indxs, data_pipe, data_dset):
         super().__init__(indxs, data_pipe, data_dset)
         self.task_pipe_dict = self.indxs.groupby('task_id')['pipeline_id'].apply(list).to_dict()
 
     def __getitem__(self, idx):
-        t1, _, x_pipe1, x_dset1, y1 = super().__getitem__(idx)
-
+        """
+        Args:
+            idx: index of data.
+        Returns:
+            x_dset: vector of dataset meta-features.
+            x_pipe1: Data object of pipeline 1.
+            x_pipe2: Data object of pipeline 2.
+            y: 1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5.
+        """
+        t1, _, x_pipe1, x_dset, y1 = super().__getitem__(idx)
         p2 = choice(self.task_pipe_dict[t1.item()])
-        idx2 = self.indxs.index[(self.indxs["pipeline_id"] == p2) & (self.indxs["task_id"] == t1.item())].to_list()[0]
-
-        _, p2, x_pipe2, x_dset2, y2 = super().__getitem__(idx2)
-        return x_pipe1, x_dset1, x_pipe2, x_dset2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
+        idx2 = self.indxs.index[(self.indxs["pipeline_id"] == p2) & (self.indxs["task_id"] == t1.item())].to_list()[0]       
+        _, p2, x_pipe2, _, y2 = super().__getitem__(idx2)     
+        return x_dset, x_pipe1, x_pipe2,  (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)

@@ -33,7 +33,7 @@ trainer:
   max_epochs: 100
   accelerator: "cpu"
   devices: "auto"
-0
+
 tensorboard_logger:
   save_dir: "./experiments/openml_meta_features_and_fedot_pipelines/train_surrogate_model_best"
   name: "model_training"
