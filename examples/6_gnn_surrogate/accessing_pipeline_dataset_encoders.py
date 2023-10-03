@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.getcwd())
 
-from thegolem.data_pipeline_surrogate import DataPipelineSurrogate
+from thegolem.data_pipeline_surrogate import DataPipelineSurrogate, PipelineVectorizer
 
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.meta_features_extractors import OpenMLDatasetMetaFeaturesExtractor
@@ -32,13 +32,13 @@ if __name__ == '__main__':
 
     # Trained dataset encoder model (dataset -> vec)
     print(surrogate_model.dataset_encoder)
+    
+    
 
-#     pipeline_features_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False, operation_encoding="ordinal")
-#     features_preprocessor = FeaturesPreprocessor(load_path="./data/openml_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle")
-#     meta_features_extractor = OpenMLDatasetMetaFeaturesExtractor(features_preprocessors=features_preprocessor)
-#     dataset_meta_features = meta_features_extractor(dataset_id=open_ml_dataset_id)
-#     surrogate_pipeline = DataPipelineSurrogate(
-#         pipeline_features_extractor=pipeline_features_extractor,
-#         dataset_meta_features=dataset_meta_features,
-#         pipeline_estimator=surrogate_model
-#     )
+    pipeline_features_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
+                                                                 operation_encoding="ordinal")
+    pipeline_vectorizer = PipelineVectorizer(
+        pipeline_features_extractor=pipeline_features_extractor,
+        pipeline_estimator=surrogate_model
+    )
+    # vector = pipeline_vectorizer(pipeline)

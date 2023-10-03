@@ -2,6 +2,7 @@ import pickle
 from typing import Any, Dict, Optional, Union
 
 import numpy as np
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
 
 class FeaturesPreprocessor:
@@ -20,7 +21,7 @@ class FeaturesPreprocessor:
             with open(load_path, 'rb') as f:
                 self.preprocessors = pickle.load(f)
         else:
-            self.preprocessors = preprocessors
+            self.preprocessors = dict()
 
     def __call__(
         self,
@@ -44,6 +45,9 @@ class FeaturesPreprocessor:
 
     def fit(self, data: Dict[str, Union[int, float]], save_path: Optional[str] = None):
         for key, value in data.items():
+            if key not in self.preprocessors:
+                self.preprocessors[key] = StandardScaler()
+            print(key, value)
             self.preprocessors[key].fit(np.array(value).reshape(-1, 1))
         if save_path is not None:
             with open(save_path, 'wb') as f:

@@ -21,6 +21,9 @@ def my_inc(self, key, value, *args, **kwargs):
 
 
 class GraphDataset(object):
+    """Pipelines dataset for Structure-Aware Transformer.
+    Computes rich feature representation of the grap including subraph features.
+    """
     def __init__(self, dataset, degree=False, k_hop=2, se="gnn", use_subgraph_edge_attr=False,
                  cache_path=None, return_complete_index=True):
         self.dataset = dataset
