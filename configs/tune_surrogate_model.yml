@@ -1,5 +1,6 @@
 tuning_method: "tune_surrogate_model"
 n_trials: 100
+direction: "maximize"
 
 batch_size: 256
 
