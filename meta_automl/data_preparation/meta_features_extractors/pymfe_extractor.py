@@ -45,7 +45,10 @@ class PymfeExtractor(MetaFeaturesExtractor):
                     (mfs := self._get_meta_features_cache(dataset, meta_feature_names))):
                 meta_features[dataset.id_] = mfs
             else:
-                dataset_data = dataset.get_data()
+                try:
+                    dataset_data = dataset.get_data()
+                except:
+                    continue
                 cat_cols_indicator = dataset_data.categorical_indicator
                 if cat_cols_indicator is not None:
                     cat_cols = [i for i, val in enumerate(cat_cols_indicator) if val]
