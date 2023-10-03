@@ -1,79 +1,61 @@
-from typing import Dict
+from typing import Dict, List
 
+import numpy as np
+import openml
 import pandas as pd
+from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 
-from .dataset_meta_features_extractor import DatasetMetaFeaturesExtractor
 
-
-# TODO: implement auto-detection of categorical (aka nominal) featires
-# TODO: numeric features are non-categorical features (real-valued features?)
-# TODO: allow to pass not only dataset CSV-file path but other options.
-# TODO: currently for classification task only.
-# TODO: is it okay to exlude target column from the datset?
-class OpenMLDatasetMetaFeaturesExtractor(DatasetMetaFeaturesExtractor):
+class OpenMLDatasetMetaFeaturesExtractor:
     """OpenML set of dataset meta-features extractor.
 
     Parameters
     ----------
-    dataset: Path to the dataset CSV-file.
-    features_preprocessors: Iterable of the dataset `FeaturesPreprocessor`. Default: `[]`.
-    target_name: Name or index of target column in the dataset. Default: `"target"`.
-    null_empty_string: Whether to consider an empty string as null value. Default: `True`.
+    dataset_id : dataset id.
+    meta_features_data_columns: List of names of meta-features to be extracted.
     return_type: Type of return value. Can be `"dict"`, `"dataframe"` or `"ndarrray"`. Default: `"dict"`.
+    features_preprocessors: Wrapped features preprocessors.
     """
 
-    def _get_max_nominal_att_distinct_values(self) -> int:
-        """Count maximal number of distinct values across all nominal attributes."""
-        return -1  # TODO: implement
+    meta_features_data_columns = [
+        "MajorityClassSize",
+        "MaxNominalAttDistinctValues",
+        "MinorityClassSize",
+        "NumberOfClasses",
+        "NumberOfFeatures",
+        "NumberOfInstances",
+        "NumberOfInstancesWithMissingValues",
+        "NumberOfMissingValues",
+        "NumberOfNumericFeatures",
+        "NumberOfSymbolicFeatures"
+    ]
 
-    def _get_majority_class_size(self) -> int:
-        """Count the number of instances in the class with the largest number of instances."""
-        return self.target.value_counts(dropna=True).max()
+    def __init__(
+            self,
+            dataset_id: int,
+            meta_features_data_columns: List[str] = None,
+            return_type: str = "dict",
+            features_preprocessors: FeaturesPreprocessor = None,
+        ):
+        if meta_features_data_columns is not None:
+            self.meta_features_data_columns = meta_features_data_columns
+        self.return_type = return_type
+        self.features_preprocessors = features_preprocessors
 
-    def _get_minority_class_size(self) -> int:
-        """Count the number of instances in the class with the least number of instances."""
-        return self.target.value_counts(dropna=True).min()
-
-    def _get_number_of_classes(self) -> int:
-        """Count the number of classes in the target column."""
-        return self.target.value_counts(dropna=True).shape[0]
-
-    def _get_number_of_features(self) -> int:
-        """Count the number of features in the dataset."""
-        return self.dataset.shape[1]
-
-    def _get_number_of_instances(self) -> int:
-        """Count the number of instances in the dataset."""
-        return self.dataset.shape[0]
-
-    def _get_number_of_instances_with_missing_values(self) -> int:
-        """Count the number of instances with missing values in the dataset."""
-        return self.dataset.isnull().sum(axis=1)
-
-    def _get_number_of_missing_values(self) -> int:
-        """Count the number of missing values in all instances in the dataset."""
-        return self.dataset.isnull().to_numpy().flatten().sum()
-
-    def _get_number_of_numeric_features(self) -> int:
-        """Count the number of numeric features."""
-        # TODO: subject of changes
-        return len(list(filter(pd.api.types.is_numeric_dtype, self.dataset.dtypes)))
-
-    def _get_number_of_symbolic_features(self) -> int:
-        """Count the number of symbolic features."""
-        # TODO: subject of changes
-        return len(list(filter(pd.api.types.is_string_dtype, self.dataset.dtypes)))
+        dataset_info = openml.datasets.list_datasets([dataset_id,], output_format="dataframe").iloc[0]
+        self.meta_features = dataset_info[self.meta_features_data_columns].to_dict()
 
     def _get_features(self) -> Dict[str, int]:
-        result = {}
-        result["MajorityClassSize"] = self._get_majority_class_size()
-        result["MinorityClassSize"] = self._get_minority_class_size()
-        result["NumberOfClasses"] = self._get_number_of_classes()
-        result["NumberOfFeatures"] = self._get_number_of_features()
-        result["NumberOfInstances"] = self._get_number_of_instances()
-        result["NumberOfInstancesWithMissingValues"] = self._get_number_of_instances_with_missing_values()
-        result["NumberOfMissingValues"] = self._get_number_of_missing_values()
-        result["NumberOfNumericFeatures"] = self._get_number_of_numeric_features()
-        result["NumberOfSymbolicFeatures"] = self._get_number_of_symbolic_features()
-        result["MaxNominalAttDistinctValues"] = self._get_max_nominal_att_distinct_values()
-        return result
+        return self.meta_features
+
+    def __call__(self) -> Dict[str, int]:
+        features = self._get_features()
+        if self.features_preprocessors is not None:
+            features = self.features_preprocessors(features)
+
+        if self.return_type == "dict":
+            return features
+        elif self.return_type == "dataframe":
+            return pd.DataFrame.from_dict({k: [v,] for k, v in features})
+        elif self.return_type == "ndarray":
+            return np.array(list(features.values()))
