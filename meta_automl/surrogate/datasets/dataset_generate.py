@@ -34,7 +34,7 @@ class KnowledgeBaseToDataset:
         train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
         task_type: Optional[str] = "classification",
         fitness_metric: Optional[str] = "f1",
-        exclude_datasets: Optional[List[str]] = None,  # In accordance to @MorrisNein message in chat
+        exclude_datasets: Optional[List[str]] = [],
         meta_features_preprocessors: Dict[str, Any] = None,
         use_hyperpar: bool = False,
         models_loader_kwargs: Dict[str, Any] = {},
