@@ -18,7 +18,7 @@ class FeaturesPreprocessor:
         if load_path is not None:
             print("Load from file. `preprocessors` argument will be ignored.")
             with open(load_path, 'rb') as f:
-                preprocessors = pickle.load(f)
+                self.preprocessors = pickle.load(f)
         else:
             self.preprocessors = preprocessors
 

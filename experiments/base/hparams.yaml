@@ -1,0 +1,18 @@
+loss_name: null
+lr: 0.0006883061453706995
+model_parameters:
+  batch_norm: true
+  d_model: 96
+  deg: null
+  dim_dataset: 10
+  dim_feedforward: 192
+  dropout: 0.30326810490592576
+  global_pool: cls
+  gnn_type: graphsage
+  in_size: 15
+  k_hop: 1
+  num_class: 1
+  num_heads: 6
+  num_layers: 5
+  se: gnn
+  use_edge_attr: false
