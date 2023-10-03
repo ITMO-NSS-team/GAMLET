@@ -2,6 +2,8 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from functools import partial
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,6 +15,16 @@ from torch_geometric.data import Batch
 
 from meta_automl.surrogate.encoders import GraphTransformer, MLPDatasetEncoder, SimpleGNNEncoder
 
+
+def to_labels_k(x, klim):
+    """Create y column assigning 1 to first klim elements and 0 to others"""
+    vals = np.zeros(len(x))
+    if len(x) == 1 or len(x) >= 2 * klim:
+        vals[:klim] = 1
+    else:
+        adjusted_klim = len(x) // 2
+        vals[:adjusted_klim] = 1
+    return vals
 
 class PipelineDatasetSurrogateModel(LightningModule):
     """Surrogate model to evaluate a pipeline on the given dataset.
@@ -73,7 +85,11 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.validation_step_outputs = []
         self.test_step_outputs = []
         self.save_hyperparameters()  # TODO: is it required? We have config file.
-
+        
+        K_TOP = 3
+        self.to_labels = partial(to_labels_k, klim=K_TOP)
+        
+        
     def forward(self, x_graph: Batch, x_dset: Tensor) -> Tensor:
         """Computation method.
 
@@ -110,12 +126,13 @@ class PipelineDatasetSurrogateModel(LightningModule):
         --------
         Loss value.
         """
-
-        _, _, x_graph, x_dset, y_true = batch
+        task_id, pipe_id, x_graph, x_dset, y_true = batch
+        print(x_graph)
+        print(x_graph.edge_index)
         y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
         loss = F.mse_loss(torch.squeeze(y_pred), y_true)
-        self.log("train_loss", loss, batch_size=batch[0].shape[0])
+        self.log("train_loss", loss, batch_size=y_true.shape[0])
         return loss
 
     def validation_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> None:
@@ -134,7 +151,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         task_id, pipe_id, x_graph, x_dset, y_true = batch
         y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
-        output = {'task_id': task_id.cpu().numpy(),
+        output = {'task_id': task_id,
                 'pipe_id':pipe_id.cpu().numpy(),
                 'y_pred':y_pred.detach().cpu().numpy(),
                 'y_true':y_true.detach().cpu().numpy()}
@@ -156,7 +173,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
         output = {
-            'task_id': task_id.cpu().numpy(),
+            'task_id': task_id,
             'pipe_id': pipe_id.cpu().numpy(),
             'y_pred': y_pred.detach().cpu().numpy(),
             'y_true': y_true.detach().cpu().numpy(),
@@ -176,7 +193,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         """
 
         def gr_calc(inp):
-            y_true = inp['y_true'].values.reshape(1, -1)
+            y_true = self.to_labels(inp['y_true'].values).reshape(1, -1)
             y_pred = inp['y_pred'].values.reshape(1, -1)
             
             res = {}        
@@ -202,6 +219,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
                            'pipe_id': np.concatenate(pipe_ids),
                            'y_pred': np.concatenate(y_preds),
                            'y_true': np.concatenate(y_trues)})
+        df = df.sort_values(by = 'y_true', ascending = False)        
         # Remove groups with single element to enable work of sklearn.metrics.ndcg
         # .filter(lambda x: len(x) > 1)
         res = df.groupby('task_id').apply(gr_calc)
