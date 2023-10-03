@@ -14,6 +14,7 @@ from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenML
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 import json
 
+
 class PymfeExtractor(MetaFeaturesExtractor):
     default_params = {'groups': 'default'}
 
@@ -43,7 +44,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             meta_features["feature"] = []
             meta_features["value"] = []
             meta_features["variable"] = []
-            
+
         for dataset in datasets_or_ids:
             if not isinstance(dataset, DatasetBase):
                 dataset = self._datasets_loader.load_single(dataset)
@@ -75,20 +76,19 @@ class PymfeExtractor(MetaFeaturesExtractor):
                     mfe = fit_extractor(transform_cat='one-hot')
                 feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
                 mfs = dict(zip(feature_names, dataset_features))
-                
+
                 if update_cached:
                     self._update_meta_features_cache(dataset.id_, mfs)
                 if is_sum_none:
                     dim_dataset = x.shape[1]
-                    # l = max([len(v) for v in mfs.values() if isinstance(v, np.ndarray)])
-                    
+
                     for key, value in mfs.items():
-                        value = value.tolist() if (isinstance(value, np.ndarray)) else [value]* dim_dataset
-                        if len(value) == 0 or len(value) >dim_dataset:
-                            value = [np.nan]* dim_dataset
+                        value = value.tolist() if (isinstance(value, np.ndarray)) else [value] * dim_dataset
+                        if len(value) == 0 or len(value) > dim_dataset:
+                            value = [np.nan] * dim_dataset
                         if len(value) < dim_dataset:
-                            value = [value[0]]* dim_dataset
-                        
+                            value = [value[0]] * dim_dataset
+
                         meta_features["dataset"].extend([dataset.id_] * dim_dataset)
                         meta_features["variable"].extend(list(range(dim_dataset)))
                         meta_features["feature"].extend([key] * dim_dataset)
@@ -96,7 +96,10 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 else:
                     meta_features[dataset.id_] = mfs
 
-        meta_features = pd.DataFrame.from_dict(meta_features) if is_sum_none else pd.DataFrame.from_dict(meta_features, orient='index')
+        if is_sum_none:
+            meta_features = pd.DataFrame.from_dict(meta_features)  
+        else:
+           meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features
 
     @staticmethod

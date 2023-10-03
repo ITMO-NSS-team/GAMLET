@@ -88,7 +88,6 @@ def get_simple_gnn_layer(gnn_type, embed_dim, **kwargs):
                             divide_input=True, edge_dim=edge_dim)
         return layer
 
-
     elif gnn_type == "mpnn":
         aggregators = ['sum']
         scalers = ['identity']

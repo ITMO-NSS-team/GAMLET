@@ -1,19 +1,21 @@
-from typing import Any, Dict, Optional, Tuple
+from functools import partial
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import pandas as pd
-from functools import partial
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from pytorch_lightning import LightningModule
-from sklearn.metrics import average_precision_score, ndcg_score, top_k_accuracy_score
+from sklearn.metrics import ndcg_score
 from torch import Tensor
 from torch_geometric.data import Batch
 
-from meta_automl.surrogate.encoders import GraphTransformer, MLPDatasetEncoder, SimpleGNNEncoder,ColumnDatasetEncoder
+from meta_automl.surrogate.encoders import (ColumnDatasetEncoder,
+                                            GraphTransformer,
+                                            MLPDatasetEncoder,
+                                            SimpleGNNEncoder)
 
 
 def to_labels_k(x, klim):
@@ -26,6 +28,7 @@ def to_labels_k(x, klim):
         vals[:adjusted_klim] = 1
     return vals
 
+
 class PipelineDatasetSurrogateModel(LightningModule):
     """Surrogate model to evaluate a pipeline on the given dataset.
 
@@ -34,15 +37,12 @@ class PipelineDatasetSurrogateModel(LightningModule):
     Parameters:
     -----------
     model_parameters: Dict of model parameters. The parameters are: TODO.
-    loss_name: Loss name from torch.nn.functional. Default: `None`.
-        If the parameter is `None`, one should implement `self.loss` method in a subclass.
     lr: Learning rate.
     """
 
     def __init__(
             self,
             model_parameters: Dict[str, Any],
-            loss_name: Optional[str] = None,
             lr: float = 1e-3,
             weight_decay: float = 1e-4,
             temperature: float = 10,
@@ -68,23 +68,14 @@ class PipelineDatasetSurrogateModel(LightningModule):
                 hidden_dim=model_parameters['d_model_dset'],
                 output_dim=model_parameters['d_model_dset'],
             )
-        
-        cat_dim = model_parameters['d_model'] + model_parameters['dim_dataset']+ model_parameters['d_model_dset'] 
+
+        cat_dim = model_parameters['d_model'] + model_parameters['dim_dataset'] + model_parameters['d_model_dset']
         self.final_model = nn.Sequential(
             nn.BatchNorm1d(cat_dim),
             nn.Linear(cat_dim, cat_dim),
             nn.ReLU(),
             nn.Linear(cat_dim, 1),
         )
-
-        # if loss_name is not None:
-        #     assert_message = f"Class`{type(self)}` has custom loss. Do not pass `loss_name` argument."
-        #     assert hasattr(self, "loss"), assert_message
-        #     self.loss = getattr(F, loss_name)
-        # else:
-        #     assert_message = "One should implement a loss function in a subclass"\
-        #                      " or provide a loss name from `torch.nn.functional`."
-        #     assert hasattr(self, "loss"), assert_message
 
         self.lr = lr
         self.weight_decay = weight_decay
@@ -94,11 +85,10 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.validation_step_outputs = []
         self.test_step_outputs = []
         self.save_hyperparameters()  # TODO: is it required? We have config file.
-        
+
         self.K_TOP = 3
         self.to_labels = partial(to_labels_k, klim=self.K_TOP)
-        
-        
+
     def forward(self, x_graph: Batch, dset) -> Tensor:
         """Computation method.
 
@@ -112,9 +102,9 @@ class PipelineDatasetSurrogateModel(LightningModule):
         A pipeline score.
         """
         if not x_graph.edge_index.shape[0]:
-            x_graph.edge_index = torch.tensor([[0],[0]], dtype=torch.long)
+            x_graph.edge_index = torch.tensor([[0], [0]], dtype=torch.long)
         x_graph.x = x_graph.x.view(-1)
-        
+
         z_pipeline = self.pipeline_encoder(x_graph)
         z_dataset = self.dataset_encoder(dset)
         if torch.isnan(z_dataset).any():
@@ -161,10 +151,12 @@ class PipelineDatasetSurrogateModel(LightningModule):
         task_id, pipe_id, x_graph, x_dset, y_true = batch
         y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
-        output = {'task_id': task_id,
-                'pipe_id':pipe_id.cpu().numpy(),
-                'y_pred':y_pred.detach().cpu().numpy(),
-                'y_true':y_true.detach().cpu().numpy()}
+        output = {
+            'task_id': task_id,
+            'pipe_id': pipe_id.cpu().numpy(),
+            'y_pred': y_pred.detach().cpu().numpy(),
+            'y_true': y_true.detach().cpu().numpy(),
+        }
         self.validation_step_outputs.append(output)
 
     def test_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> None:
@@ -206,18 +198,18 @@ class PipelineDatasetSurrogateModel(LightningModule):
             kk = 3
             y_true = self.to_labels(inp['y_true'].values).reshape(1, -1)
             y_pred = inp['y_pred'].values.reshape(1, -1)
-            
-            res = {}        
+
+            res = {}
             # MRR
             idx_y_pred_sorted = np.argsort(y_pred.flatten())[::-1]
-            mask = y_true.flatten()[idx_y_pred_sorted]>0
+            mask = y_true.flatten()[idx_y_pred_sorted] > 0
             rank_max = idx_y_pred_sorted[mask][0]
-            res['mrr'] = 1./(rank_max+1)#average_precision_score(y_true.flatten(), y_pred.flatten())
+            res['mrr'] = 1. / (rank_max + 1)
             # NDCG
             res['ndcg'] = ndcg_score(y_true, y_pred, k=10)
             # HITS
-            
-            res['hits'] = mask[:kk].sum()/kk   #top_k_accuracy_score(y_true.flatten(), y_pred.flatten(), k=1)  
+
+            res['hits'] = mask[:kk].sum() / kk
             return pd.Series(res, index=['ndcg', 'hits', 'mrr'])
 
         task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
@@ -231,9 +223,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
                            'pipe_id': np.concatenate(pipe_ids),
                            'y_pred': np.concatenate(y_preds),
                            'y_true': np.concatenate(y_trues)})
-        df = df.sort_values(by = 'y_true', ascending = False)        
-        # Remove groups with single element to enable work of sklearn.metrics.ndcg
-        # .filter(lambda x: len(x) > 1)
+        df = df.sort_values(by='y_true', ascending=False)
         res = df.groupby('task_id').apply(gr_calc)
         return res.mean().to_dict()
 
@@ -253,14 +243,14 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.test_step_outputs.clear()
 
     def configure_optimizers(self) -> optim.Optimizer:
-        optimizer = optim.AdamW(list(self.pipeline_encoder.parameters()) +
-                                      list(self.dataset_encoder.parameters()) +
-                                      list(self.final_model.parameters()),
-                                      lr=self.lr,
-                                      weight_decay=self.weight_decay)
+        optimizer = optim.AdamW(list(self.pipeline_encoder.parameters())
+                                + list(self.dataset_encoder.parameters())
+                                + list(self.final_model.parameters()),
+                                lr=self.lr,
+                                weight_decay=self.weight_decay)
         return optimizer
 
-    
+
 class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
     """Surrogate model to evaluate a pipeline on the given dataset.
 
@@ -308,10 +298,10 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         Loss value.
         """
         x_pipe1, x_pipe2, dset_data, y = batch
-                
+
         pred1 = torch.squeeze(self.forward(x_pipe1, dset_data))
         pred2 = torch.squeeze(self.forward(x_pipe2, dset_data))
-        loss = F.binary_cross_entropy_with_logits((pred1-pred2)*self.temperature, y)
+        loss = F.binary_cross_entropy_with_logits((pred1 - pred2) * self.temperature, y)
         # loss = self.loss(pred1, pred2, y)
         self.log("train_loss", loss)
         return loss

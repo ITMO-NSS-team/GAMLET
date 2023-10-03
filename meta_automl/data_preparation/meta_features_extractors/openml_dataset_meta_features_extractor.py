@@ -31,12 +31,12 @@ class OpenMLDatasetMetaFeaturesExtractor:
     ]
 
     def __init__(
-            self,
-            dataset_id: int = None,
-            meta_features_data_columns: List[str] = None,
-            return_type: str = "dict",
-            features_preprocessors: FeaturesPreprocessor = None,
-        ):
+        self,
+        dataset_id: int = None,
+        meta_features_data_columns: List[str] = None,
+        return_type: str = "dict",
+        features_preprocessors: FeaturesPreprocessor = None,
+    ):
         if meta_features_data_columns is not None:
             self.meta_features_data_columns = meta_features_data_columns
         self.return_type = return_type
@@ -52,7 +52,7 @@ class OpenMLDatasetMetaFeaturesExtractor:
             try:
                 meta_features[key] = dataset_info[key]
             except KeyError:
-                 meta_features[key] = -1
+                meta_features[key] = -1
         return meta_features
 
     def __call__(self, dataset_id: int = None) -> Dict[str, int]:

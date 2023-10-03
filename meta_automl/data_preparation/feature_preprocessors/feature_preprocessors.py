@@ -18,7 +18,12 @@ class FeaturesPreprocessor:
     load_path: Path to load preprocessors from. If specified, `preprocessors` argument will be ignored.
     """
 
-    def __init__(self, preprocessors: Dict[Union[str, int], Any] = None, load_path: str = None, extractor_params: Dict[str, Any] = None):
+    def __init__(
+        self,
+        preprocessors: Dict[Union[str, int], Any] = None,
+        load_path: str = None,
+        extractor_params: Dict[str, Any] = None,
+    ):
         if load_path is not None:
             print("Load from file. `preprocessors` argument will be ignored.")
             with open(load_path, 'rb') as f:
@@ -28,9 +33,14 @@ class FeaturesPreprocessor:
         else:
             self.preprocessors = dict()
         self.extractor_params = extractor_params
-        self.is_sum_none = True if self.extractor_params is not None and "summary" in self.extractor_params and self.extractor_params["summary"] is None else False
+        conditions = [
+            self.extractor_params is not None,
+            "summary" in self.extractor_params,
+            self.extractor_params["summary"] is None
+        ]
+        self.is_sum_none = all(conditions)
         if self.is_sum_none:
-            self.features =  self.extractor_params["features"]
+            self.features = self.extractor_params["features"]
 
     def __call__(
         self,
@@ -47,7 +57,8 @@ class FeaturesPreprocessor:
         result = data.copy()
         if self.is_sum_none:
             for key in self.features:
-                result.loc[(data["feature"] == key), "value"] = self.preprocessors[key].transform(data.loc[(data["feature"] == key), "value"].values.reshape(-1, 1))
+                data_ = data.loc[(data["feature"] == key), "value"].values.reshape(-1, 1)
+                result.loc[(data["feature"] == key), "value"] = self.preprocessors[key].transform(data_)
         else:
             for key in data.columns:
                 result[key] = self.preprocessors[key].transform(data[key].values.reshape(-1, 1))
