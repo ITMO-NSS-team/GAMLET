@@ -45,6 +45,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
             loss_name: Optional[str] = None,
             lr: float = 1e-3,
             weight_decay: float = 1e-4,
+            temperature: float = 10,
     ):
         super().__init__()
 
@@ -80,6 +81,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
 
         self.lr = lr
         self.weight_decay = weight_decay
+        self.temperature = temperature
 
         # Migration to pytorch_lightning > 1.9.5
         self.validation_step_outputs = []
@@ -127,8 +129,6 @@ class PipelineDatasetSurrogateModel(LightningModule):
         Loss value.
         """
         task_id, pipe_id, x_graph, x_dset, y_true = batch
-        print(x_graph)
-        print(x_graph.edge_index)
         y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
         loss = F.mse_loss(torch.squeeze(y_pred), y_true)
@@ -253,7 +253,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
                                       list(self.dataset_encoder.parameters()) +
                                       list(self.final_model.parameters()),
                                       lr=self.lr,
-                                      weight_decay=1e-5)
+                                      weight_decay=self.weight_decay)
         return optimizer
 
     
@@ -307,8 +307,7 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
                 
         pred1 = torch.squeeze(self.forward(x_pipe1, x_dset))
         pred2 = torch.squeeze(self.forward(x_pipe2, x_dset))
-        temperature = 1000
-        loss = F.binary_cross_entropy_with_logits((pred1-pred2)*temperature, y)
+        loss = F.binary_cross_entropy_with_logits((pred1-pred2)*self.temperature, y)
         # loss = self.loss(pred1, pred2, y)
         self.log("train_loss", loss)
         return loss
