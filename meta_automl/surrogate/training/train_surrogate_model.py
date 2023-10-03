@@ -21,8 +21,8 @@ from torch_geometric.data import Data
 
 from fedot.core.pipelines.pipeline import Pipeline
 
-from meta_automl.surrogate import models
-from meta_automl.surrogate.datasets import GraphDataset, PairDataset, SingleDataset
+from meta_automl.surrogate import surrogate_model
+from meta_automl.data_preparation.surrogate_dataset import GraphDataset, PairDataset, SingleDataset
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 
  
@@ -136,7 +136,7 @@ def random_train_val_test_split(tasks: List[int], splits: List[float]) -> Tuple[
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     """Create surrogate model and do training according to config parameters"""    
     is_pair = False
-    model_class = getattr(models, config["model"].pop("name"))
+    model_class = getattr(surrogate_model, config["model"].pop("name"))
     if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
         is_pair = True
 

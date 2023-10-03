@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
-from meta_automl.surrogate import models
+from meta_automl.surrogate import surrogate_model
 
 from .train_surrogate_model import get_datasets
 
@@ -30,7 +30,7 @@ def train_surrogate_model(
     `surrogate.training.surrogate_model.train_surrogate_model.train_surrogate_model.
     Data loading is moved outside the function to avoid the data reloading.
     """
-    model_class = getattr(models, config["model"]["name"])
+    model_class = getattr(surrogate_model, config["model"]["name"])
 
     config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
     config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
@@ -166,7 +166,7 @@ def tune_surrogate_model(config: dict, n_trials: int):
     )
 
     is_pair = False
-    model_class = getattr(models, config["model"]["name"])
+    model_class = getattr(surrogate_model, config["model"]["name"])
     if model_class.__name__ == "RankingPipelineDatasetSurrogateModel":
         is_pair = True
 

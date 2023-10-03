@@ -16,7 +16,7 @@ from meta_automl.data_preparation.datasets_loaders.custom_datasets_loader import
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.meta_features_extractors import (OpenMLDatasetMetaFeaturesExtractor,
                                                                    PymfeExtractor)
-from meta_automl.surrogate.datasets import KnowledgeBaseToDataset
+from meta_automl.data_preparation.surrogate_dataset.dataset_generate import KnowledgeBaseToDataset
 
 
 def dataset_from_id_without_data_loading(dataset_id: DatasetIDType) -> CustomDataset:

@@ -1,17 +1,17 @@
 training_method: "train_surrogate_model"
-batch_size: 128
+batch_size: 256
 
 num_dataloader_workers: 32
-# Ranking
 model:
   name: "RankingPipelineDatasetSurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
-    d_model: 32
+    d_model: 64
+    d_model_dset: 64
     dim_feedforward: null  # The parameter is inferred
     dropout: 0.3
-    num_heads: 4
+    num_heads: 8
     num_layers: 2
     #    layer_norm: True
     batch_norm: True  # not LAYER_NORM
@@ -19,17 +19,19 @@ model:
     k_hop: 2
     se: "gnn"
     deg: null  # The parameter is inferred
-    global_pool: "cls"
+    global_pool: "mean"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
+    dataset_encoder_type: "column"
   weight_decay: 0.0001
   lr: 0.001
-  
+  temperature: 5
   
 
 dataset_params:
+  root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
+  # root_path: "./data/openml/"
   # root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
-  root_path: "./data/openml"
 
 
 trainer:
@@ -53,4 +55,4 @@ model_checkpoint_callback:
 early_stopping_callback:
   monitor: "val_ndcg"
   mode: "max"
-  patience: 3
+  patience: 7
