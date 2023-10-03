@@ -1,10 +1,10 @@
 import os
+from random import choice
 
 import torch
-from torch.utils.data import Dataset
 import torch_geometric.utils as utils
+from torch.utils.data import Dataset
 from torch_geometric.data import Data
-from random import choice
 
 
 def my_inc(self, key, value, *args, **kwargs):
@@ -183,17 +183,11 @@ class PairDataset(SingleDataset):
         super().__init__(indxs, data_pipe, data_dset)
         self.task_pipe_dict = self.indxs.groupby('task_id')['pipeline_id'].apply(list).to_dict()
 
-    def _get_pair(self, idx):
-        task_id = torch.tensor(self.indxs['task_id'].loc[idx])
-        pipe_id = torch.tensor(self.indxs['pipeline_id'].loc[idx])
-
-        y = torch.tensor(self.indxs['y'].loc[idx], dtype=torch.float32)
-        return task_id, pipe_id, self.data_pipe.__getitem__(pipe_id), self.data_dset[task_id], y
-
     def __getitem__(self, idx):
         t1, p1, x_pipe1, x_dset1, y1 = super().__getitem__(idx)
 
-        idx2 = choice(self.task_pipe_dict[t1.item()])
+        p2 = choice(self.task_pipe_dict[t1.item()])
+        idx2 = self.indxs.index[(self.indxs["pipeline_id"] == p2) & (self.indxs["task_id"] == t1.item())].to_list()[0]
 
-        t2, p2, x_pipe2, x_dset2, y2 = self._get_pair(idx2)
+        t2, p2, x_pipe2, x_dset2, y2 = super().__getitem__(idx2)
         return x_pipe1, x_dset1, x_pipe2, x_dset2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
