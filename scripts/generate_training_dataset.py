@@ -1,9 +1,11 @@
 import argparse
 import os
 import sys
+import json
 
 import numpy as np
 import pandas as pd
+from typing import Dict
 
 sys.path.append(os.getcwd())
 from meta_automl.data_preparation.dataset import (CustomDataset,
@@ -48,12 +50,19 @@ def dataset_from_id_with_data_loading(dataset_id: DatasetIDType) -> CustomDatase
         dataset.dump_data(dataset_data)
     return dataset
 
+def get_extractor_params(filename: str) -> Dict[str, str]:
+    with open(filename) as f:
+        extractor_params = json.load(f)
+    return extractor_params
+
 def main():
 
     datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_with_data_loading)
 
+    extractor_params = get_extractor_params('scripts/use_features.json')
+
     meta_features_extractor = PymfeExtractor(
-        extractor_params = {"groups": ["general", "statistical"]},
+        extractor_params = extractor_params,
         datasets_loader = datasets_loader_builder(),
     )
     # OpenMLDatasetMetaFeaturesExtractor(meta_features_data_columns=self.meta_features_data_columns)
