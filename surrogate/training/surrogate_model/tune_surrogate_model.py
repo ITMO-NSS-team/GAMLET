@@ -16,6 +16,8 @@ from surrogate import models
 from .train_surrogate_model import get_datasets
 
 
+import torch
+
 def train_surrogate_model(
         config: Dict[str, Any],
         meta_data: Dict,
@@ -152,9 +154,14 @@ def tune_surrogate_model(config: dict, n_trials: int):
         direction=config["direction"],
         load_if_exists=True,
     )
-
+    
+    is_pair = False
+    model_class = getattr(models, config["model"]["name"])
+    if model_class.__name__ == 'RankingSurrogateModel':
+        is_pair = True
+    
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
-        'data/openml/')
+        'data/openml/', is_pair)
 
     train_loader = DataLoader(
         train_dataset,
