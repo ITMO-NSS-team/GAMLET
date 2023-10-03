@@ -19,6 +19,7 @@ jupyter = "*"
 tqdm = "*"
 tensorboard = "*"
 einops = "*"
+optuna = "*"
 
 [dev-packages]
 
