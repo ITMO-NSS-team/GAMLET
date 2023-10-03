@@ -1,6 +1,7 @@
 from functools import partial
 from pathlib import Path
-from typing import List, Union, Optional, Literal
+from typing import List, Union, Optional
+from typing_extensions import Literal
 
 import numpy as np
 from fedot.core.data.data import InputData
