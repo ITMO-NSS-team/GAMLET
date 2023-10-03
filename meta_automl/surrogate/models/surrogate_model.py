@@ -13,7 +13,7 @@ from sklearn.metrics import average_precision_score, ndcg_score, top_k_accuracy_
 from torch import Tensor
 from torch_geometric.data import Batch
 
-from meta_automl.surrogate.encoders import GraphTransformer, MLPDatasetEncoder, SimpleGNNEncoder
+from meta_automl.surrogate.encoders import GraphTransformer, MLPDatasetEncoder, SimpleGNNEncoder,ColumnDatasetEncoder
 
 
 def to_labels_k(x, klim):
@@ -56,18 +56,25 @@ class PipelineDatasetSurrogateModel(LightningModule):
             self.pipeline_encoder = GraphTransformer(
                 **{k: v for k, v in model_parameters.items() if k != "name"})
 
-        self.dataset_encoder = MLPDatasetEncoder(
-            model_parameters['dim_dataset'],
-            hidden_dim=model_parameters['d_model'],
-            output_dim=model_parameters['d_model'],
-        )
-
+        if model_parameters['dataset_encoder_type'] == "column":
+            self.dataset_encoder = ColumnDatasetEncoder(
+                model_parameters['dim_dataset'],
+                hidden_dim=model_parameters['d_model_dset'],
+                output_dim=model_parameters['d_model_dset'],
+            )
+        elif model_parameters['dataset_encoder_type'] == "aggregated":
+            self.dataset_encoder = MLPDatasetEncoder(
+                model_parameters['dim_dataset'],
+                hidden_dim=model_parameters['d_model_dset'],
+                output_dim=model_parameters['d_model_dset'],
+            )
+        
+        cat_dim = model_parameters['d_model'] + model_parameters['dim_dataset']+ model_parameters['d_model_dset'] 
         self.final_model = nn.Sequential(
-            nn.BatchNorm1d(model_parameters['d_model'] * 2),
-            nn.Linear(
-                model_parameters['d_model'] * 2, model_parameters['d_model'] * 2),
+            nn.BatchNorm1d(cat_dim),
+            nn.Linear(cat_dim, cat_dim),
             nn.ReLU(),
-            nn.Linear(model_parameters['d_model'] * 2, 1),
+            nn.Linear(cat_dim, 1),
         )
 
         # if loss_name is not None:
@@ -92,7 +99,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.to_labels = partial(to_labels_k, klim=K_TOP)
         
         
-    def forward(self, x_graph: Batch, x_dset: Tensor) -> Tensor:
+    def forward(self, x_graph: Batch, dset) -> Tensor:
         """Computation method.
 
         Parameters:
@@ -107,9 +114,12 @@ class PipelineDatasetSurrogateModel(LightningModule):
         if not x_graph.edge_index.shape[0]:
             x_graph.edge_index = torch.tensor([[0],[0]], dtype=torch.long)
         x_graph.x = x_graph.x.view(-1)
-            
+        
         z_pipeline = self.pipeline_encoder(x_graph)
-        z_dataset = self.dataset_encoder(x_dset)
+        z_dataset = self.dataset_encoder(dset)
+        if torch.isnan(z_dataset).any():
+            print(z_dataset)
+            quit()
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
@@ -193,6 +203,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         """
 
         def gr_calc(inp):
+            kk = 3
             y_true = self.to_labels(inp['y_true'].values).reshape(1, -1)
             y_pred = inp['y_pred'].values.reshape(1, -1)
             
@@ -203,9 +214,10 @@ class PipelineDatasetSurrogateModel(LightningModule):
             rank_max = idx_y_pred_sorted[mask][0]
             res['mrr'] = 1./(rank_max+1)#average_precision_score(y_true.flatten(), y_pred.flatten())
             # NDCG
-            res['ndcg'] = ndcg_score(y_true, y_pred, k=3)
+            res['ndcg'] = ndcg_score(y_true, y_pred, k=10)
             # HITS
-            res['hits'] = top_k_accuracy_score(y_true.flatten(), y_pred.flatten(), k=1)  
+            
+            res['hits'] = mask[:kk].sum()/kk   #top_k_accuracy_score(y_true.flatten(), y_pred.flatten(), k=1)  
             return pd.Series(res, index=['ndcg', 'hits', 'mrr'])
 
         task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
@@ -234,14 +246,6 @@ class PipelineDatasetSurrogateModel(LightningModule):
 
     def on_test_epoch_end(self) -> None:
         """Calculate NDCG score over predicted during testing pipeline estimates."""
-        # ndcg_mean = self._get_ndcg(self.test_step_outputs)
-        # y_preds, y_trues = [], []
-        # for output in self.test_step_outputs:
-        #     y_preds.append(output['y_pred'])
-        #     y_trues.append(output['y_true'])
-        # y_true = np.concatenate(y_trues)
-        # y_score = np.concatenate(y_preds)
-
         metrics = self._get_metrics(self.test_step_outputs)
         self.log("test_ndcg", metrics['ndcg'])
         self.log("test_mrr", metrics['mrr'])
@@ -270,22 +274,22 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         If the parameter is `None`, one should implement `self.loss` method in a subclass.
     lr: Learning rate.
     """
-    def loss(self, score1: Tensor, score2: Tensor, target: Tensor) -> Tensor:
-        """Ranknet loss.
+#     def loss(self, score1: Tensor, score2: Tensor, target: Tensor) -> Tensor:
+#         """Ranknet loss.
 
-        Parameters:
-        -----------
-        score1: Predicted score of the first pipeline.
-        score2: Predicted score of the second pipeline.
-        target: Target value.
+#         Parameters:
+#         -----------
+#         score1: Predicted score of the first pipeline.
+#         score2: Predicted score of the second pipeline.
+#         target: Target value.
 
-        Returns:
-        Loss value.
-        """
+#         Returns:
+#         Loss value.
+#         """
 
-        o = torch.sigmoid(score1 - score2)
-        loss = (-target * o + F.softplus(o)).mean()
-        return loss
+#         o = torch.sigmoid(score1 - score2)
+#         loss = (-target * o + F.softplus(o)).mean()
+#         return loss
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
         """Training step.
@@ -303,10 +307,10 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         --------
         Loss value.
         """
-        x_dset, x_pipe1, x_pipe2, y = batch
+        x_pipe1, x_pipe2, dset_data, y = batch
                 
-        pred1 = torch.squeeze(self.forward(x_pipe1, x_dset))
-        pred2 = torch.squeeze(self.forward(x_pipe2, x_dset))
+        pred1 = torch.squeeze(self.forward(x_pipe1, dset_data))
+        pred2 = torch.squeeze(self.forward(x_pipe2, dset_data))
         loss = F.binary_cross_entropy_with_logits((pred1-pred2)*self.temperature, y)
         # loss = self.loss(pred1, pred2, y)
         self.log("train_loss", loss)
