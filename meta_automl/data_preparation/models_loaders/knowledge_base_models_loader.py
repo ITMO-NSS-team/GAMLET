@@ -74,7 +74,7 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
         df_knowledge_base['dataset_cache'] = df_knowledge_base['dataset_id'].map(cached_datasets)  
         
         partitions = max(cpu_count()-2, 1)
-        models = parallelize(df_knowledge_base[:100],
+        models = parallelize(df_knowledge_base,
                              partial(process_record, knowledge_base_path = self.knowledge_base_path), 
                              num_workers = partitions)
         return models
