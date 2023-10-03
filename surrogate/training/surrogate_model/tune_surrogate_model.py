@@ -144,7 +144,7 @@ def tune_surrogate_model(config: dict, n_trials: int):
         ),
         pruner=HyperbandPruner(),
         study_name="surrogate_model_hyperparameter_tuning",
-        direction="minimize",
+        direction=config["direction"],
         load_if_exists=True,
     )
 
