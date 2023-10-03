@@ -3,11 +3,11 @@ batch_size: 256
 
 num_dataloader_workers: 32
 model:
-  name: "PipelineDatasetSurrogateModel"
+  name: "RankingPipelineDatasetSurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
-    d_model: 64
+    d_model: 32
     d_model_dset: 64
     dim_feedforward: null  # The parameter is inferred
     dropout: 0.3
@@ -22,8 +22,9 @@ model:
     global_pool: "mean"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
-  weight_decay: 0.0001
+  weight_decay: 0.00001
   lr: 0.0001
+  temperature: 10
   
 
 dataset_params:
