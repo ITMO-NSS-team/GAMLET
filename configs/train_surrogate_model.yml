@@ -1,6 +1,8 @@
 training_method: "train_surrogate_model"
 batch_size: 256
 
+num_dataloader_workers: 8
+
 model:
   name: "SurrogateModel"
   model_parameters:
@@ -18,12 +20,9 @@ model:
     se: "gnn"
     deg: null  # The parameter is inferred
     global_pool: "mean"
-    abs_pe: False
     use_edge_attr: False
-  loss_name: "l1_loss"
+  loss_name: "mse_loss"
   lr: 0.001
-  weight_decay: 0.00001
-  warmup_steps: 5000
 
 dataset_params:
   pipeline_graph_rename_path: 'data/openml/pipelines_graphs/pipeline_graph_rename.pickle'
@@ -32,19 +31,20 @@ dataset_params:
   seed: 0
 
 trainer:
+  log_every_n_steps: 50
   num_sanity_val_steps: 0
   max_epochs: 100
-  accelerator: "cpu"
+  accelerator: "auto"
   devices: "auto"
-  
+
 tensorboard_logger: null
 
 model_checkpoint_callback:
   save_top_k: 1
-  monitor: "ndcg"
+  monitor: "val_ndcg"
   save_last: True
   every_n_epochs: 1
 
 early_stopping_callback:
-  monitor: "ndcg"
+  monitor: "val_ndcg"
   min_delta: 0.00001
