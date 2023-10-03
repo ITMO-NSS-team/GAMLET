@@ -16,8 +16,8 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
-from surrogate import models
-from surrogate.datasets import GraphDataset, PairDataset, SingleDataset
+from meta_automl.surrogate import models
+from meta_automl.surrogate.datasets import GraphDataset, PairDataset, SingleDataset
 
 
 def get_datasets(path, is_pair = False):
@@ -31,6 +31,7 @@ def get_datasets(path, is_pair = False):
     to_labels = partial(to_labels_k, klim=K_TOP)
     task_pipe_comb_bin = task_pipe_comb.sort_values(by = 'y', ascending = False)
     task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(to_labels)
+    # task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(lambda x: x)
 
     try:
         with open(os.path.join(path, "split.json")) as f:

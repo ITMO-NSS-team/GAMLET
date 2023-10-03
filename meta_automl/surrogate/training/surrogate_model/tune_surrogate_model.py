@@ -13,7 +13,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
-from surrogate import models
+from meta_automl.surrogate import models
 
 from .train_surrogate_model import get_datasets
 

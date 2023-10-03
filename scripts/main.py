@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.append(os.getcwd())
 
-from surrogate import training
+from meta_automl.surrogate import training
 
 
 if __name__ == '__main__':

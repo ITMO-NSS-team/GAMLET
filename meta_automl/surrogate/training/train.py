@@ -1,4 +1,4 @@
-"""The module contains general method to train a model from `surrogate.models`."""
+"""The module contains general method to train a model from `meta_automl.surrogate.models`."""
 
 from typing import Dict, Any, List
 
@@ -7,10 +7,11 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
-from surrogate import datasets, models
+from meta_automl.surrogate import datasets, models
 
 
 def train(config: Dict[str, Any]) -> List[Dict[str, float]]:
+    """General training function."""
     train_dataset = getattr(datasets, config["train_dataset"]["name"])(**config["train_dataset"]["parameters"])
     val_dataset = getattr(datasets, config["val_dataset"]["name"])(**config["val_dataset"]["parameters"])
     test_dataset = getattr(datasets, config["test_dataset"]["name"])(**config["test_dataset"]["parameters"])
