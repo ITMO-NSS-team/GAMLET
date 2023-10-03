@@ -69,7 +69,7 @@ class HomogeneousPipelineDataset(Dataset):
     OPERATIONS_PREPROCESSORS_FILENAME = "operations_preprocessors_filename.pickle"
     OPERATIONS_PARAMETERS_VECTOR_INDEXES_FILENAME = "operations_parameters_vector_indexes_filename.pickle"
     OPERATIONS_PARAMETERS_VECTOR_TEMPLATE_FILENAME = "operations_parameters_vector_template_filename.pickle"
-    METRICS_SCALER_FILENAME = "metrics_scaler_filename.pickle"
+    # METRICS_SCALER_FILENAME = "metrics_scaler_filename.pickle"
     # Predefined train/val/test ratio.
     TRAIN_RATIO, VAL_RATIO, TEST_RATIO = 0.7, 0.15, 0.15
 
@@ -85,8 +85,10 @@ class HomogeneousPipelineDataset(Dataset):
         self.direction = direction
         self.use_operations_hyperparameters = use_operations_hyperparameters
         self.type_name_mapping = type_name_mapping
-        self.json_pipelines = list(Path(os.path.join(root, "pipelines")).glob("**/*.json"))
-        self.pickle_metrics = list(Path(os.path.join(root, "metrics")).glob("**/*.pickle"))
+        # self.json_pipelines = list(Path(os.path.join(root, "pipelines")).glob("**/*.json"))
+        # self.pickle_metrics = list(Path(os.path.join(root, "metrics")).glob("**/*.pickle"))
+        self.json_pipelines = list(Path(os.path.join(root)).glob("**/*.json"))
+        self.json_pipelines = sorted(self.json_pipelines ,key=lambda x: int(x.name.split(".")[0].split("_")[1]))
         super().__init__(root, log=log)
         if split is not None:
             if split == "train":
@@ -101,7 +103,7 @@ class HomogeneousPipelineDataset(Dataset):
             else:
                 raise ValueError(f"Unknown split: {split}")
             self.json_pipelines = self.json_pipelines[start: stop]
-            self.pickle_metrics = self.pickle_metrics[start: stop]
+            # self.pickle_metrics = self.pickle_metrics[start: stop]
 
         # Fix to run knowledge_base_v0
         processed_dir = overriden_processed_dir if overriden_processed_dir is not None else self.processed_dir
@@ -118,9 +120,9 @@ class HomogeneousPipelineDataset(Dataset):
         self._operations_preprocessors = self._load_pickle(
             os.path.join(processed_dir, self.OPERATIONS_PREPROCESSORS_FILENAME),
         )
-        self._metrics_scaler = self._load_pickle(
-            os.path.join(processed_dir, self.METRICS_SCALER_FILENAME),
-        )
+        # self._metrics_scaler = self._load_pickle(
+        #     os.path.join(processed_dir, self.METRICS_SCALER_FILENAME),
+        # )
 
     def _fit_operation_name_one_hot_encoder(self, names: List[str]) -> None:
         one_hot_encoder = OneHotEncoder(sparse_output=False)
@@ -166,13 +168,13 @@ class HomogeneousPipelineDataset(Dataset):
         with open(os.path.join(self.processed_dir, self.OPERATIONS_PARAMETERS_VECTOR_TEMPLATE_FILENAME), "wb") as f:
             pickle.dump(operations_parameters_vector_template, f)
 
-    def _fit_metrics_scaler(self, targets: List[Dict[str, float]]):
-        targets = self._list_dicts2dict_lists(targets)
-        targets = np.concatenate(list(targets.values()), axis=-1)
-        metrics_scaler = MinMaxScaler()
-        metrics_scaler.fit(targets)
-        with open(os.path.join(self.processed_dir, self.METRICS_SCALER_FILENAME), "wb") as f:
-            pickle.dump(metrics_scaler, f)
+    # def _fit_metrics_scaler(self, targets: List[Dict[str, float]]):
+    #     targets = self._list_dicts2dict_lists(targets)
+    #     targets = np.concatenate(list(targets.values()), axis=-1)
+    #     metrics_scaler = MinMaxScaler()
+    #     metrics_scaler.fit(targets)
+    #     with open(os.path.join(self.processed_dir, self.METRICS_SCALER_FILENAME), "wb") as f:
+    #         pickle.dump(metrics_scaler, f)
 
     def process(self) -> None:
         """Implement method required by `torch_geometric.data.Dataset`."""
@@ -184,8 +186,8 @@ class HomogeneousPipelineDataset(Dataset):
         self._fit_operation_name_one_hot_encoder(operations_names)
         nodes = list(chain.from_iterable(pipelines_nodes))
         self._fit_operations_preprocessors(operations_names, nodes)
-        targets = [{k: [v, ] for k, v in self._load_pickle(pickle).items()} for pickle in self.pickle_metrics]
-        self._fit_metrics_scaler(targets)
+        # targets = [{k: [v, ] for k, v in self._load_pickle(pickle).items()} for pickle in self.pickle_metrics]
+        # self._fit_metrics_scaler(targets)
 
     def processed_file_names(self) -> Union[str, List[str], Tuple]:
         """Implement method required by `torch_geometric.data.Dataset`."""
@@ -194,7 +196,7 @@ class HomogeneousPipelineDataset(Dataset):
             self.OPERATIONS_PREPROCESSORS_FILENAME,
             self.OPERATIONS_PARAMETERS_VECTOR_INDEXES_FILENAME,
             self.OPERATIONS_PARAMETERS_VECTOR_TEMPLATE_FILENAME,
-            self.METRICS_SCALER_FILENAME,
+            # self.METRICS_SCALER_FILENAME,
         )
 
     def len(self) -> int:
@@ -241,9 +243,9 @@ class HomogeneousPipelineDataset(Dataset):
     def _operation_name2vec(self, operation_name: str) -> np.ndarray:
         return self._operation_name_one_hot_encoder.transform(np.array([[operation_name, ]])).reshape(-1)
 
-    def _metrics_preprocessing(self, metrics: Dict[str, float]) -> torch.Tensor:
-        processed = self._metrics_scaler.transform(np.array(list(metrics.values())).reshape(1, -1)).reshape(-1)
-        return torch.Tensor(processed)
+    # def _metrics_preprocessing(self, metrics: Dict[str, float]) -> torch.Tensor:
+    #     processed = self._metrics_scaler.transform(np.array(list(metrics.values())).reshape(1, -1)).reshape(-1)
+    #     return torch.Tensor(processed)
 
     def _operation_preprocessing(self, operation_name: str, operation_parameters: Dict[str, Any]) -> Dict[
         str, np.ndarray]:
@@ -309,13 +311,14 @@ class HomogeneousPipelineDataset(Dataset):
         data = Data(operations_tensor, edge_index)
         return data
 
-    def _get_metrics(self, idx: int) -> torch.Tensor:
-        pickle = self.pickle_metrics[idx]
-        metrics = self._load_pickle(pickle)
-        return self._metrics_preprocessing(metrics)
+    # def _get_metrics(self, idx: int) -> torch.Tensor:
+    #     pickle = self.pickle_metrics[idx]
+    #     metrics = self._load_pickle(pickle)
+    #     return self._metrics_preprocessing(metrics)
 
     def get(self, idx: int) -> Tuple[Data, torch.Tensor]:
         """Implement method required by `torch_geometric.data.Dataset`."""
         data = self._get_data(idx)
-        metric = self._get_metrics(idx)
-        return data, metric
+        # metric = self._get_metrics(idx)
+        # return data, metric
+        return data
