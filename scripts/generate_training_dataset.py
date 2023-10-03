@@ -67,7 +67,6 @@ def main():
         train_test_split_name = "train_test_datasets_classification.csv",
         task_type="classification",
         fitness_metric = "fitness",
-        exclude_datasets = ["connect-4", "higgs"],
         meta_features_preprocessors=meta_features_preprocessor,
         models_loader_kwargs={"datasets_loader": datasets_loader_builder()}
     )
