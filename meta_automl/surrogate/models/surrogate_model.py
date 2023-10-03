@@ -40,7 +40,6 @@ class PipelineDatasetSurrogateModel(LightningModule):
 
         self.dataset_encoder = MLPDatasetEncoder(
             model_parameters['dim_dataset'],
-            model_parameters['meta_data'],
             hidden_dim=model_parameters['d_model'],
             output_dim=model_parameters['d_model'],
         )
@@ -54,6 +53,8 @@ class PipelineDatasetSurrogateModel(LightningModule):
         )
 
         if loss_name is not None:
+            assert_message = f"Class`{type(self)}` has custom loss. Do not pass `loss_name` argument."
+            assert hasattr(self, "loss"), assert_message
             self.loss = getattr(F, loss_name)
         else:
             assert_message = "One should implement a loss function in a subclass"\
@@ -84,7 +85,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         z_dataset = self.dataset_encoder(x_dset)
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
-    def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], **kwargs: Any) -> Tensor:
+    def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
         """Training step.
 
         Parameters:
@@ -108,7 +109,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.log("train_loss", loss, batch_size=batch[0].shape[0])
         return loss
 
-    def validation_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], **kwargs: Any) -> None:
+    def validation_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> None:
         """Validation step.
 
         Parameters:
@@ -130,7 +131,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
                 'y_true':y_true.detach().cpu().numpy()}
         self.validation_step_outputs.append(output)
 
-    def test_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], **kwargs: Any) -> None:
+    def test_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> None:
         """Test step.
 
         Parameters:
@@ -153,7 +154,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         }
         self.test_step_outputs.append(output)
 
-    def _get_ndcg(self, outputs: Dict[str: np.ndarray]) -> np.ndarray:
+    def _get_ndcg(self, outputs: Dict[str, np.ndarray]) -> np.ndarray:
         """Calculate mean NDCG score value over multiple predictions.
 
         Parameters:
@@ -246,7 +247,7 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         loss = (-target * o + F.softplus(o)).mean()
         return loss
 
-    def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], **kwargs: Any) -> Tensor:
+    def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
         """Training step.
 
         Parameters:
