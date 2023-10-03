@@ -11,7 +11,7 @@ from sklearn.metrics import average_precision_score, ndcg_score, top_k_accuracy_
 from torch import Tensor
 from torch_geometric.data import Batch
 
-from meta_automl.surrogate.encoders import GraphTransformer, MLPDatasetEncoder
+from meta_automl.surrogate.encoders import GraphTransformer, MLPDatasetEncoder, SimpleGNNEncoder
 
 
 class PipelineDatasetSurrogateModel(LightningModule):
@@ -36,8 +36,12 @@ class PipelineDatasetSurrogateModel(LightningModule):
     ):
         super().__init__()
 
-        self.pipeline_encoder = GraphTransformer(
-            **{k: v for k, v in model_parameters.items() if k != "name"})
+        if model_parameters['pipe_encoder_type'] == "simple_graph_encoder":
+            self.pipeline_encoder = SimpleGNNEncoder(
+                **{k: v for k, v in model_parameters.items() if k != "name"})
+        elif model_parameters['pipe_encoder_type'] == "graph_transformer":
+            self.pipeline_encoder = GraphTransformer(
+                **{k: v for k, v in model_parameters.items() if k != "name"})
 
         self.dataset_encoder = MLPDatasetEncoder(
             model_parameters['dim_dataset'],
