@@ -125,7 +125,7 @@ class FEDOTPipelineFeaturesExtractor:
         for node in nodes:
             if not node["nodes_from"]:
                 node["nodes_from"] = [max_op_id]
-        dataset_node = [{'operation_id': max_op_id, 'operation_type': 'dataset', 'custom_params': {}, 'params': {}, 'nodes_from': []}]
+        dataset_node = [{'operation_id': max_op_id, 'operation_type': 'dataset', 'operation_name': None, 'custom_params': {}, 'params': {}, 'nodes_from': []}]
         nodes = dataset_node + nodes
         
         
