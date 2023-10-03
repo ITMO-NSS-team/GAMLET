@@ -159,7 +159,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         }
         self.test_step_outputs.append(output)
 
-    def _get_ndcg(self, outputs: Dict[str, np.ndarray]) -> np.ndarray:
+    def _get_metrics(self, outputs: Dict[str, np.ndarray]) -> Any:
         """Calculate mean NDCG score value over multiple predictions.
 
         Parameters:
@@ -171,10 +171,19 @@ class PipelineDatasetSurrogateModel(LightningModule):
         Mean NDCG score.
         """
 
-        def gr_ndcg(inp):
-            y1 = inp['y_true'].values.reshape(1, -1)
-            y2 = inp['y_pred'].values.reshape(1, -1)
-            return ndcg_score(y1, y2, k=3)
+        def gr_calc(inp):
+            y_true = inp['y_true'].values.reshape(1, -1)
+            y_pred = inp['y_pred'].values.reshape(1, -1)
+            res = {}
+            
+            idx_y_pred_sorted = np.argsort(y_pred.flatten())[::-1]
+            mask = y_true.flatten()[idx_y_pred_sorted]>0
+            rank_max = idx_y_pred_sorted[mask][0]
+            
+            res['ndcg'] = ndcg_score(y_true, y_pred, k=3)
+            res['hits'] = top_k_accuracy_score(y_true.flatten(), y_pred.flatten(), k=1)
+            res['mrr'] = 1./(rank_max+1)#average_precision_score(y_true.flatten(), y_pred.flatten())
+            return pd.Series(res, index=['ndcg', 'hits', 'mrr'])
 
         task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
         for output in outputs:
@@ -187,31 +196,32 @@ class PipelineDatasetSurrogateModel(LightningModule):
                            'pipe_id': np.concatenate(pipe_ids),
                            'y_pred': np.concatenate(y_preds),
                            'y_true': np.concatenate(y_trues)})
-
         # Remove groups with single element to enable work of sklearn.metrics.ndcg
-        ndcg_mean = df.groupby('task_id').filter(lambda x: len(x) > 1).groupby('task_id').apply(gr_ndcg).mean()
-        return ndcg_mean
+        # .filter(lambda x: len(x) > 1)
+        res = df.groupby('task_id').apply(gr_calc)
+        return res.mean().to_dict()
 
     def on_validation_epoch_end(self) -> None:
         """Calculate NDCG score over predicted during validation pipeline estimates."""
-        ndcg_mean = self._get_ndcg(self.validation_step_outputs)
+        ndcg_mean = self._get_metrics(self.validation_step_outputs)['ndcg']
+        print("val_ndcg = ", ndcg_mean)
         self.log("val_ndcg", ndcg_mean)
         self.validation_step_outputs.clear()
 
     def on_test_epoch_end(self) -> None:
         """Calculate NDCG score over predicted during testing pipeline estimates."""
-        ndcg_mean = self._get_ndcg(self.test_step_outputs)
+        # ndcg_mean = self._get_ndcg(self.test_step_outputs)
+        # y_preds, y_trues = [], []
+        # for output in self.test_step_outputs:
+        #     y_preds.append(output['y_pred'])
+        #     y_trues.append(output['y_true'])
+        # y_true = np.concatenate(y_trues)
+        # y_score = np.concatenate(y_preds)
 
-        y_preds, y_trues = [], []
-        for output in self.test_step_outputs:
-            y_preds.append(output['y_pred'])
-            y_trues.append(output['y_true'])
-        y_true = np.concatenate(y_trues)
-        y_score = np.concatenate(y_preds)
-
-        self.log("test_ndcg", ndcg_mean)
-        self.log("test_mrr", average_precision_score(y_true, y_score))
-        self.log("test_hits", top_k_accuracy_score(y_true, y_score, k=1))
+        metrics = self._get_metrics(self.test_step_outputs)
+        self.log("test_ndcg", metrics['ndcg'])
+        self.log("test_mrr", metrics['mrr'])
+        self.log("test_hits", metrics['hits'])
         self.test_step_outputs.clear()
 
     def configure_optimizers(self) -> optim.Optimizer:

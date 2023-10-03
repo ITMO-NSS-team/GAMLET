@@ -1,0 +1,55 @@
+training_method: "train_surrogate_model"
+batch_size: 256
+
+num_dataloader_workers: 32
+model:
+  name: "RankingPipelineDatasetSurrogateModel"
+  model_parameters:
+    in_size: null  # The parameter is inferred
+    num_class: 1
+    d_model: 64
+    d_model_dset: 64
+    dim_feedforward: null  # The parameter is inferred
+    dropout: 0.3
+    num_heads: 4
+    num_layers: 3
+    #    layer_norm: True
+    batch_norm: True  # not LAYER_NORM
+    gnn_type: "graphsage"
+    k_hop: 2
+    se: "gnn"
+    deg: null  # The parameter is inferred
+    global_pool: "mean"
+    use_edge_attr: False
+  weight_decay: 0.0001
+  lr: 0.0001
+  
+
+dataset_params:
+  # root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
+  # root_path: "./data/openml/"
+  root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+
+
+trainer:
+  log_every_n_steps: 1
+  num_sanity_val_steps: 0
+  max_epochs: 100
+  accelerator: "cpu"
+  devices: "auto"
+
+tensorboard_logger:
+  save_dir: "./experiments/openml_meta_features_and_fedot_pipelines/train_surrogate_model_best"
+  name: "model_training"
+
+model_checkpoint_callback:
+  save_top_k: 1
+  monitor: "val_ndcg"
+  mode: "max"
+  save_last: False
+  every_n_epochs: 1
+
+early_stopping_callback:
+  monitor: "val_ndcg"
+  mode: "max"
+  patience: 3
