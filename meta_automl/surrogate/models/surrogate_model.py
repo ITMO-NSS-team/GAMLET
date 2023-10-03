@@ -80,7 +80,10 @@ class PipelineDatasetSurrogateModel(LightningModule):
         --------
         A pipeline score.
         """
-
+        if not x_graph.edge_index.shape[0]:
+            x_graph.edge_index = torch.tensor([[0],[0]], dtype=torch.long)
+        x_graph.x = x_graph.x.view(-1)
+            
         z_pipeline = self.pipeline_encoder(x_graph)
         z_dataset = self.dataset_encoder(x_dset)
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
@@ -217,6 +220,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
                                       weight_decay=1e-5)
         return optimizer
 
+    
 class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
     """Surrogate model to evaluate a pipeline on the given dataset.
 

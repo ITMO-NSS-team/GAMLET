@@ -24,6 +24,8 @@ class GraphDataset(object):
     def __init__(self, dataset, degree=False, k_hop=2, se="gnn", use_subgraph_edge_attr=False,
                  cache_path=None, return_complete_index=True):
         self.dataset = dataset
+        
+        
         self.n_features = dataset[0].x.shape[-1]
         self.degree = degree
         self.compute_degree()

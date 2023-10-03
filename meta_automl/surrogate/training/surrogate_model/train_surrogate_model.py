@@ -6,7 +6,7 @@ import pickle
 import random
 import warnings
 from functools import partial
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -18,12 +18,38 @@ from torch_geometric.loader import DataLoader
 
 from meta_automl.surrogate import models
 from meta_automl.surrogate.datasets import GraphDataset, PairDataset, SingleDataset
+from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+
+from fedot.core.pipelines.pipeline import Pipeline
+
+from torch_geometric.data import Data
 
 
-def get_datasets(path, is_pair = False):
-    with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
+def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor, 
+                          pipeline: Pipeline) -> Data:
+    pipeline_json_string = pipeline.save()[0].encode()
+    return pipeline_extractor(pipeline_json_string)  
+
+def get_pipelines_dataset(path: Union[str,os.PathLike]):
+    with open(os.path.join(path, "pipelines_fedot.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)
-
+        
+    pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
+                                                                 operation_encoding="ordinal")
+    return [get_pipeline_features(pipeline_extractor, pl) for pl in pipelines],\
+        pipelines,
+    
+        
+def get_datasets(path, is_pair = False):
+    """Loading preprocessed data and creating Dataset objects for model training 
+    Parameters:
+    -----------
+    is_pair: create dataset with or without pipeline pairs.
+    
+    """
+    # with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
+    #     pipelines = pickle.load(input_file)
+    pipelines, _ = get_pipelines_dataset(path)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'), index_col=0)
     datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=None, header=0).to_numpy()
 
@@ -74,6 +100,7 @@ def get_datasets(path, is_pair = False):
     return train_dataset, val_dataset, test_dataset, meta_data
 
 def to_labels_k(x, klim):
+    """Create y column assigning 1 to first klim elements and 0 to others"""
     vals = np.zeros(len(x))
     if len(x) == 1 or len(x) >= 2 * klim:
         vals[:klim] = 1
@@ -101,6 +128,7 @@ def train_val_test_split(splits: Dict[str, List[int]]) -> Tuple[List[int], List[
     return train_task_set, val_task_set, test_task_set
 
 def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[int], List[int]]:
+    """Split tasks list into train/valid/test sets randomly"""
     random.seed(10)
     tasks = list(range(len(datasets)))
     VAL_R = 0.15
@@ -117,6 +145,8 @@ def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[i
 
 
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
+    """Create surrogate model and do training according to config parameters"""
+    
     is_pair = False
     model_class = getattr(models, config["model"].pop("name"))
     if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
