@@ -1,10 +1,15 @@
 import logging
 from os import PathLike
-from pathlib import Path
+from pathlib import Path, WindowsPath, PureWindowsPath
 from typing import Union,  Optional, Sequence, List
 from typing_extensions import Literal
-
+import os
 import pandas as pd
+from itertools import chain
+from functools import partial
+from multiprocessing import Pool, cpu_count
+import numpy as np
+
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.optimisers.fitness import SingleObjFitness
 
@@ -16,6 +21,28 @@ from meta_automl.data_preparation.models_loaders import ModelsLoader
 DEFAULT_KNOWLEDGE_BASE_PATH = get_data_dir() / 'knowledge_base_0'
 
 
+def parallelize(data, func, num_workers):
+    data_split = np.array_split(data, num_workers)
+    pool = Pool(num_workers)
+    data = list(chain(*pool.map(func, data_split)))
+    pool.close()
+    pool.join()
+    return data
+
+def process_record(df, knowledge_base_path):  
+    models = []
+    for _, row in df.iterrows():
+        json_path = knowledge_base_path.joinpath(PureWindowsPath(row['model_path']))
+        pipeline = Pipeline()
+        pipeline.log.setLevel(logging.CRITICAL)
+        predictor = pipeline.load(json_path)
+
+        metric_value = row['fitness']
+        # fitness = SingleObjFitness(metric_value)
+        metadata = dict(row)     
+        models.append(Model(predictor, metric_value, 'fitness', row['dataset_cache'], metadata))
+    return models
+
 class KnowledgeBaseModelsLoader(ModelsLoader):
     def __init__(self, knowledge_base_path: Union[str, PathLike] = DEFAULT_KNOWLEDGE_BASE_PATH,
                  datasets_loader: DatasetsLoader = OpenMLDatasetsLoader):
@@ -23,36 +50,35 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
         self.df_knowledge_base: Optional[pd.DataFrame] = None
         self.df_datasets: Optional[pd.DataFrame] = None
         self.datasets_loader = datasets_loader
-
+         
     def load(self, dataset_ids: Optional[Sequence[str]] = None,
-             fitness_metric: str = 'f1') -> List[Model]:
+             fitness_metric: str = 'f1') -> List[Model]:       
         if self.df_knowledge_base is None:
             knowledge_base_split_file = self.knowledge_base_path.joinpath('knowledge_base.csv')
             self.df_knowledge_base = pd.read_csv(knowledge_base_split_file)
 
         if dataset_ids is None:
             dataset_ids = self.parse_datasets()['dataset_id']
-
+            
+        # self.df_knowledge_base['fitness_coef'] = (self.df_knowledge_base['fitness_metric']=="logloss") | (self.df_knowledge_base['fitness_metric']=="fitness") 
+        # self.df_knowledge_base['fitness_coef'] = -2*self.df_knowledge_base['fitness_coef'].astype(int)+1
+        self.df_knowledge_base['fitness_coef'] = -1
+        self.df_knowledge_base['fitness'] *= self.df_knowledge_base['fitness_coef']
+        
         df_knowledge_base = self.df_knowledge_base
         df_knowledge_base = df_knowledge_base[df_knowledge_base['dataset_id'].isin(dataset_ids)]
-
+ 
         cached_datasets = {}
         for id_ in dataset_ids:
             cached_datasets[id_] = self.datasets_loader.load_single(id_)
-
-        models = []
-        for _, row in df_knowledge_base.iterrows():
-            pipeline = Pipeline()
-            pipeline.log.setLevel(logging.CRITICAL)
-            predictor = pipeline.load(str(self.knowledge_base_path.joinpath(row['model_path'])))
-            metric_value = row[fitness_metric]
-            fitness = SingleObjFitness(metric_value)
-            metadata = dict(row)
-            dataset_cache = cached_datasets[row['dataset_id']]
-            model = Model(predictor, fitness, fitness_metric, dataset_cache, metadata)
-            models.append(model)
+        df_knowledge_base['dataset_cache'] = df_knowledge_base['dataset_id'].map(cached_datasets)  
+        
+        partitions = max(cpu_count()-2, 1)
+        models = parallelize(df_knowledge_base[:100],
+                             partial(process_record, knowledge_base_path = self.knowledge_base_path), 
+                             num_workers = partitions)
         return models
-
+    
     def parse_datasets(
             self, train_test: Literal['train', 'test', 'all'] = 'all',
             task_type: Literal['classification', 'regression', 'ts_forecasting'] = 'classification') -> pd.DataFrame:
@@ -61,6 +87,7 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
             train_test_split_file = self.knowledge_base_path.joinpath(train_test_split_file)
             self.df_datasets = pd.read_csv(train_test_split_file)
 
+        
         df_datasets = self.df_datasets
         if train_test in ('train', 'test'):
             is_train = (train_test == 'train')

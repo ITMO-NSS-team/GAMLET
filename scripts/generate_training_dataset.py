@@ -56,9 +56,8 @@ def get_extractor_params(filename: str) -> Dict[str, str]:
     return extractor_params
 
 def main():
-
-    datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_with_data_loading)
-
+    # datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_with_data_loading)
+    datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_without_data_loading)
     extractor_params = get_extractor_params('scripts/use_features.json')
 
     meta_features_extractor = PymfeExtractor(
