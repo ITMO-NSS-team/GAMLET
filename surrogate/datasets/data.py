@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
+import os
+
 import torch
-import torch.nn.functional as F
-from torch.utils.data.dataloader import default_collate
+from torch.utils.data import Dataset
 import torch_geometric.utils as utils
 from torch_geometric.data import Data
-import numpy as np
-import os
 
 
 def my_inc(self, key, value, *args, **kwargs):
     if key == 'subgraph_edge_index':
-        return self.num_subgraph_nodes 
+        return self.num_subgraph_nodes
     if key == 'subgraph_node_idx':
-        return self.num_nodes 
+        return self.num_nodes
     if key == 'subgraph_indicator':
-        return self.num_nodes 
+        return self.num_nodes
     elif 'index' in key:
         return self.num_nodes
     else:
@@ -37,7 +35,7 @@ class GraphDataset(object):
         if self.se == 'khopgnn':
             Data.__inc__ = my_inc
             self.extract_subgraphs()
- 
+
     def compute_degree(self):
         if not self.degree:
             self.degree_list = None
@@ -82,17 +80,17 @@ class GraphDataset(object):
 
             for node_idx in range(graph.num_nodes):
                 sub_nodes, sub_edge_index, _, edge_mask = utils.k_hop_subgraph(
-                    node_idx, 
-                    self.k_hop, 
+                    node_idx,
+                    self.k_hop,
                     graph.edge_index,
-                    relabel_nodes=True, 
+                    relabel_nodes=True,
                     num_nodes=graph.num_nodes
-                    )
+                )
                 node_indices.append(sub_nodes)
                 edge_indices.append(sub_edge_index + edge_index_start)
                 indicators.append(torch.zeros(sub_nodes.shape[0]).fill_(node_idx))
                 if self.use_subgraph_edge_attr and graph.edge_attr is not None:
-                    edge_attributes.append(graph.edge_attr[edge_mask]) # CHECK THIS DIDN"T BREAK ANYTHING
+                    edge_attributes.append(graph.edge_attr[edge_mask])  # CHECK THIS DIDN"T BREAK ANYTHING
                 edge_index_start += len(sub_nodes)
 
             if self.cache_path is not None:
@@ -134,7 +132,7 @@ class GraphDataset(object):
         data.abs_pe = None
         if self.abs_pe_list is not None and len(self.abs_pe_list) == len(self.dataset):
             data.abs_pe = self.abs_pe_list[index]
-         
+
         # add subgraphs and relevant meta data
         if self.se == "khopgnn":
             if self.cache_path is not None:
@@ -158,3 +156,38 @@ class GraphDataset(object):
             data.subgraph_indicator = None
 
         return data
+
+    
+class PairDataset(Dataset):
+    def __init__(self,data, dict_category):
+    
+        self.data = data
+        self.value = self.data['value']
+        self.task_id = self.data['task_id']
+        self.x1 = self.data[list(set(self.data.columns) - {'value', 'task_id'})]
+        self.x1_cat = torch.tensor(np.array(self.x1[dict_category.keys()]), dtype=torch.int64) #dtype=torch.float16
+        self.x1_cont = torch.tensor(np.array(self.x1[list(set(self.x1.columns) - set(dict_category.keys()))]), dtype=torch.float32) #dtype=torch.float16
+        # self.x1 = torch.tensor(np.array(self.data[list(set(self.data.columns) - {'value', 'task_id'})]), dtype=torch.float32) #dtype=torch.float16
+        self.y1 = np.array(self.data['value'])
+
+        self.x2 = pd.DataFrame()
+        self.y2 = np.array([])
+        for i in self.data.index:
+            new_row = self.data[self.data['task_id'] == self.data['task_id'][i]].drop(index=i,columns =['value','task_id']).sample(n=1)
+            self.x2 = self.x2.append(new_row)
+            self.y2 = np.append(self.y2, self.data['value'][new_row.index])
+
+        self.x2_cat = torch.tensor(np.array(self.x2[dict_category.keys()]), dtype=torch.int64) #dtype=torch.float16
+        self.x2_cont = torch.tensor(np.array(self.x2[list(set(self.x2.columns) - set(dict_category.keys()))]), dtype=torch.float32)
+        # self.x2 = torch.tensor(np.array(self.x2), dtype=torch.float32) #dtype=torch.float16
+        self.y2 = np.array(self.y2)
+
+        self.compare = torch.tensor([1.0 if t1 > t2 else 0.0 if t1 < t2 else 0.5 for t1,t2 in zip(self.y1,self.y2)], dtype=torch.float32) #dtype=torch.float16
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.x1_cat[idx], self.x1_cont[idx], self.x2_cat[idx], self.x2_cont[idx], self.compare[idx], self.value[idx], self.task_id[idx]
+    
+    
