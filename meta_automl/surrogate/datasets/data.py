@@ -172,7 +172,7 @@ class SingleDataset(Dataset):
     """
     def __init__(self, indxs, data_pipe, data_dset):
         self.data_pipe = data_pipe
-        self.data_dset = torch.tensor(data_dset, dtype=torch.float32)
+        self.data_dset = data_dset
         
         self.indxs = indxs
         # remove records with only 1 pipeline per dataset
@@ -194,11 +194,15 @@ class SingleDataset(Dataset):
             x_dataset: vector of dataset meta-features.
             y: value of quality metric.
         """
-        task_id = torch.tensor(self.indxs['task_id'].iloc[idx])
+        task_id = self.indxs['task_id'].iloc[idx]
         pipe_id = torch.tensor(self.indxs['pipeline_id'].iloc[idx])
 
         y = torch.tensor(self.indxs['y'].iloc[idx], dtype=torch.float32)
-        return task_id, pipe_id, self.data_pipe.__getitem__(pipe_id), self.data_dset[task_id], y
+        return task_id, \
+               pipe_id, \
+               self.data_pipe.__getitem__(pipe_id), \
+               torch.tensor(self.data_dset.loc[task_id].values, dtype=torch.float32), \
+               y
 
 
 class PairDataset(SingleDataset):
