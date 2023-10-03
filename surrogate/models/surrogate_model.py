@@ -17,6 +17,10 @@ def gr_ndcg(inp):
     y2 = inp['y_pred'].values.reshape(1, -1)
     return ndcg_score(y1, y2, k=3)
 
+def ranknet_loss(s1, s2, t):
+    o = torch.sigmoid(s1 - s2)
+    loss = (-t * o + F.softplus(o)).mean()
+    return loss
 
 class SurrogateModel(LightningModule):
     def __init__(
@@ -52,34 +56,34 @@ class SurrogateModel(LightningModule):
         self.validation_step_outputs = []
         self.test_step_outputs = []
 
-    def forward(self, data) -> Tuple[torch.Tensor, torch.Tensor]:
-        task_id, pipe_id, x_graph, x_dset, y = data
+    def forward(self, x_graph,  x_dset):
         z_pipeline = self.pipeline_encoder(x_graph)
         z_dataset = self.dataset_encoder(x_dset)
-        return task_id, pipe_id, self.final_model(torch.cat((z_pipeline, z_dataset), 1)), y
+        return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
     def training_step(self, batch, batch_idx):
-        # task_id, pipe_id, y_pred, y_true = self.forward(batch)
-        _, _, y_pred, y_true = self.forward(batch)
+        task_id, pipe_id, x_graph, x_dset, y_true = batch        
+        y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
         loss = self.loss(torch.squeeze(y_pred), y_true)
-        self.log("train_loss", loss, batch_size=y_true.shape[0])
+        self.log("train_loss", loss, batch_size=batch[0].shape[0])
         return loss
-
+    
     def validation_step(self, batch, batch_idx):
-        task_id, pipe_id, y_pred, y_true = self.forward(batch)
+        task_id, pipe_id, x_graph, x_dset, y_true = batch        
+        y_pred = self.forward(x_graph, x_dset)        
         y_pred = torch.squeeze(y_pred)
-        output = {
-            'task_id': task_id.cpu().numpy(),
-            'pipe_id': pipe_id.cpu().numpy(),
-            'y_pred': y_pred.detach().cpu().numpy(),
-            'y_true': y_true.detach().cpu().numpy(),
-        }
+        output = {'task_id': task_id.cpu().numpy(), 
+                'pipe_id':pipe_id.cpu().numpy(), 
+                'y_pred':y_pred.detach().cpu().numpy(), 
+                'y_true':y_true.detach().cpu().numpy()}
         self.validation_step_outputs.append(output)
-
+            
+        
     def test_step(self, batch, batch_idx):
-        task_id, pipe_id, y_pred, y_true = self.forward(batch)
-        y_pred = torch.squeeze(y_pred)
+        task_id, pipe_id, x_graph, x_dset, y_true = batch        
+        y_pred = self.forward(x_graph, x_dset)   
+        y_pred = torch.squeeze(y_pred)     
         output = {
             'task_id': task_id.cpu().numpy(),
             'pipe_id': pipe_id.cpu().numpy(),
@@ -120,3 +124,16 @@ class SurrogateModel(LightningModule):
                                       lr=self.lr,
                                       weight_decay=1e-5)
         return optimizer
+
+class RankingSurrogateModel(SurrogateModel):
+    def training_step(self, batch, batch_idx):
+        x_pipe1, x_dset1, x_pipe2, x_dset2, y = batch
+
+        pred1 = torch.squeeze(self.forward(x_pipe1, x_dset1))
+        pred2 = torch.squeeze(self.forward(x_pipe2, x_dset2))
+                
+        loss = ranknet_loss(pred1, pred2, y)
+        self.log("train_loss", loss)# batch_size=batch[0].shape[0])
+        return loss    
+    
+    
