@@ -39,7 +39,7 @@ def get_pipelines_dataset(path: Union[str,os.PathLike]):
     pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")
     return [get_pipeline_features(pipeline_extractor, pl) for pl in pipelines],\
-        pipelines,
+        pipelines, pipeline_extractor.operations_count
     
         
 def get_datasets(path, is_pair = False):
@@ -51,7 +51,7 @@ def get_datasets(path, is_pair = False):
     """
     # with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
     #     pipelines = pickle.load(input_file)
-    pipelines, _ = get_pipelines_dataset(path)
+    pipelines, _, n_ops  = get_pipelines_dataset(path)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'), index_col=0)
     datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=None, header=0).to_numpy()
 
@@ -93,12 +93,12 @@ def get_datasets(path, is_pair = False):
     )
     # Infer parameters
     meta_data = dict()
-    xs = []
-    for dset in pipelines:
-        for item in list(dset.x):
-            xs.append(int(item))
-    n_tags = len(set(xs))
-    meta_data["in_size"] = n_tags
+    # xs = []
+    # for dset in pipelines:
+    #     for item in list(dset.x):
+    #         xs.append(int(item))
+    # n_tags = len(set(xs))
+    meta_data["in_size"] = n_ops
     meta_data["dim_dataset"] = datasets.shape[1]
     return train_dataset, val_dataset, test_dataset, meta_data
 
@@ -169,7 +169,7 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
         num_workers=config["num_dataloader_workers"],
     )
     val_loader = DataLoader(
-        val_dataset,
+        test_dataset,
         batch_size=config["batch_size"],
         num_workers=config["num_dataloader_workers"],
     )
