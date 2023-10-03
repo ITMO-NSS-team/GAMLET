@@ -37,7 +37,7 @@ trainer:
   log_every_n_steps: 19
   num_sanity_val_steps: 0
   max_epochs: 100
-  accelerator: "auto"
+  accelerator: "cpu"
   devices: "auto"
 
 tensorboard_logger: null
