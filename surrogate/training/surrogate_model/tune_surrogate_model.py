@@ -161,7 +161,7 @@ def tune_surrogate_model(config: dict, n_trials: int):
         is_pair = True
 
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
-        'data/openml/', is_pair)
+        config["dataset_params"]["root_path"], is_pair)
 
     train_loader = DataLoader(
         train_dataset,

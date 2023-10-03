@@ -2,7 +2,6 @@ from typing import Dict, Any, Tuple
 
 import pandas as pd
 import numpy as np
-from sklearn.metrics import ndcg_score
 
 import torch
 import torch.nn as nn
@@ -10,7 +9,7 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 
 from surrogate.encoders import GraphTransformer, MLPDatasetEncoder
-from sklearn.metrics import top_k_accuracy_score, average_precision_score
+from sklearn.metrics import top_k_accuracy_score, average_precision_score, ndcg_score
 
 
 def gr_ndcg(inp):
@@ -64,28 +63,28 @@ class SurrogateModel(LightningModule):
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
     def training_step(self, batch, batch_idx):
-        task_id, pipe_id, x_graph, x_dset, y_true = batch        
+        task_id, pipe_id, x_graph, x_dset, y_true = batch
         y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
         loss = self.loss(torch.squeeze(y_pred), y_true)
         self.log("train_loss", loss, batch_size=batch[0].shape[0])
         return loss
-    
+
     def validation_step(self, batch, batch_idx):
-        task_id, pipe_id, x_graph, x_dset, y_true = batch        
-        y_pred = self.forward(x_graph, x_dset)        
+        task_id, pipe_id, x_graph, x_dset, y_true = batch
+        y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
-        output = {'task_id': task_id.cpu().numpy(), 
-                'pipe_id':pipe_id.cpu().numpy(), 
-                'y_pred':y_pred.detach().cpu().numpy(), 
+        output = {'task_id': task_id.cpu().numpy(),
+                'pipe_id':pipe_id.cpu().numpy(),
+                'y_pred':y_pred.detach().cpu().numpy(),
                 'y_true':y_true.detach().cpu().numpy()}
         self.validation_step_outputs.append(output)
-            
-        
+
+
     def test_step(self, batch, batch_idx):
-        task_id, pipe_id, x_graph, x_dset, y_true = batch        
-        y_pred = self.forward(x_graph, x_dset)   
-        y_pred = torch.squeeze(y_pred)     
+        task_id, pipe_id, x_graph, x_dset, y_true = batch
+        y_pred = self.forward(x_graph, x_dset)
+        y_pred = torch.squeeze(y_pred)
         output = {
             'task_id': task_id.cpu().numpy(),
             'pipe_id': pipe_id.cpu().numpy(),
@@ -106,7 +105,8 @@ class SurrogateModel(LightningModule):
                            'pipe_id': np.concatenate(pipe_ids),
                            'y_pred': np.concatenate(y_preds),
                            'y_true': np.concatenate(y_trues)})
-        ndcg_mean = df.groupby('task_id').apply(gr_ndcg).mean()
+        # Remove groups with single element to enable work of sklearn.metrics.ndcg
+        ndcg_mean = df.groupby('task_id').filter(lambda x: len(x) > 1).groupby('task_id').apply(gr_ndcg).mean()
         return ndcg_mean
 
     def on_validation_epoch_end(self):
@@ -116,18 +116,18 @@ class SurrogateModel(LightningModule):
 
     def on_test_epoch_end(self):
         ndcg_mean = self._get_ndcg(self.test_step_outputs)
-        
+
         task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
         for output in self.test_step_outputs:
             y_preds.append(output['y_pred'])
             y_trues.append(output['y_true'])
         y_true = np.concatenate(y_trues)
         y_score = np.concatenate(y_preds)
-        
+
 
         self.log("test_ndcg", ndcg_mean)
         self.log("test_mrr", average_precision_score(y_true, y_score))
-        self.log("test_hits", top_k_accuracy_score(y_true, y_score, k=1))        
+        self.log("test_hits", top_k_accuracy_score(y_true, y_score, k=1))
         self.test_step_outputs.clear()
 
     def configure_optimizers(self):
@@ -144,9 +144,8 @@ class RankingSurrogateModel(SurrogateModel):
 
         pred1 = torch.squeeze(self.forward(x_pipe1, x_dset1))
         pred2 = torch.squeeze(self.forward(x_pipe2, x_dset2))
-                
+
         loss = ranknet_loss(pred1, pred2, y)
         self.log("train_loss", loss)# batch_size=batch[0].shape[0])
-        return loss    
-    
-    
+        return loss
+
