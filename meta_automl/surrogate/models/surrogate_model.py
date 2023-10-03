@@ -32,6 +32,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
             model_parameters: Dict[str, Any],
             loss_name: Optional[str] = None,
             lr: float = 1e-3,
+            weight_decay: float = 1e-4,
     ):
         super().__init__()
 
@@ -52,16 +53,17 @@ class PipelineDatasetSurrogateModel(LightningModule):
             nn.Linear(model_parameters['d_model'] * 2, 1),
         )
 
-        if loss_name is not None:
-            assert_message = f"Class`{type(self)}` has custom loss. Do not pass `loss_name` argument."
-            assert hasattr(self, "loss"), assert_message
-            self.loss = getattr(F, loss_name)
-        else:
-            assert_message = "One should implement a loss function in a subclass"\
-                             " or provide a loss name from `torch.nn.functional`."
-            assert hasattr(self, "loss"), assert_message
+        # if loss_name is not None:
+        #     assert_message = f"Class`{type(self)}` has custom loss. Do not pass `loss_name` argument."
+        #     assert hasattr(self, "loss"), assert_message
+        #     self.loss = getattr(F, loss_name)
+        # else:
+        #     assert_message = "One should implement a loss function in a subclass"\
+        #                      " or provide a loss name from `torch.nn.functional`."
+        #     assert hasattr(self, "loss"), assert_message
 
         self.lr = lr
+        self.weight_decay = weight_decay
 
         # Migration to pytorch_lightning > 1.9.5
         self.validation_step_outputs = []
@@ -108,7 +110,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         _, _, x_graph, x_dset, y_true = batch
         y_pred = self.forward(x_graph, x_dset)
         y_pred = torch.squeeze(y_pred)
-        loss = self.loss(torch.squeeze(y_pred), y_true)
+        loss = F.mse_loss(torch.squeeze(y_pred), y_true)
         self.log("train_loss", loss, batch_size=batch[0].shape[0])
         return loss
 
@@ -267,10 +269,12 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         --------
         Loss value.
         """
-
         x_dset, x_pipe1, x_pipe2, y = batch
+                
         pred1 = torch.squeeze(self.forward(x_pipe1, x_dset))
         pred2 = torch.squeeze(self.forward(x_pipe2, x_dset))
-        loss = self.loss(pred1, pred2, y)
+        temperature = 1000
+        loss = F.binary_cross_entropy_with_logits((pred1-pred2)*temperature, y)
+        # loss = self.loss(pred1, pred2, y)
         self.log("train_loss", loss)
         return loss
