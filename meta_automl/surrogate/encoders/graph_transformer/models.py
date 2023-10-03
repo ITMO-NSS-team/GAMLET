@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import torch
+import torch.nn.functional as F
 import torch_geometric.nn as gnn
 from einops import repeat
 from torch import nn
-import torch.nn.functional as F
 
 from .layers import TransformerEncoderLayer
-
 
 
 class GraphTransformerEncoder(nn.TransformerEncoder):
@@ -39,7 +38,7 @@ class GraphTransformer(nn.Module):
                  in_embed=True, edge_embed=True, use_global_pool=True, max_seq_len=None,
                  global_pool='mean', **kwargs):
         super().__init__()
-        
+
         self.abs_pe = abs_pe
         self.abs_pe_dim = abs_pe_dim
         if abs_pe and abs_pe_dim > 0:
@@ -87,7 +86,7 @@ class GraphTransformer(nn.Module):
 
         self.max_seq_len = max_seq_len
 
-        
+
     def forward(self, data, return_attn=False):
         x, edge_index, edge_attr = data.x.to(dtype=torch.long), data.edge_index, data.edge_attr
 
@@ -105,14 +104,10 @@ class GraphTransformer(nn.Module):
             subgraph_indicator_index = None
             subgraph_edge_attr = None
 
-        # print(x)
-        
         complete_edge_index = data.complete_edge_index if hasattr(data, 'complete_edge_index') else None
         abs_pe = data.abs_pe if hasattr(data, 'abs_pe') else None
         degree = data.degree if hasattr(data, 'degree') else None
-        # print('node_depth', node_depth)
-        # print('x  ', x)
-        
+
         output = self.embedding(x) if node_depth is None else self.embedding(x, node_depth.view(-1, ))
 
         if self.abs_pe and abs_pe is not None:
