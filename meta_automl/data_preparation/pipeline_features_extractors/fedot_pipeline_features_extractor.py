@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import torch
 from torch_geometric.data.data import Data
+from fedot.core.repository.operation_types_repository import OperationTypesRepository
 
 
 class FEDOTPipelineFeaturesExtractor:
@@ -18,45 +19,50 @@ class FEDOTPipelineFeaturesExtractor:
     operation_encoding: Type of operation encoding. Can be `"ordinal"` or `"onehot"`. Default: `"ordinal"`.
     """
 
-    default_operation_type2name = {
-        # '': '',  # Empty string indicates that the node means <no_operation> as https://t.me/FGksjp67 requested.
-        'scaling': 'ScalingImplementation',
-        'normalization': 'NormalizationImplementation',
-        'pca': 'PCAImplementation',
-        'lgbm': 'LGBMClassifier',
-        'mlp': 'MLPClassifier',
-        'bernb': 'BernoulliNB',
-        'isolation_forest_class': 'IsolationForestClassImplementation',
-        'fast_ica': 'FastICAImplementation',
-        'rf': 'RandomForestClassifier',
-        'dt': 'DecisionTreeClassifier',
-        'qda': 'QDAImplementation',
-        'knn': 'FedotKnnClassImplementation',
-        'resample': 'ResampleImplementation',
-        'logit': 'LogisticRegression',
-        'poly_features': 'PolyFeaturesImplementation'
-    }
+    # default_operation_type2name = {
+    #     # '': '',  # Empty string indicates that the node means <no_operation> as https://t.me/FGksjp67 requested.
+    #     'scaling': 'ScalingImplementation',
+    #     'normalization': 'NormalizationImplementation',
+    #     'pca': 'PCAImplementation',
+    #     'lgbm': 'LGBMClassifier',
+    #     'mlp': 'MLPClassifier',
+    #     'bernb': 'BernoulliNB',
+    #     'isolation_forest_class': 'IsolationForestClassImplementation',
+    #     'fast_ica': 'FastICAImplementation',
+    #     'rf': 'RandomForestClassifier',
+    #     'dt': 'DecisionTreeClassifier',
+    #     'qda': 'QDAImplementation',
+    #     'knn': 'FedotKnnClassImplementation',
+    #     'resample': 'ResampleImplementation',
+    #     'logit': 'LogisticRegression',
+    #     'poly_features': 'PolyFeaturesImplementation'
+    # }
 
     def __init__(
             self,
             include_operations_hyperparameters: Optional[bool] = False,
-            operation_type2name: Optional[Dict[str, str]] = default_operation_type2name,
             operation_encoding: Optional[str] = "ordinal",
         ):
+        models_repo = OperationTypesRepository()
+        self.operation_types = []
+        for k in models_repo.__initialized_repositories__.keys():
+            for o in models_repo.__initialized_repositories__[k]:
+                self.operation_types.append(o.id)
+        self.operations_count = len(self.operation_types)
+        
         possible_operation_encodings = ["ordinal", "onehot"]
         assert_message = f"Expected `return_type` is of {possible_operation_encodings}, got {operation_encoding}"
         assert operation_encoding in possible_operation_encodings, assert_message
 
         self.include_operations_hyperparameters = include_operations_hyperparameters
-        self.operation_type2name = operation_type2name
         self.operation_encoding = operation_encoding
         self.operation_name2vec = self._get_operation_name2vec()
 
     def _get_operation_name2vec(self) -> Dict[str, Union[int, np.ndarray]]:
         result = {}
-        for i, operation_name in enumerate(self.operation_type2name.values()):
+        for i, operation_name in enumerate(self.operation_types):
             if self.operation_encoding == "onehot":
-                vector = np.zeros(len(self.operation_type2name))
+                vector = np.zeros(len(self.operation_types))
                 vector[i] = 1
                 result[operation_name] = vector
             elif self.operation_encoding == "ordinal":
@@ -77,19 +83,17 @@ class FEDOTPipelineFeaturesExtractor:
     def _get_operations_names(self, nodes: List[Dict[str, Any]], order: List[int] = None) -> List[str]:
         operations_names = []
         if order is None:
-            for node in nodes:
+            for node in nodes:              
                 operation_name = node["operation_name"]
                 if operation_name is None:  # TODO: is it a workaround or normal solution?
                     operation_type = node["operation_type"]
-                    operation_name = self.operation_type2name[operation_type]
-                operations_names.append(operation_name)
+                operations_names.append(operation_type)
         else:
             for index in order:
                 operation_name = nodes[index]["operation_name"]
                 if operation_name is None:
                     operation_type = nodes[index]["operation_type"]
-                    operation_name = self.operation_type2name[operation_type]
-                operations_names.append(operation_name)
+                operations_names.append(operation_type)
         return operations_names
 
     def _operation_name2vec(self, operation_name: str) -> np.ndarray:
@@ -112,7 +116,7 @@ class FEDOTPipelineFeaturesExtractor:
             operations_parameters: List[Dict[str, Any]],
     ) -> torch.Tensor:
         tensor = np.vstack([self._operation2vec(n, p) for n, p in zip(operations_names, operations_parameters)])
-        return torch.Tensor(tensor)
+        return torch.Tensor(tensor).to(dtype=torch.long)
 
     def _get_operations_parameters(self, nodes: List[Dict[str, Any]], order: List[int] = None) -> List[Dict[str, Any]]:
         if order is None:
