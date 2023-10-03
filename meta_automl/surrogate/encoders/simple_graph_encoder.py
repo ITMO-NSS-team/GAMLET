@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 import torch
+import torch.nn.functional as F
 import torch_geometric.nn as gnn
 from torch import nn
-import torch.nn.functional as F
-from einops import repeat
+
 from .gnn_layers import get_simple_gnn_layer
+
 
 class SimpleGNNEncoder(nn.Module):
     def __init__(self, in_size, d_model, global_pool='mean', gnn_type="gcn", dropout=0.0, num_layers=4,
                  batch_norm=False, in_embed=True, max_seq_len=None, use_global_pool=True, **kwargs):
-        
+
         super().__init__()
 
         self.num_layers = num_layers
@@ -33,7 +34,7 @@ class SimpleGNNEncoder(nn.Module):
         self.global_pool = 'mean'
         self.use_global_pool = True
         self.pooling = gnn.global_mean_pool
-        
+
         if in_embed:
             if isinstance(in_size, int):
                 self.embedding = nn.Embedding(in_size, d_model)
@@ -46,17 +47,13 @@ class SimpleGNNEncoder(nn.Module):
                                        out_features=d_model,
                                        bias=False)
         self.max_seq_len = max_seq_len
-        
-        
 
     def forward(self, data):
-        
+
         x, edge_index, batch = data.x.to(dtype=torch.long), data.edge_index, data.batch
-        
+
         node_depth = data.node_depth if hasattr(data, "node_depth") else None
-        
-        complete_edge_index = data.complete_edge_index if hasattr(data, 'complete_edge_index') else None
-        
+
         output = self.embedding(x) if node_depth is None else self.embedding(x, node_depth.view(-1, ))
 
         for layer in range(self.num_layers):

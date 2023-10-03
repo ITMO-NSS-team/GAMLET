@@ -112,8 +112,7 @@ class FEDOTPipelinesLoader(ModelsLoader):
         if not self.launch_dir:
             raise ValueError('Launch dir or datasets must be provided!')
 
-        datasets = list({p.parents[2].name for p in self.launch_dir.glob(r'*\FEDOT*\*\launch_0')})
-        datasets.sort()
+        datasets = sorted({p.parents[2].name for p in self.launch_dir.glob(r'*\FEDOT*\*\launch_0')})
         datasets = self._get_datasets_from_names(datasets)
         return datasets
 

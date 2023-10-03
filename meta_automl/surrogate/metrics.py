@@ -8,12 +8,13 @@ from sklearn.metrics import ndcg_score
 def ndcg_fixed(y_true: list, y_pred: list, k=10) -> float:
     ndcg_score_skl = []
     k_lim = 3
-    for idx in range(len(y_true)):    
+    for idx in range(len(y_true)):
         tr = np.zeros((y_true[idx].shape[0],))
         tr[:k_lim] = 1
-        ndcg_score_skl.append(sklearn.metrics.ndcg_score([tr], [y_pred[idx]],k=k_lim)) 
+        ndcg_score_skl.append(ndcg_score([tr], [y_pred[idx]], k=k_lim))
     return np.mean(ndcg_score_skl)
-    
+
+
 def _precision(predicted, actual):
     prec = [value for value in predicted if value in actual]
     prec = float(len(prec)) / float(len(predicted))
@@ -36,15 +37,15 @@ def _apk(actual: list, predicted: list, k=10) -> float:
     score : float
         The average precision at k.
     """
-    
+
     if len(predicted) > k:
         predicted = predicted[:k]
 
     predicted = np.argsort(predicted)[::-1]
     actual = np.argsort(actual)[::-1]
-    
+
     print(predicted, actual)
-    
+
     score = 0.0
     true_positives = 0.0
 
@@ -53,14 +54,15 @@ def _apk(actual: list, predicted: list, k=10) -> float:
             max_ix = min(i + 1, len(predicted))
             score += _precision(predicted[:max_ix], actual)
             true_positives += 1
-    
+
     if score == 0.0:
         return 0.0
-    print(score , true_positives)
-    
+    print(score, true_positives)
+
     return score / true_positives
 
-def mapk(actual: List[list], predicted: List[list], k: int=10) -> float:
+
+def mapk(actual: List[list], predicted: List[list], k: int = 10) -> float:
     """
     Computes the mean average precision at k.
     Parameters
@@ -79,8 +81,7 @@ def mapk(actual: List[list], predicted: List[list], k: int=10) -> float:
     mapk = []
     if len(actual) != len(predicted):
         raise AssertionError("Length mismatched")
-    return np.mean([_apk(a,p,k) for a,p in zip(actual, predicted)])
-
+    return np.mean([_apk(a, p, k) for a, p in zip(actual, predicted)])
 
 
 def eval(y_pos, y_neg):
@@ -88,37 +89,40 @@ def eval(y_pos, y_neg):
     hits3_list = []
     hits7_list = []
     mrr_list = []
-    for y_pred_neg,y_pred_pos in zip(y_neg, y_pos):
-            y_pred = np.concatenate([y_pred_pos, y_pred_neg])
-            ranking_list = (len(y_pred) - y_pred.argsort().argsort())
-            hits1_list.append(int(any(ranking_list[:1] <= 1)))
-            hits3_list.append(int(any(ranking_list[:3] <= 3)))
-            hits7_list.append(int(any(ranking_list[:7] <= 7)))
-            mrr_list.append(np.mean(1./(np.where(ranking_list == 1)[0]+1)))     
+    for y_pred_neg, y_pred_pos in zip(y_neg, y_pos):
+        y_pred = np.concatenate([y_pred_pos, y_pred_neg])
+        ranking_list = (len(y_pred) - y_pred.argsort().argsort())
+        hits1_list.append(int(any(ranking_list[:1] <= 1)))
+        hits3_list.append(int(any(ranking_list[:3] <= 3)))
+        hits7_list.append(int(any(ranking_list[:7] <= 7)))
+        mrr_list.append(np.mean(1. / (np.where(ranking_list == 1)[0] + 1)))
     return np.mean(mrr_list), np.mean(hits1_list), np.mean(hits3_list), np.mean(hits7_list)
+
 
 def dcg(order):
     log = 0
-    for i,o in enumerate(order):
-        log += o/math.log(1+i+1,2)
+    for i, o in enumerate(order):
+        log += o / math.log(1 + i + 1, 2)
     return np.array(log)
+
 
 def ndcg(y_true_list, y_score_list):
     _ndcg = []
 
-    for y_true,y_score in zip(y_true_list, y_score_list):
+    for y_true, y_score in zip(y_true_list, y_score_list):
         rank = rankdata(y_true, method='min')
-        rank_true = rankdata(y_true[(-1*rank).argsort()], method='max')-1
-        rank_pred = rankdata(y_score[(-1*rank).argsort()], method='max')-1
-        
+        rank_true = rankdata(y_true[(-1 * rank).argsort()], method='max') - 1
+        rank_pred = rankdata(y_score[(-1 * rank).argsort()], method='max') - 1
+
         idcg = np.mean(dcg(rank_true))
         _dcg = np.mean(dcg(rank_pred))
 
-        _ndcg.append(_dcg/idcg)
+        _ndcg.append(_dcg / idcg)
 
     return np.mean(_ndcg)
 
 ###########################
+
 
 def _mean_ranking_metric(predictions, labels, k, metric):
     """Helper function for precision_at_k and mean_average_precision"""
@@ -126,7 +130,7 @@ def _mean_ranking_metric(predictions, labels, k, metric):
     for i, prd in enumerate(predictions):
         # prd = np.argsort(prd)[::-1]
         # lbs = np.argsort(labels[i])[::-1]
-        lbs =labels[i]
+        lbs = labels[i]
         # print(prd, lbs)
         result.append(metric(np.asarray(prd), np.asarray(lbs), k))
         # print(result[i])
@@ -262,7 +266,8 @@ def _require_positive_k(k):
     """Helper function to avoid copy/pasted code for validating K"""
     if k <= 0:
         raise ValueError("ranking position k should be positive")
-        
+
+
 def ndcg_at(predictions, labels, k=10, assume_unique=True):
     """Compute the normalized discounted cumulative gain at K.
 

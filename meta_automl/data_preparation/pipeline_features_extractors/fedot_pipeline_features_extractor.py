@@ -3,8 +3,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import torch
-from torch_geometric.data.data import Data
 from fedot.core.repository.operation_types_repository import OperationTypesRepository
+from torch_geometric.data.data import Data
 
 
 class FEDOTPipelineFeaturesExtractor:
@@ -18,11 +18,12 @@ class FEDOTPipelineFeaturesExtractor:
     operation_type2name: Mapping of operation type to its implementation name. Default mapping is adapted from FEDOT.
     operation_encoding: Type of operation encoding. Can be `"ordinal"` or `"onehot"`. Default: `"ordinal"`.
     """
+
     def __init__(
-            self,
-            include_operations_hyperparameters: Optional[bool] = False,
-            operation_encoding: Optional[str] = "ordinal",
-        ):
+        self,
+        include_operations_hyperparameters: Optional[bool] = False,
+        operation_encoding: Optional[str] = "ordinal",
+    ):
         models_repo = OperationTypesRepository()
         self.operation_types = []
         for k in models_repo.__initialized_repositories__.keys():
@@ -30,7 +31,7 @@ class FEDOTPipelineFeaturesExtractor:
                 self.operation_types.append(o.id)
         self.operation_types += ['dataset']
         self.operations_count = len(self.operation_types)
-        
+
         possible_operation_encodings = ["ordinal", "onehot"]
         assert_message = f"Expected `return_type` is of {possible_operation_encodings}, got {operation_encoding}"
         assert operation_encoding in possible_operation_encodings, assert_message
@@ -64,7 +65,7 @@ class FEDOTPipelineFeaturesExtractor:
     def _get_operations_names(self, nodes: List[Dict[str, Any]], order: List[int] = None) -> List[str]:
         operations_names = []
         if order is None:
-            for node in nodes:              
+            for node in nodes:
                 operation_name = node["operation_name"]
                 if operation_name is None:  # TODO: is it a workaround or normal solution?
                     operation_type = node["operation_type"]
@@ -114,29 +115,35 @@ class FEDOTPipelineFeaturesExtractor:
                 target = node["operation_id"]
                 for source in nodes_from:
                     edges.append([source, target])
-            
+
         return torch.LongTensor(edges).T
 
     def _get_data(self, pipeline_json_string: str) -> Data:
         nodes = self._get_nodes_from_json_string(pipeline_json_string)
-        
+
         # add dataset node!!!
-        max_op_id = max([node['operation_id'] for node in nodes]) +1
+        max_op_id = max([node['operation_id'] for node in nodes]) + 1
         for node in nodes:
             if not node["nodes_from"]:
                 node["nodes_from"] = [max_op_id]
-        dataset_node = [{'operation_id': max_op_id, 'operation_type': 'dataset', 'operation_name': None, 'custom_params': {}, 'params': {}, 'nodes_from': []}]
+        dataset_node = {
+            'operation_id': max_op_id,
+            'operation_type': 'dataset',
+            'operation_name': None,
+            'custom_params': {},
+            'params': {},
+            'nodes_from': []
+        }
+        dataset_node = [dataset_node,]
         nodes = dataset_node + nodes
-        
-        
+
         operations_ids = self._get_operations_ids(nodes)
         operations_names = self._get_operations_names(nodes, operations_ids)
         operations_parameters = self._get_operations_parameters(nodes, operations_ids)
         operations_tensor = self._operations2tensor(operations_names, operations_parameters)
         edge_index = self._get_edge_index_tensor(nodes)
-        data = Data(x=operations_tensor, edge_index = edge_index, in_size = self.operations_count)
+        data = Data(x=operations_tensor, edge_index=edge_index, in_size=self.operations_count)
         return data
-
 
     def __call__(self, pipeline_json_string: str):
         return self._get_data(pipeline_json_string)

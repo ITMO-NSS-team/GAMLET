@@ -1,38 +1,36 @@
 import sys
 sys.path.append("..")
 
-import pickle
-import shutil
-from tqdm import tqdm
-from typing import List, Union, Tuple, Dict, Optional, Any
 import json
-import pickle
 import os
-import openml
-import pandas as pd
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pathlib
-from fedot.core.pipelines.pipeline import Pipeline
+import pickle
 
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import pandas as pd
+from fedot.core.pipelines.pipeline import Pipeline
 from torch_geometric.data import Data
 
+from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
+from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.model import Model
-from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 
 
-def calc_pipeline_hash(pl: Pipeline)-> str:
+
+def calc_pipeline_hash(pl: Pipeline) -> str:
     ''' not real hash'''
     edges_str = " ".join([",".join([str(item) for item in sublist]) for sublist in pl.get_edges()])
     nodes_str = ' '.join([str(item) for item in pl.nodes])
-    return edges_str + ' '+ nodes_str
+    return edges_str + ' ' + nodes_str
 
-def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor, 
+
+def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor,
                           pipeline: Pipeline) -> Data:
     pipeline_json_string = pipeline.save()[0].encode()
-    return pipeline_extractor(pipeline_json_string)  
+    return pipeline_extractor(pipeline_json_string)
+
 
 class KnowledgeBaseToDataset:
     def __init__(
@@ -40,7 +38,7 @@ class KnowledgeBaseToDataset:
         knowledge_base_directory: str,
         dataset_directory: str,
         meta_features_extractor: MetaFeaturesExtractor,
-        split: Optional[str] = "all", # Can be train, test, all
+        split: Optional[str] = "all",  # Can be train, test, all
         train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
         task_type: Optional[str] = "classification",
         fitness_metric: Optional[str] = "f1",
@@ -67,10 +65,8 @@ class KnowledgeBaseToDataset:
         self.meta_features_extractor = meta_features_extractor
 
         self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory, **models_loader_kwargs)
-        df_datasets = self.models_loader.parse_datasets(self.split, self.task_type)        
+        df_datasets = self.models_loader.parse_datasets(self.split, self.task_type)
         self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x not in self.exclude_datasets)]
-
-        # self._check_for_duplicated_datasets()
 
         self.use_hyperpar = use_hyperpar
 
@@ -85,38 +81,38 @@ class KnowledgeBaseToDataset:
             pathlib.Path(directory).mkdir(parents=True)
 
     def _get_best_pipelines_unique_indexes(self, dataset_models: List[Model]) -> List[int]:
-        best_pipelines_unique_indexes = temp_df.groupby('pipeline_id')['fitness'].max().reset_index()
-        return best_pipelines_unique_indexes
+        raise NotImplementedError("Broken code in the function.")
+        # best_pipelines_unique_indexes = temp_df.groupby('pipeline_id')['fitness'].max().reset_index()
+        # return best_pipelines_unique_indexes
 
-    def _process(self) -> Tuple[List[Dict[str, Union[float, int]]], List[Dict[str, float]], List[int]]:    
-        df_dataset_models = pd.DataFrame(self.models_loader.load(
-                fitness_metric=self.fitness_metric)
-            ) 
+    def _process(self) -> Tuple[List[Dict[str, Union[float, int]]], List[Dict[str, float]], List[int]]:
+        df_dataset_models = pd.DataFrame(self.models_loader.load(fitness_metric=self.fitness_metric))
         df_dataset_models['task_id'] = df_dataset_models.metadata.apply(lambda x: x['dataset_id'])
         df_dataset_models['y'] = df_dataset_models['fitness'].astype(float)
-                
+
         if self.use_hyperpar:
-            df_dataset_models['pipeline_id'] = df_dataset_models.index # or create another hash?
+            df_dataset_models['pipeline_id'] = df_dataset_models.index  # or create another hash?
             task_pipe_comb = df_dataset_models
         else:
-            df_dataset_models['pipeline_hash'] = df_dataset_models.predictor.apply(calc_pipeline_hash).astype(str)   
-            task_pipe_comb = df_dataset_models.groupby(['task_id','pipeline_hash'])['y'].max().reset_index()
-            
-            task_pipe_comb = df_dataset_models.loc[df_dataset_models.reset_index().groupby(['task_id','pipeline_hash'])['y'].idxmax()]            
-            codes, uniques = pd.factorize(task_pipe_comb['pipeline_hash'])
+            df_dataset_models['pipeline_hash'] = df_dataset_models.predictor.apply(calc_pipeline_hash).astype(str)
+            task_pipe_comb = df_dataset_models.groupby(['task_id', 'pipeline_hash'])['y'].max().reset_index()
+            idxes = df_dataset_models.reset_index().groupby(['task_id', 'pipeline_hash'])['y'].idxmax()
+            task_pipe_comb = df_dataset_models.loc[idxes]
+            codes, _ = pd.factorize(task_pipe_comb['pipeline_hash'])
             task_pipe_comb['pipeline_id'] = codes
-        # print(task_pipe_comb)    
         pipelines_fedot = task_pipe_comb.drop_duplicates(subset=['pipeline_id']) \
                                         .sort_values(by=['pipeline_id'])['predictor'] \
                                         .values.tolist()
         pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
-                                                                 operation_encoding="ordinal")
+                                                            operation_encoding="ordinal")
         pipelines_data = [get_pipeline_features(pipeline_extractor, pl) for pl in pipelines_fedot]
-        return task_pipe_comb[["task_id", "pipeline_id", "y"]], \
-               pipelines_fedot, \
-               pipelines_data, \
-               self.df_datasets[['dataset_id','is_train']].set_index('dataset_id')['is_train'].to_dict()
-                
+        return (
+            task_pipe_comb[["task_id", "pipeline_id", "y"]],
+            pipelines_fedot,
+            pipelines_data,
+            self.df_datasets[['dataset_id', 'is_train']].set_index('dataset_id')['is_train'].to_dict(),
+        )
+
     def _save_task_pipe_comb(self, task_pipe_comb: List[Dict[str, Union[float, int]]]):
         # task_pipe_comb_df = pd.DataFrame.from_records(task_pipe_comb)
         task_pipe_comb.to_csv(
@@ -133,7 +129,7 @@ class KnowledgeBaseToDataset:
             )
             transformed = self.meta_features_preprocessors.transform(datasets_meta_features, single=False)
             # df = pd.DataFrame.from_dict({k: v.reshape(-1) for k,v in transformed.items()})
-        transformed = transformed.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x:pd.Series(x))
+        transformed = transformed.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x: pd.Series(x))
         transformed.to_csv(
             os.path.join(self.dataset_directory, self.split, "datasets.csv"),
             header=True,
@@ -143,7 +139,7 @@ class KnowledgeBaseToDataset:
     def _save_pipelines_objects(self, pipelines: List[Any]):
         with open(os.path.join(self.dataset_directory, self.split, "pipelines_fedot.pickle"), "wb") as f:
             pickle.dump(pipelines, f)
-            
+
     def _save_pipelines_data(self, pipelines: List[Any]):
         with open(os.path.join(self.dataset_directory, self.split, "pipelines.pickle"), "wb") as f:
             pickle.dump(pipelines, f)
@@ -168,10 +164,12 @@ class KnowledgeBaseToDataset:
         self._save_pipelines_objects(pipelines_fedot)
         self._save_pipelines_data(pipelines_data)
         self._save_task_pipe_comb(task_pipe_comb)
-        
+
     def convert_datasets(self):
-        datasets_meta_features = self.meta_features_extractor.extract(self.df_datasets['dataset_id'].values.tolist(), \
-                                                                      fill_input_nans=True)    
+        datasets_meta_features = self.meta_features_extractor.extract(
+            self.df_datasets['dataset_id'].values.tolist(),
+            fill_input_nans=True,
+        )
         # For PyMFE. OpenML provides a dictionary of floats.
         # if isinstance(datasets_meta_features[0], pd.DataFrame):
         #     datasets_meta_features = [df.iloc[0].to_dict() for df in datasets_meta_features]
