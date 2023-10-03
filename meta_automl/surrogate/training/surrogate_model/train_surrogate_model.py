@@ -25,7 +25,7 @@ def get_datasets(path, is_pair = False):
         pipelines = pickle.load(input_file)
 
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'), index_col=0)
-    datasets = np.genfromtxt(os.path.join(path, 'datasets.csv'), delimiter=",")
+    datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=None, header=0).to_numpy()
 
     K_TOP = 3
     to_labels = partial(to_labels_k, klim=K_TOP)
