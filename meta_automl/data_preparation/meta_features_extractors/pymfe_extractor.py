@@ -37,8 +37,6 @@ class PymfeExtractor(MetaFeaturesExtractor):
         meta_features = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
 
-        # rzz = []
-        
         is_sum_none = True if "summary" in self.extractor_params and self.extractor_params["summary"] is None else False
         if is_sum_none:
             meta_features["dataset"] = []
@@ -76,14 +74,6 @@ class PymfeExtractor(MetaFeaturesExtractor):
                     mfe = fit_extractor(transform_cat='one-hot')
                 feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
                 mfs = dict(zip(feature_names, dataset_features))
-                # print(mfs)
-                # dd = dict()
-                # for k,v in mfs.items():
-                #     vv = v
-                #     if isinstance(v, np.ndarray):
-                #         vv = v.tolist()
-                #     dd[k] = vv
-                # rzz.append(dd)
                 
                 if update_cached:
                     self._update_meta_features_cache(dataset.id_, mfs)
@@ -92,17 +82,11 @@ class PymfeExtractor(MetaFeaturesExtractor):
                     # l = max([len(v) for v in mfs.values() if isinstance(v, np.ndarray)])
                     
                     for key, value in mfs.items():
-                        # l = len(value) if isinstance(value, np.ndarray) and len(value) > 0 else 1
-                        # value = value.tolist() if isinstance(value, np.ndarray) else [value]
-                        # value = value if len(value) > 0 else [np.nan]
-                        
                         value = value.tolist() if (isinstance(value, np.ndarray)) else [value]* dim_dataset
                         if len(value) == 0 or len(value) >dim_dataset:
                             value = [np.nan]* dim_dataset
                         if len(value) < dim_dataset:
                             value = [value[0]]* dim_dataset
-
-                        # print(key, value)    
                         
                         meta_features["dataset"].extend([dataset.id_] * dim_dataset)
                         meta_features["variable"].extend(list(range(dim_dataset)))
