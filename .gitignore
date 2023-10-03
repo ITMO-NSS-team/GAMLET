@@ -132,4 +132,5 @@ data/cache
 
 # IDEs
 .idea/
+.run/
 .vscode/
