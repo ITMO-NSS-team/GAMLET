@@ -1,23 +1,19 @@
 """The module contains custom method to tune `surrogate.models.SurrogateModel`."""
 from copy import deepcopy
 from functools import partial
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 
 import optuna
-import torch
-import torch_geometric.utils as utils
 from optuna.pruners import HyperbandPruner
 from optuna.samplers import TPESampler
 from optuna.trial import Trial
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
-from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
 from surrogate import models
 from .train_surrogate_model import get_datasets
-from surrogate.datasets import SingleDataset, GraphDataset, PairDataset
 
 
 def train_surrogate_model(
@@ -27,19 +23,18 @@ def train_surrogate_model(
         val_loader: DataLoader,
         test_loader: DataLoader,
 ) -> List[Dict[str, float]]:
-    """Optimized version of `surrogate.training.surrogate_model.train_surrogate_model.train_surrogate_model.
+    """Optimized version of
+    `surrogate.training.surrogate_model.train_surrogate_model.train_surrogate_model.
     Data loading is moved outside the function to avoid the data reloading.
     """
-    model_class = getattr(models, config["model"]["name"])
+    model_class = getattr(models, config["model"].pop("name"))
 
     config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
     config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
     dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
     config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
     config["model"]["model_parameters"]["meta_data"] = {}
-    model = model_class(config["model"]["model_parameters"])
-
-    model = model_class(config["model"]["model_parameters"])
+    model = model_class(**config["model"])
 
     if config["tensorboard_logger"] is not None:
         logger = TensorBoardLogger(**config["tensorboard_logger"])
@@ -107,12 +102,11 @@ def objective(
         "lr",
         *config["model"]["lr"],
     )
-    config["model"]["warmup_steps"] = trial.suggest_int(
-        "warmup_steps",
-        *config["model"]["warmup_steps"],
-    )
     if config["tensorboard_logger"] is not None:
-        config["tensorboard_logger"]["name"] = config["tensorboard_logger"]["name"] + f"__trial_id_{trial._trial_id}"
+        config["tensorboard_logger"]["name"] = (
+            config["tensorboard_logger"]["name"]
+            + f"__trial_id_{trial._trial_id}"
+        )
 
     test_result = train_surrogate_model(
         config=config,
@@ -121,8 +115,8 @@ def objective(
         val_loader=val_loader,
         test_loader=test_loader,
     )
-    test_loss = test_result[0]["ndcg"]
-    return test_loss
+    test_metric = test_result[0]["test_ndcg"]
+    return test_metric
 
 
 def find_divisible_pairs(set1, set2):
@@ -153,20 +147,34 @@ def tune_surrogate_model(config: dict, n_trials: int):
         direction="minimize",
         load_if_exists=True,
     )
-        
-    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets('data/openml/')
-    
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=50)
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], num_workers=50)
-    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], num_workers=50)
-    
+
+    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
+        'data/openml/')
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config["batch_size"],
+        shuffle=True,
+        num_workers=config["num_dataloader_workers"],
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=config["batch_size"],
+        num_workers=config["num_dataloader_workers"],
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=config["batch_size"],
+        num_workers=config["num_dataloader_workers"],
+    )
+
     # To avoid mismatch of arguments for torch attention (`embed_dim must be divisible by num_heads`).
     divisble_d_model_num_heads = find_divisible_pairs(
         list(range(*config["model"]["model_parameters"]["d_model"])),
         list(range(*config["model"]["model_parameters"]["num_heads"]))
     )
     # Hack to enable persistent storage in a database
-    divisble_d_model_num_heads = list(str(e) for e in divisble_d_model_num_heads)
+    divisble_d_model_num_heads = list(map(str, divisble_d_model_num_heads))
 
     objective_function = partial(
         objective,
