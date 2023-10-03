@@ -54,6 +54,11 @@ def train_surrogate_model(
         callbacks=[c for c in [model_checkpoint_callback, early_stopping_callback] if c is not None],
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    
+    checkpoint = torch.load(model_checkpoint_callback.best_model_path)
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    
     test_results = trainer.test(model, dataloaders=test_loader)
     return test_results
 
