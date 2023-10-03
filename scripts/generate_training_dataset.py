@@ -66,7 +66,7 @@ def main():
     )
     # OpenMLDatasetMetaFeaturesExtractor(meta_features_data_columns=self.meta_features_data_columns)
 
-    meta_features_preprocessor = FeaturesPreprocessor()
+    meta_features_preprocessor = FeaturesPreprocessor(extractor_params=extractor_params)
 
     converter = KnowledgeBaseToDataset(
         knowledge_base_directory = "data/knowledge_base_1",
