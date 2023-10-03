@@ -37,22 +37,23 @@ class FeaturesPreprocessor:
     def transform(
         self,
         data: Dict[Union[str, int], Union[int, float]],
-        single: bool = True,
+        single: bool = False,
     ) -> Dict[str, Union[float, np.ndarray]]:
-        result = {}
-        for key, value in data.items():
-            if single:
-                result[key] = self.preprocessors[key].transform(np.array(value).reshape(1, 1)).item(0)
-            else:
-                result[key] = self.preprocessors[key].transform(np.array(value).reshape(-1, 1))
+        result = data.copy()
+        for key in data.columns:
+            result[key] = self.preprocessors[key].transform(data[key].values.reshape(-1, 1))
+        # for key, value in data.items():
+        #     if single:
+        #         result[key] = self.preprocessors[key].transform(np.array(value).reshape(1, 1)).item(0)
+        #     else:
+        #         result[key] = self.preprocessors[key].transform(np.array(value).reshape(-1, 1))
         return result
 
     def fit(self, data: Dict[str, Union[int, float]], save_path: Optional[str] = None):
-        for key, value in data.items():
+        for key in data.columns:
             if key not in self.preprocessors:
                 self.preprocessors[key] = StandardScaler()
-            print(key, value)
-            self.preprocessors[key].fit(np.array(value).reshape(-1, 1))
+            self.preprocessors[key].fit(data[key].values.reshape(-1, 1))
         if save_path is not None:
             with open(save_path, 'wb') as f:
                 pickle.dump(self.preprocessors, f)
