@@ -11,8 +11,8 @@ model:
     d_model_dset: 64
     dim_feedforward: null  # The parameter is inferred
     dropout: 0.3
-    num_heads: 4
-    num_layers: 3
+    num_heads: 8
+    num_layers: 2
     #    layer_norm: True
     batch_norm: True  # not LAYER_NORM
     gnn_type: "graphsage"
@@ -26,9 +26,9 @@ model:
   
 
 dataset_params:
-  # root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
+  root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
   # root_path: "./data/openml/"
-  root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+  # root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
 
 
 trainer:
@@ -52,4 +52,4 @@ model_checkpoint_callback:
 early_stopping_callback:
   monitor: "val_ndcg"
   mode: "max"
-  patience: 3
+  patience: 5
