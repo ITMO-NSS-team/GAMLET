@@ -1,25 +1,24 @@
 """The module contains custom method to train `lib.lightning_modules.GraphTransformer`."""
 
+import json
 import os
 import pickle
-from typing import Dict, Any, List
-import json
+import random
+import warnings
+from functools import partial
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
-
 import pandas as pd
 import torch
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
 from surrogate import models
+from surrogate.datasets import GraphDataset, PairDataset, SingleDataset
 
-from surrogate.datasets import SingleDataset, GraphDataset, PairDataset
-
-from functools import partial
-import random
 
 def get_datasets(path, is_pair = False):
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
@@ -33,36 +32,32 @@ def get_datasets(path, is_pair = False):
     task_pipe_comb_bin = task_pipe_comb.sort_values(by = 'y', ascending = False)
     task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(to_labels)
 
-    # # TODO: fix
-    # try:
-    #     with open(os.path.join(path, "split.json")) as f:
-    #         splits = json.load(f)
-    #         train_task_set = splits["train"]
-    #         val_task_set = splits["val"]
-    #         test_task_set = splits["test"]
-    # except FileNotFoundError:
-    #     train_task_set, val_task_set, test_task_set = train_test_split(datasets)
-    train_task_set, val_task_set, test_task_set = train_test_split(datasets)
+    try:
+        with open(os.path.join(path, "split.json")) as f:
+            splits = json.load(f)
+        train_task_set, val_task_set, test_task_set = train_val_test_split(splits)
+    except FileNotFoundError:
+        train_task_set, val_task_set, test_task_set = random_train_val_test_split(datasets)
 
     if is_pair:
         train_dataset = PairDataset(
-        task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)],
+        task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
         GraphDataset(pipelines),
         datasets,
         )
     else:
         train_dataset = SingleDataset(
-            task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)],
+            task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
             GraphDataset(pipelines),
             datasets,
         )
     val_dataset = SingleDataset(
-        task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(val_task_set)],
+        task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(val_task_set)].reset_index(drop=True),
         GraphDataset(pipelines),
         datasets,
     )
     test_dataset = SingleDataset(
-        task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(test_task_set)],
+        task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(test_task_set)].reset_index(drop=True),
         GraphDataset(pipelines),
         datasets,
     )
@@ -83,7 +78,24 @@ def to_labels_k(x, klim):
     x['y'] = vals
     return x
 
-def train_test_split(datasets):
+def train_val_test_split(splits: Dict[str, List[int]]) -> Tuple[List[int], List[int], List[int]]:
+    try:
+        train_task_set = splits["train"]
+    except KeyError:
+        raise KeyError("The key `train` is not found in the json file.")
+    try:
+        val_task_set = splits["val"]
+    except KeyError:
+        warnings.warn("The key `val` is not found in the json file.")
+        val_task_set = []
+    try:
+        test_task_set = splits["test"]
+    except KeyError:
+        warnings.warn("The key `test` is not found in the json file.")
+        test_task_set = []
+    return train_task_set, val_task_set, test_task_set
+
+def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[int], List[int]]:
     random.seed(10)
     tasks = list(range(len(datasets)))
     VAL_R = 0.15
@@ -107,6 +119,11 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
 
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets('data/openml/', is_pair)
 
+    # Not the best solution, that may lead to overfitting, but enables fair comparison with traditional models.
+    if len(val_dataset) == 0:
+        config["early_stopping_callback"]["monitor"] = "train_loss"
+        config["model_checkpoint_callback"]["monitor"] = "train_loss"
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=config["batch_size"],
@@ -123,8 +140,6 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
         batch_size=config["batch_size"],
         num_workers=config["num_dataloader_workers"],
     )
-
-
 
     config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
     config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
