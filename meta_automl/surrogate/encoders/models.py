@@ -86,7 +86,6 @@ class GraphTransformer(nn.Module):
 
         self.max_seq_len = max_seq_len
 
-
     def forward(self, data, return_attn=False):
         x, edge_index, edge_attr = data.x.to(dtype=torch.long), data.edge_index, data.edge_attr
 

@@ -24,11 +24,11 @@ class GraphDataset(object):
     """Pipelines dataset for Structure-Aware Transformer.
     Computes rich feature representation of the grap including subraph features.
     """
+
     def __init__(self, dataset, degree=False, k_hop=2, se="gnn", use_subgraph_edge_attr=False,
                  cache_path=None, return_complete_index=True):
         self.dataset = dataset
-        
-        
+
         self.n_features = dataset[0].x.shape[-1]
         self.degree = degree
         self.compute_degree()
@@ -166,20 +166,22 @@ class GraphDataset(object):
 
         return data
 
+
 class SingleDataset(Dataset):
     """Dataset for surrogate model. Stores dataset-pipeline experiments data.
 
     """
+
     def __init__(self, indxs, data_pipe, data_dset):
         self.data_pipe = data_pipe
         self.data_dset = data_dset
-        
+
         self.indxs = indxs
         # remove records with only 1 pipeline per dataset
-        cnts = self.indxs.groupby('task_id').size().reset_index(name='counts') # ??
+        cnts = self.indxs.groupby('task_id').size().reset_index(name='counts')  # ??
         valid_tasks = set(cnts.task_id[cnts.counts > 1].values)
         self.indxs = self.indxs[self.indxs.task_id.isin(valid_tasks)]
-        
+
     def __len__(self):
         return len(self.indxs)
 
@@ -202,20 +204,10 @@ class SingleDataset(Dataset):
 
         dset_data = Data()
         dset_data.x = torch.tensor(self.data_dset.loc[task_id].values, dtype=torch.float32)
-        if dset_data.x.dim() < 2:     
-            dset_data.x = dset_data.x.view(1,-1)
-        
-        # gr_data['x_dset'] = torch.tensor(self.data_dset.loc[task_id].values, dtype=torch.float32)
-        # if gr_data['x_dset'].dim() < 2:     
-        #     gr_data['x_dset'] = gr_data['x_dset'].view(1,-1)
-        # if gr_data['x_dset'].shape[0] > 1000:
-        #     print(task_id)
-        # gr_data['x_dset'] =torch.unsqueeze( gr_data['x_dset'], 0)
-        return task_id, \
-               pipe_id, \
-               gr_data, \
-               dset_data, \
-               y
+        if dset_data.x.dim() < 2:
+            dset_data.x = dset_data.x.view(1, -1)
+
+        return task_id, pipe_id, gr_data, dset_data, y
 
 
 class PairDataset(SingleDataset):
@@ -223,13 +215,13 @@ class PairDataset(SingleDataset):
     Returns pair of pipelines for chosen dataset.
 
     """
+
     def __init__(self, indxs, data_pipe, data_dset):
         super().__init__(indxs, data_pipe, data_dset)
         self.indxs['ind'] = list(range(len(self.indxs)))
         self.task_pipe_dict = self.indxs.groupby('task_id')['ind'].apply(set).to_dict()
-            
+
     def __getitem__(self, idx):
-        
         """
         Args:
             idx: index of data.
@@ -239,9 +231,8 @@ class PairDataset(SingleDataset):
             x_pipe2: Data object of pipeline 2.
             y: 1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5.
         """
-        t1, p1, gr_data1, dset_data1, y1 = super().__getitem__(idx)
-        other_indexes = list(self.task_pipe_dict[t1]- {idx}) 
+        t1, _, gr_data1, _, y1 = super().__getitem__(idx)
+        other_indexes = list(self.task_pipe_dict[t1] - {idx})
         idx2 = choice(other_indexes)
-        # idx2 = self.indxs.index[(self.indxs["pipeline_id"] == p2) & (self.indxs["task_id"] == t1.item())].to_list()[0]  
-        _, p2, gr_data2, dset_data2, y2 = super().__getitem__(idx2)           
-        return gr_data1, gr_data2,  dset_data2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
+        _, _, gr_data2, dset_data2, y2 = super().__getitem__(idx2)
+        return gr_data1, gr_data2, dset_data2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)

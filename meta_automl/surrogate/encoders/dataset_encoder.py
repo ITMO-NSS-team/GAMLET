@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import torch
 from torch import nn
-from torch_geometric.nn.aggr import SetTransformerAggregation, DeepSetsAggregation,MeanAggregation
 from torch_geometric.nn.models import MLP
 from torch_geometric.nn import aggr
 
@@ -40,13 +39,13 @@ class MyAggregation(aggr.Aggregation):
 
 class MLPDatasetEncoder(nn.Module):
     def __init__(
-            self,
-            input_dim,
-            hidden_dim=128,
-            output_dim=64,
-            dropout_in=0.4,
-            dropout=0.2,
-        ):
+        self,
+        input_dim,
+        hidden_dim=128,
+        output_dim=64,
+        dropout_in=0.4,
+        dropout=0.2,
+    ):
         super().__init__()
 
         self.inp_layer = nn.Sequential(
@@ -73,35 +72,28 @@ class MLPDatasetEncoder(nn.Module):
         z = self.block2(z)
         return z
 
-    
+
 class ColumnDatasetEncoder(nn.Module):
     def __init__(
-            self,
-            input_dim,
-            hidden_dim=64,
-            output_dim=64,
-            dropout=0.2,
-        ):
+        self,
+        input_dim,
+        hidden_dim=64,
+        output_dim=64,
+        dropout=0.2,
+    ):
         super().__init__()
 
         self.inp_layer = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
         )
-        # encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=8)
-        # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
-        # self.set_transformer = SetTransformerAggregation(hidden_dim, heads= 8)
-        
-        mlp1 = nn.Sequential(nn.BatchNorm1d(input_dim),nn.Linear(input_dim, hidden_dim),nn.ReLU())
-        # mlp2 = MLP([hidden_dim, hidden_dim])
-        mlp2 = nn.Sequential(nn.BatchNorm1d(hidden_dim),nn.Linear(hidden_dim, hidden_dim),nn.ReLU())
-        agg_f = MyAggregation(   mlp1, mlp2)
+        mlp1 = nn.Sequential(nn.BatchNorm1d(input_dim), nn.Linear(input_dim, hidden_dim), nn.ReLU())
+        mlp2 = nn.Sequential(nn.BatchNorm1d(hidden_dim), nn.Linear(hidden_dim, hidden_dim), nn.ReLU())
+        agg_f = MyAggregation(mlp1, mlp2)
         self.multi_aggr = aggr.MultiAggregation(
             aggrs=['mean', agg_f],
             mode='cat')
-        
-        # self.multi_aggr = MeanAggregation()   
 
-    def forward(self, data): 
+    def forward(self, data):
         z = data.x
-        z = self.multi_aggr(z, ptr = data.ptr, dim=0)
+        z = self.multi_aggr(z, ptr=data.ptr, dim=0)
         return z

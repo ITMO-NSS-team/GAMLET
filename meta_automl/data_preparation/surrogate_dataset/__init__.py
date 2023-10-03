@@ -1,4 +1,4 @@
-from .data import GraphDataset,SingleDataset, PairDataset
+from .data import GraphDataset, PairDataset, SingleDataset
 from .dataset_generate import KnowledgeBaseToDataset
 
 __all__ = [

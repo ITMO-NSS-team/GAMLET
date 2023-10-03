@@ -3,9 +3,9 @@ from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, List
 
+import numpy as np
 import optuna
 import torch
-import numpy as np
 from optuna.pruners import HyperbandPruner
 from optuna.samplers import TPESampler
 from optuna.trial import Trial
@@ -36,7 +36,7 @@ def train_surrogate_model(
     config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
     dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
     config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
-    
+
     model_config = config["model"].copy()
     model_config.pop("name")
     model = model_class(**model_config)
@@ -116,13 +116,13 @@ def objective(
         "weight_decay",
         *config["model"]["weight_decay"],
     )
-    
+
     if config["tensorboard_logger"] is not None:
         config["tensorboard_logger"]["name"] = (
             config["tensorboard_logger"]["name"]
             + f"__trial_id_{trial._trial_id}"
         )
-    
+
     test_metric = []
     for i_it in range(5):
         test_result = train_surrogate_model(
@@ -170,8 +170,10 @@ def tune_surrogate_model(config: dict, n_trials: int):
     if model_class.__name__ == "RankingPipelineDatasetSurrogateModel":
         is_pair = True
 
-    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
-        config["dataset_params"]["root_path"], is_pair)
+    train_dataset, val_dataset, test_dataset, meta_data = get_datasets(
+        config["dataset_params"]["root_path"],
+        is_pair,
+    )
 
     # Not the best solution, that may lead to overfitting, but enables fair comparison with traditional models.
     if len(val_dataset) == 0:
