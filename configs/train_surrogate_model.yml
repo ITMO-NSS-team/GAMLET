@@ -1,30 +1,34 @@
 training_method: "train_surrogate_model"
-batch_size: 256
+batch_size: 128
 
-num_dataloader_workers: 8
-
+num_dataloader_workers: 32
+# Ranking
 model:
   name: "RankingPipelineDatasetSurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
-    d_model: 96
+    d_model: 32
     dim_feedforward: null  # The parameter is inferred
-    dropout: 0.30326810490592576
-    num_heads: 6
-    num_layers: 5
+    dropout: 0.3
+    num_heads: 4
+    num_layers: 2
     #    layer_norm: True
     batch_norm: True  # not LAYER_NORM
     gnn_type: "graphsage"
-    k_hop: 1
+    k_hop: 2
     se: "gnn"
     deg: null  # The parameter is inferred
     global_pool: "cls"
     use_edge_attr: False
-  lr: 0.0006883061453706995
+  weight_decay: 0.0001
+  lr: 0.001
+  
+  
 
 dataset_params:
-  root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+  # root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+  root_path: "./data/openml"
 
 
 trainer:
@@ -41,10 +45,11 @@ tensorboard_logger:
 model_checkpoint_callback:
   save_top_k: 1
   monitor: "val_ndcg"
-  save_last: True
+  mode: "max"
+  save_last: False
   every_n_epochs: 1
 
 early_stopping_callback:
   monitor: "val_ndcg"
-  min_delta: 0.01
-  mode: 'max'
+  mode: "max"
+  patience: 3

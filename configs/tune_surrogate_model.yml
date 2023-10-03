@@ -1,11 +1,11 @@
 tuning_method: "tune_surrogate_model"
 n_trials: 100
 direction: "maximize"
-path_to_optuna_db: "sqlite:///optuna_fedot_pipelines_and_openml_meta_features.db"
+path_to_optuna_db: "sqlite:///optuna_fedot_pipelines_and_openml_meta_features2.db"
 
-batch_size: 256
+batch_size: 16
 
-num_dataloader_workers: 8
+num_dataloader_workers: 32
 
 model:
   name: "RankingPipelineDatasetSurrogateModel"
@@ -16,8 +16,8 @@ model:
     dim_feedforward: null  # The parameter is inferred
     dropout: [0.2, 0.6]
     num_heads: [2, 8, 2]
-    num_layers: [2,  5]
-    batch_norm: [True, False]
+    num_layers: [2,  4]
+    # batch_norm: [True, False]
     # Not working with current settings: "gin", "khopgnn", "rwgnn", "pna4", "gine", "mpnn"
     gnn_type: ["graph", "graphsage", "gcn"]
     k_hop: [1, 3]
@@ -25,7 +25,9 @@ model:
     deg: null  # The parameter is inferred
     global_pool: ["mean", "add", "cls"]
     use_edge_attr: False
-  lr: [0.0001, 0.001]
+  lr: [0.0001, 0.01]
+  weight_decay: [0.00001, 0.0001]
+  
 
 dataset_params:
   root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
@@ -45,10 +47,11 @@ tensorboard_logger:
 model_checkpoint_callback:
   save_top_k: 1
   monitor: "val_ndcg"
-  save_last: True
+  mode: "max"
+  save_last: False
   every_n_epochs: 1
 
 early_stopping_callback:
   monitor: "val_ndcg"
-  min_delta: 0.01
-  mode: 'max'
+  mode: "max"
+  patience: 2
