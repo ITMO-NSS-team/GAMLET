@@ -34,7 +34,7 @@ def get_pipelines_dataset(path: Union[str,os.PathLike]):
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)
     if isinstance(pipelines[0], Data):    
-        return pipelines, None
+        return pipelines, None, 100 # fix for OpenML data
     
     pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")
@@ -49,11 +49,10 @@ def get_datasets(path, is_pair = False):
     is_pair: create dataset with or without pipeline pairs.
     
     """
-    # with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
-    #     pipelines = pickle.load(input_file)
     pipelines, _, n_ops  = get_pipelines_dataset(path)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'), index_col=0)
-    datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=None, header=0).to_numpy()
+    task_pipe_comb['y'] = (-1) * task_pipe_comb['y']
+    datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=None, header=0).fillna(0).to_numpy()
 
     K_TOP = 3
     to_labels = partial(to_labels_k, klim=K_TOP)
@@ -61,14 +60,22 @@ def get_datasets(path, is_pair = False):
     task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(to_labels)
     # task_pipe_comb_bin = task_pipe_comb_bin.groupby('task_id').apply(lambda x: x)
 
+    
+    VAL_R = 0.15
+    TEST_R = 0.15
     try:
         with open(os.path.join(path, "split.json")) as f:
             splits = json.load(f)
         train_task_set, val_task_set, test_task_set = train_val_test_split(splits)
     except FileNotFoundError:
-        train_task_set, val_task_set, test_task_set = random_train_val_test_split(datasets)
-
+        train_task_set, val_task_set, test_task_set = \
+            random_train_val_test_split(list(range(len(datasets))), 
+                                        (VAL_R,TEST_R) )
+    if len(val_task_set) == 0:
+        train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), 
+                                        (VAL_R,) )
     
+
     if is_pair:
         train_dataset = PairDataset(
         task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -130,22 +137,22 @@ def train_val_test_split(splits: Dict[str, List[int]]) -> Tuple[List[int], List[
         test_task_set = []
     return train_task_set, val_task_set, test_task_set
 
-def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[int], List[int]]:
+def random_train_val_test_split(tasks: List[int], splits: List[float]) -> Tuple[List[int], List[int], List[int]]:
     """Split tasks list into train/valid/test sets randomly"""
-    random.seed(10)
-    tasks = list(range(len(datasets)))
-    VAL_R = 0.15
-    TEST_R = 0.15
+    random.seed(10)                                                              
     random.shuffle(tasks)
-
-    train_ind = int((1- (VAL_R+TEST_R))*len(datasets))
-    val_ind = train_ind + int(VAL_R*len(datasets))
-
-    train_task_set = set(tasks[:train_ind])
-    val_task_set = set(tasks[train_ind:val_ind])
-    test_task_set = set(tasks[val_ind:])
-    return train_task_set, val_task_set, test_task_set
-
+    ind_splits = [len(tasks)]
+    split_ratio = 0
+    for split in reversed(splits):
+        split_ratio += split
+        ind_splits.append(int((1- split_ratio)*len(tasks)) )
+    
+    task_sets = []
+    ind_prev = 0
+    for ind in reversed(ind_splits):
+        task_sets.append(set(tasks[ind_prev:ind]) )
+        ind_prev = ind
+    return task_sets
 
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     """Create surrogate model and do training according to config parameters"""    
@@ -157,11 +164,6 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
         config["dataset_params"]["root_path"], is_pair)
 
-    # Not the best solution, that may lead to overfitting, but enables fair comparison with traditional models.
-    if len(val_dataset) == 0:
-        config["early_stopping_callback"]["monitor"] = "train_loss"
-        config["model_checkpoint_callback"]["monitor"] = "train_loss"
-
     train_loader = DataLoader(
         train_dataset,
         batch_size=config["batch_size"],
@@ -169,7 +171,7 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
         num_workers=config["num_dataloader_workers"],
     )
     val_loader = DataLoader(
-        test_dataset,
+        val_dataset,
         batch_size=config["batch_size"],
         num_workers=config["num_dataloader_workers"],
     )
