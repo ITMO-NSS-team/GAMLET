@@ -3,7 +3,7 @@ batch_size: 256
 
 num_dataloader_workers: 32
 model:
-  name: "RankingPipelineDatasetSurrogateModel"
+  name: "PipelineDatasetSurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
@@ -21,6 +21,7 @@ model:
     deg: null  # The parameter is inferred
     global_pool: "mean"
     use_edge_attr: False
+    pipe_encoder_type: "graph_transformer"
   weight_decay: 0.0001
   lr: 0.0001
   
