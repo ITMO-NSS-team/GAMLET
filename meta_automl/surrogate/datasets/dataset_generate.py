@@ -41,7 +41,7 @@ class KnowledgeBaseToDataset:
     ) -> None:
         if task_type != "classification":
             raise NotImplementedError(f"Current version if for `'classification'` `task_type`")
-        if fitness_metric == "log_loss":
+        if fitness_metric == "log_loss" or "fitness":
             self.fitness_coef = 1
         else:
             self.fitness_coef = -1
