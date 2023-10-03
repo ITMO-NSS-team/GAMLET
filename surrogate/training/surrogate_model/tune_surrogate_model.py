@@ -157,7 +157,7 @@ def tune_surrogate_model(config: dict, n_trials: int):
 
     is_pair = False
     model_class = getattr(models, config["model"]["name"])
-    if model_class.__name__ == 'RankingSurrogateModel':
+    if model_class.__name__ == 'RankingSurrogateModel' or model_class.__name__ == 'RankingSurrogateModelNoMeta':
         is_pair = True
 
     train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
