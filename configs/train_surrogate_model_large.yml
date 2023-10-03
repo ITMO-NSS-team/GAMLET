@@ -7,7 +7,7 @@ model:
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
-    d_model: 32
+    d_model: 64
     d_model_dset: 64
     dim_feedforward: null  # The parameter is inferred
     dropout: 0.3
@@ -22,9 +22,10 @@ model:
     global_pool: "mean"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
-  weight_decay: 0.00001
+    dataset_encoder_type: "column"
+  weight_decay: 0.0001
   lr: 0.0001
-  temperature: 10
+  temperature: 5
   
 
 dataset_params:
@@ -54,4 +55,4 @@ model_checkpoint_callback:
 early_stopping_callback:
   monitor: "val_ndcg"
   mode: "max"
-  patience: 5
+  patience: 7
