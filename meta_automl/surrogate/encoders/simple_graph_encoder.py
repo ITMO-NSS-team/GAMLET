@@ -4,7 +4,7 @@ import torch_geometric.nn as gnn
 from torch import nn
 import torch.nn.functional as F
 from einops import repeat
-from .graph_transformer.gnn_layers import get_simple_gnn_layer
+from .gnn_layers import get_simple_gnn_layer
 
 class SimpleGNNEncoder(nn.Module):
     def __init__(self, in_size, d_model, global_pool='mean', gnn_type="gcn", dropout=0.0, num_layers=4,
