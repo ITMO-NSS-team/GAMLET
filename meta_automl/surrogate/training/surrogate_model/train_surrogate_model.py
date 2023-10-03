@@ -35,9 +35,6 @@ def get_datasets(path, is_pair = False, binary_y = True):
     """      
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)   
-    
-    for p in pipelines
-    
     datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=0).fillna(0)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'))
     
@@ -93,7 +90,7 @@ def get_datasets(path, is_pair = False, binary_y = True):
     #     for item in list(dset.x):
     #         xs.append(int(item))
     # n_tags = len(set(xs))
-    meta_data["in_size"] = len(pipelines[0].in_size)
+    meta_data["in_size"] = pipelines[0].in_size
     meta_data["dim_dataset"] = datasets.shape[1]
     return train_dataset, val_dataset, test_dataset, meta_data
 
