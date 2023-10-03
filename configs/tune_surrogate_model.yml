@@ -16,8 +16,8 @@ model:
     num_heads: [2, 8, 2]
     num_layers: [2,  5]
     batch_norm: [True, False]
-    # Not working with current settings: "gin", "khopgnn", "rwgnn", "pna4", "gine"
-    gnn_type: ["graph", "graphsage", "gcn", "mpnn"]
+    # Not working with current settings: "gin", "khopgnn", "rwgnn", "pna4", "gine", "mpnn"
+    gnn_type: ["graph", "graphsage", "gcn"]
     k_hop: [1, 3]
     se: "gnn"
     deg: null  # The parameter is inferred
