@@ -61,7 +61,7 @@ def main():
     meta_features_preprocessor = FeaturesPreprocessor()
 
     converter = KnowledgeBaseToDataset(
-        knowledge_base_directory = "data/knowledge_base_1",  # One should specify his own path here.
+        knowledge_base_directory = "data/knowledge_base_1_v2",
         dataset_directory = "data/pymfe_meta_features_and_fedot_pipelines",
         meta_features_extractor = meta_features_extractor,
         train_test_split_name = "train_test_datasets_classification.csv",
