@@ -42,7 +42,7 @@ def get_pipelines_dataset(path: Union[str,os.PathLike]):
         pipelines, pipeline_extractor.operations_count
     
         
-def get_datasets(path, is_pair = False):
+def get_datasets(path, is_pair = False, binary_y = True):
     """Loading preprocessed data and creating Dataset objects for model training 
     Parameters:
     -----------
@@ -88,16 +88,28 @@ def get_datasets(path, is_pair = False):
             GraphDataset(pipelines),
             datasets,
         )
-    val_dataset = SingleDataset(
-        task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(val_task_set)].reset_index(drop=True),
-        GraphDataset(pipelines),
-        datasets,
-    )
-    test_dataset = SingleDataset(
-        task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(test_task_set)].reset_index(drop=True),
-        GraphDataset(pipelines),
-        datasets,
-    )
+    if binary_y:
+        val_dataset = SingleDataset(
+            task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(val_task_set)].reset_index(drop=True),
+            GraphDataset(pipelines),
+            datasets,
+        )
+        test_dataset = SingleDataset(
+            task_pipe_comb_bin[task_pipe_comb_bin.task_id.isin(test_task_set)].reset_index(drop=True),
+            GraphDataset(pipelines),
+            datasets,
+        )
+    else:
+        val_dataset = SingleDataset(
+            task_pipe_comb[task_pipe_comb.task_id.isin(val_task_set)].reset_index(drop=True),
+            GraphDataset(pipelines),
+            datasets,
+        )
+        test_dataset = SingleDataset(
+            task_pipe_comb[task_pipe_comb.task_id.isin(test_task_set)].reset_index(drop=True),
+            GraphDataset(pipelines),
+            datasets,
+        )        
     # Infer parameters
     meta_data = dict()
     # xs = []
@@ -213,3 +225,41 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
 
     test_results = trainer.test(model, dataloaders=test_loader)
     return test_results
+
+
+def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
+    """Test surrogate model"""    
+
+    train_dataset,  val_dataset, test_dataset, meta_data = get_datasets(
+        config["dataset_params"]["root_path"], False, False)
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=256,
+        num_workers=config["num_dataloader_workers"],
+    )
+
+    model_class = getattr(models, config["model"].pop("name"))
+    surrogate_model = model_class.load_from_checkpoint(
+            checkpoint_path=config["model_data"]["save_dir"]+"checkpoints/last.ckpt",
+            hparams_file=config["model_data"]["save_dir"]+"hparams.yaml"
+        )
+    surrogate_model.eval()
+ 
+    task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
+    with torch.no_grad():
+        for batch in test_loader:
+            task_id, pipe_id, x_graph, x_dset, y_true = batch
+            y_pred = surrogate_model(x_graph, x_dset)
+            y_pred = torch.squeeze(y_pred)
+            task_ids.append(task_id)
+            pipe_ids.append(pipe_id)
+            y_preds.append(y_pred)
+            y_trues.append(y_true)
+            
+    df = pd.DataFrame({'task_id': np.concatenate(task_ids),
+                           'pipe_id': np.concatenate(pipe_ids),
+                           'y_pred': np.concatenate(y_preds),
+                           'y_true': np.concatenate(y_trues)})
+    df.to_csv('results.csv')
+
