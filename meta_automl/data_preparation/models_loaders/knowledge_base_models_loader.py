@@ -1,7 +1,8 @@
 import logging
 from os import PathLike
 from pathlib import Path
-from typing import Union, Literal, Optional, Sequence, List
+from typing import Union,  Optional, Sequence, List
+from typing_extensions import Literal
 
 import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
