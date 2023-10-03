@@ -21,6 +21,12 @@ from meta_automl.surrogate.datasets import GraphDataset, PairDataset, SingleData
 
 
 def get_datasets(path, is_pair = False):
+    """Loading preprocessed data and creating Dataset objects for model training 
+    Parameters:
+    -----------
+    is_pair: create dataset with or without pipeline pairs.
+    
+    """
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)
 
@@ -74,6 +80,7 @@ def get_datasets(path, is_pair = False):
     return train_dataset, val_dataset, test_dataset, meta_data
 
 def to_labels_k(x, klim):
+    """Create y column assigning 1 to first klim elements and 0 to others"""
     vals = np.zeros(len(x))
     if len(x) == 1 or len(x) >= 2 * klim:
         vals[:klim] = 1
@@ -101,6 +108,7 @@ def train_val_test_split(splits: Dict[str, List[int]]) -> Tuple[List[int], List[
     return train_task_set, val_task_set, test_task_set
 
 def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[int], List[int]]:
+    """Split tasks list into train/valid/test sets randomly"""
     random.seed(10)
     tasks = list(range(len(datasets)))
     VAL_R = 0.15
@@ -117,6 +125,8 @@ def random_train_val_test_split(datasets: np.ndarray) -> Tuple[List[int], List[i
 
 
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
+    """Create surrogate model and do training according to config parameters"""
+    
     is_pair = False
     model_class = getattr(models, config["model"].pop("name"))
     if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
