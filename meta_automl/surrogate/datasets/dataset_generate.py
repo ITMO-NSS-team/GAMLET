@@ -63,8 +63,7 @@ class KnowledgeBaseToDataset:
         self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory, **models_loader_kwargs)
         df_datasets = self.models_loader.parse_datasets(self.split, self.task_type)
 
-        # self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x not in self.exclude_datasets)]
-        self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x in  ['sylvine','jasmine'])]
+        self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x not in self.exclude_datasets)]
 
         self._check_for_duplicated_datasets()
 
