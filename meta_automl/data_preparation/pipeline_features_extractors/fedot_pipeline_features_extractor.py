@@ -107,15 +107,7 @@ class FEDOTPipelineFeaturesExtractor:
 
     def _get_edge_index_tensor(self, nodes: List[Dict[str, Any]]) -> torch.LongTensor:
         edges = []
-        
-        # add dataset node!!!
-        max_op_id = max([node['operation_id'] for node in nodes]) +1
-        for node in nodes:
-            if not node["nodes_from"]:
-                node["nodes_from"] = [max_op_id]
-        dataset_node = [{'operation_id': max_op_id, 'operation_type': 'dataset', 'custom_params': {}, 'params': {}, 'nodes_from': []}]
-        nodes = dataset_node + nodes
-        
+
         for node in nodes:
             nodes_from = node["nodes_from"]
             if len(nodes_from) > 0:
@@ -127,6 +119,16 @@ class FEDOTPipelineFeaturesExtractor:
 
     def _get_data(self, pipeline_json_string: str) -> Data:
         nodes = self._get_nodes_from_json_string(pipeline_json_string)
+        
+        # add dataset node!!!
+        max_op_id = max([node['operation_id'] for node in nodes]) +1
+        for node in nodes:
+            if not node["nodes_from"]:
+                node["nodes_from"] = [max_op_id]
+        dataset_node = [{'operation_id': max_op_id, 'operation_type': 'dataset', 'custom_params': {}, 'params': {}, 'nodes_from': []}]
+        nodes = dataset_node + nodes
+        
+        
         operations_ids = self._get_operations_ids(nodes)
         operations_names = self._get_operations_names(nodes, operations_ids)
         operations_parameters = self._get_operations_parameters(nodes, operations_ids)
