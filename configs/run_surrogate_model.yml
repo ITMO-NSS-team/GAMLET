@@ -8,12 +8,13 @@ model:
   name: "PipelineDatasetSurrogateModel"
   model_parameters:
     pipe_encoder_type: "graph_transformer"
+    dataset_encoder_type: "column"
         
 dataset_params:
-  root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+  root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
 
-pipelines_data:
-  root_path: "./data/openml_meta_features_and_fedot_pipelines/all/"
+dataset_params:
+  root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
 
 model_data:
   save_dir: "./experiments/base/"
