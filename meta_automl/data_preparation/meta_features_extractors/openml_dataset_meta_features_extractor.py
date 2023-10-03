@@ -32,7 +32,7 @@ class OpenMLDatasetMetaFeaturesExtractor:
 
     def __init__(
             self,
-            dataset_id: int,
+            dataset_id: int = None,
             meta_features_data_columns: List[str] = None,
             return_type: str = "dict",
             features_preprocessors: FeaturesPreprocessor = None,
@@ -42,14 +42,24 @@ class OpenMLDatasetMetaFeaturesExtractor:
         self.return_type = return_type
         self.features_preprocessors = features_preprocessors
 
-        dataset_info = openml.datasets.list_datasets([dataset_id,], output_format="dataframe").iloc[0]
-        self.meta_features = dataset_info[self.meta_features_data_columns].to_dict()
+        if dataset_id is not None:
+            self.meta_features = self._get_features(dataset_id)
 
-    def _get_features(self) -> Dict[str, int]:
-        return self.meta_features
+    def _get_features(self, dataset_id: int) -> Dict[str, int]:
+        if dataset_id is not None:
+            dataset_info = openml.datasets.list_datasets([dataset_id,], output_format="dataframe").iloc[0].to_dict()
+            meta_features = {}
+            for key in self.meta_features_data_columns:
+                try:
+                    meta_features[key] = dataset_info[key]
+                except KeyError:
+                     meta_features[key] = -1
+            return meta_features
+        else:
+            return self.meta_features
 
-    def __call__(self) -> Dict[str, int]:
-        features = self._get_features()
+    def __call__(self, dataset_id: int = None) -> Dict[str, int]:
+        features = self._get_features(dataset_id)
         if self.features_preprocessors is not None:
             features = self.features_preprocessors(features)
 
