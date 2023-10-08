@@ -6,7 +6,7 @@ Intro to GAMLET
 | Each of the components may include different implementations while staying compatible. 
 | This is achieved by specification and maintaining their external interfaces.
 
-Datasets loader & Dataset
+Datasets Loader & Dataset
 -------------------------
 
 | Automate dataset management, including retrieval, caching, and loading into memory. 
