@@ -1,4 +1,4 @@
-Intro to MetaFEDOT
+Intro to GAMLET
 ==================
 
 | This framework consists of several key components that automate and enhance the process of meta-learning. It provides functionalities for dataset and model management, meta-features extraction, dataset similarity assessment. 

@@ -8,7 +8,6 @@
 [![codecov](https://codecov.io/gh/itmo-nss-team/metafedot/branch/main/graph/badge.svg)](https://codecov.io/gh/ITMO-NSS-team/MetaFEDOT)
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT&countColor=%23263759&style=plastic&labelStyle=lower)](https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT)
 
-
 GAMLET (previously known as MetaFEDOT) is an open platform for sharing meta-learning experiences in **AutoML** and more
 general **Graph Optimization**.
 The project has 3 major long-term goals:

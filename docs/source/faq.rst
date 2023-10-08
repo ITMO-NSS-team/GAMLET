@@ -3,16 +3,16 @@ FAQ
 
 Frequently asked questions and answers
 
-.. topic:: What is MetaFEDOT?
+.. topic:: What is GAMLET?
 
-    *The MetaFEDOT framework is an open platform for sharing meta-learning experiences in AutoML and more general Graph Optimization..*
+    *The GAMLET framework is an open platform for sharing meta-learning experiences in AutoML and more general Graph Optimization..*
 
 
-.. topic:: Can I install MetaFEDOT using pip/conda?
+.. topic:: Can I install GAMLET using pip/conda?
 
-    *Yes, just write the following command:* ``$ pip install MetaFEDOT``
+    *Yes, just write the following command:* ``$ pip install GAMLET``
 
-.. topic:: Can I use MetaFEDOT in my project/research/etc?
+.. topic:: Can I use GAMLET in my project/research/etc?
 
-    *Yes, you can. The MetaFEDOT is published under the BSD-3 license. Also, we
+    *Yes, you can. The GAMLET is published under the BSD-3 license. Also, we
     will be happy to help the users to adopt GEEFST to their needs.*

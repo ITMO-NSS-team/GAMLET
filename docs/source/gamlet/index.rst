@@ -1,11 +1,11 @@
-MetaFEDOT
+GAMLET
 =========
 
-**That is all about MetaFEDOT**
+**That is all about GAMLET**
 
 .. toctree::
    :glob:
    :maxdepth: 2
 
-   metafedot
+   gamlet
    installation

@@ -21,12 +21,12 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
 
-project = "MetaFEDOT"
+project = "GAMLET"
 copyright = "2023-{}, NSS Lab".format(datetime.datetime.now().year)
 author = "NSS Lab"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.1"
+release = "0.0.2"
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -69,9 +69,6 @@ html_theme = "sphinx_rtd_theme"
 
 # -- Extension configuration -------------------------------------------------
 
-# autodoc_inherit_docstrings = False
-# napoleon_google_docstring = True
-# napoleon_include_init_with_doc = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 napoleon_include_init_with_doc = False
