@@ -219,8 +219,7 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
         batch_size=256,
         num_workers=config["num_dataloader_workers"],
     )
-    raise ValueError("Broken code below")
-    model_class = getattr(models, config["model"].pop("name"))
+    model_class = getattr(surrogate_model, config["model"].pop("name"))
     chpoint_dir = config["model_data"]["save_dir"] + "checkpoints/"
     surrogate_model = model_class.load_from_checkpoint(
         checkpoint_path=chpoint_dir + os.listdir(chpoint_dir)[0],
