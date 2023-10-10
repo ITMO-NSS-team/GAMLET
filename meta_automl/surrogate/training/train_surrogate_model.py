@@ -190,9 +190,6 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
-    checkpoint = torch.load(model_checkpoint_callback.best_model_path)
-    # model.load_state_dict(checkpoint["state_dict"])
-    # model.eval()
     model = model_class.load_from_checkpoint(model_checkpoint_callback.best_model_path)
     print(model_checkpoint_callback.best_model_path)
 
