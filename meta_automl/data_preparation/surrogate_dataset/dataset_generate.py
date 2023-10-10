@@ -80,11 +80,6 @@ class KnowledgeBaseToDataset:
         if not os.path.exists(directory):
             pathlib.Path(directory).mkdir(parents=True)
 
-    def _get_best_pipelines_unique_indexes(self, dataset_models: List[Model]) -> List[int]:
-        raise NotImplementedError("Broken code in the function.")
-        # best_pipelines_unique_indexes = temp_df.groupby('pipeline_id')['fitness'].max().reset_index()
-        # return best_pipelines_unique_indexes
-
     def _process(self) -> Tuple[List[Dict[str, Union[float, int]]], List[Dict[str, float]], List[int]]:
         df_dataset_models = pd.DataFrame(self.models_loader.load(fitness_metric=self.fitness_metric))
         df_dataset_models['task_id'] = df_dataset_models.metadata.apply(lambda x: x['dataset_id'])
