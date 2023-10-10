@@ -146,7 +146,10 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
         is_pair,
         index_col=index_col,
     )
-
+    assert len(train_dataset) != 0
+    assert len(val_dataset) != 0
+    assert len(test_dataset) != 0
+       
     train_loader = DataLoader(
         train_dataset,
         batch_size=config["batch_size"],
