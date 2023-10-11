@@ -16,9 +16,9 @@ class TimeSeriesDataset(DatasetBase):
         self.forecast_length = forecast_length
 
     def get_data(self) -> TimeSeriesData:
-        path_to_series = Path(self.path_to_knowledge_base, self.id_, 'data', f'{self.id_}.csv')
+        path_to_series = Path(self.path_to_knowledge_base, self.id_,  'data.csv')
         series = pd.read_csv(path_to_series)['value'].values
-        x = series[:-self.forecast_length],
+        x = series[:-self.forecast_length]
         y = series[-self.forecast_length:]
         return TimeSeriesData(x, y, self.forecast_length)
 
