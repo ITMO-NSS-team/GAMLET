@@ -10,7 +10,7 @@ from sklearn.preprocessing import QuantileTransformer
 
 from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
 from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors.time_series_meta_features_extractor import \
+from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
     TimeSeriesFeaturesExtractor
 
 len_d = {'D1002': 1066, 'D1019': 4089, 'D1032': 2454, 'D1091': 3080, 'D1101': 4211, 'D1104': 4211, 'D1124': 4211,
@@ -176,14 +176,19 @@ len_d_classes = {k: tresholds[np.argmin(np.abs(tresholds - v))] for k, v in len_
 
 
 def main():
-    meta_features = pd.read_csv('meta_features_ts.csv', index_col=0)
-
+    # Define datasets.
+    dataset_names = os.listdir(Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets'))
+    loader = TimeSeriesDatasetsLoader()
+    datasets = loader.load(dataset_names)
+    # Extract meta-features and load on demand.
+    extractor = TimeSeriesFeaturesExtractor()
+    meta_features = extractor.extract(datasets)
     # Preprocess meta-features, as KNN does not support NaNs.
     meta_features = meta_features.dropna(axis=1, how='any')
     idx = meta_features.index.values
     meta_features.to_csv('meta_features_ts.csv')
     # Dimension reduction
-    dim_reduction = umap.UMAP(n_components=2, min_dist=1)
+    dim_reduction = umap.UMAP(n_components=2, min_dist=0.5)
     X = QuantileTransformer(output_distribution='normal').fit_transform(meta_features)
     X = dim_reduction.fit_transform(X)
 
@@ -199,7 +204,7 @@ def main():
     plt.grid()
     plt.show()
 
-    cluster_algo = DBSCAN(eps=0.9)
+    cluster_algo = DBSCAN(eps=0.7)
 
     # Apply the clustering algorithm to your data
     cluster_labels = cluster_algo.fit_predict(X)

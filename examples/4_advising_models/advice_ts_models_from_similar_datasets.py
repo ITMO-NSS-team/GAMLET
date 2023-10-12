@@ -1,9 +1,7 @@
 import os
 from pathlib import Path
 
-import pandas as pd
 from fedot.core.pipelines.adapters import PipelineAdapter
-from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
@@ -11,7 +9,7 @@ from tqdm import tqdm
 from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
 from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
 from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors.time_series_meta_features_extractor import \
+from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
     TimeSeriesFeaturesExtractor
 from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor

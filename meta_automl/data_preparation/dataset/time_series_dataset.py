@@ -1,7 +1,4 @@
-import os
-import shutil
 from pathlib import Path
-from secrets import token_hex
 import pandas as pd
 from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.data_preparation.dataset.dataset_base import TimeSeriesData, DatasetBase
@@ -21,24 +18,3 @@ class TimeSeriesDataset(DatasetBase):
         x = series[:-self.forecast_length]
         y = series[-self.forecast_length:]
         return TimeSeriesData(x, y, self.forecast_length)
-
-
-if __name__ == '__main__':
-
-    p = r'D:\Programming\Work\pytsbe\experiments\univariate\benchmark_results_Daily\M4_daily_test\launch_0\FEDOT'
-
-    # for i in os.listdir(Path(get_project_root(), r'data/knowledge_base_time_series_0/datasets')):
-    #     os.mkdir(Path(get_project_root(), r'data/knowledge_base_time_series_0/datasets', i.split('.')[0], 'models', 'FEDOT'))
-    #
-    #
-    for i in os.listdir(p):
-        if 'additional' in i:
-            label = 'M4_' + i.split('_')[0]
-            n_p = Path(p, i)
-            s = token_hex(16)
-            shutil.copyfile(Path(n_p, 'opt_history.json'),
-                            Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets', label,
-                                 'histories', 'FEDOT', s + '.json'))
-            shutil.copyfile(Path(n_p, 'model', '0_pipeline_saved', '0_pipeline_saved.json'),
-                            Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets', label,
-                                 'models', 'FEDOT', s + '.json'))
