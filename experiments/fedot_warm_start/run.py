@@ -208,11 +208,18 @@ def extract_best_models_from_history(dataset: DatasetBase, history: OptHistory) 
         best_individuals = sorted(chain(*history.individuals),
                                   key=lambda ind: ind.fitness,
                                   reverse=True)
+        for individual in history.final_choices:
+            if individual not in best_individuals:
+                best_individuals.insert(0, individual)
+
+        best_individuals = best_individuals[:N_BEST_DATASET_MODELS_TO_MEMORIZE]
+
         best_individuals = list({ind.graph.descriptive_id: ind for ind in best_individuals}.values())
         best_models = []
-        for individual in best_individuals[:N_BEST_DATASET_MODELS_TO_MEMORIZE]:
+        for individual in best_individuals:
             pipeline = PipelineAdapter().restore(individual.graph)
-            model = Model(pipeline, individual.fitness, history.objective.metric_names[0], dataset)
+            fitness = individual.fitness or SingleObjFitness()
+            model = Model(pipeline, fitness, history.objective.metric_names[0], dataset)
             best_models.append(model)
     else:
         pipeline = PipelineAdapter().restore(history.tuning_result)
