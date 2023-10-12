@@ -267,7 +267,7 @@ def main():
     df_datasets_train, df_datasets_test, datasets_dict = fetch_datasets()
 
     dataset_ids = list(datasets_dict.keys())
-    dataset_ids_train = df_datasets_train.index.to_list()
+    dataset_ids_test = df_datasets_train.index.to_list()
     dataset_ids_test = df_datasets_test.index.to_list()
 
     dataset_names_train = df_datasets_train['dataset_name'].to_list()
@@ -279,7 +279,7 @@ def main():
             experiment_start_date_iso=experiment_date_iso,
             input_config=config,
             dataset_ids=dataset_ids,
-            dataset_ids_train=dataset_ids_train,
+            dataset_ids_train=dataset_ids_test,
             dataset_names_train=dataset_names_train,
             dataset_ids_test=dataset_ids_test,
             dataset_names_test=dataset_names_test,
@@ -291,7 +291,7 @@ def main():
     with open(progress_file_path, 'a') as progress_file:
         for dataset_id, dataset in tqdm(datasets_dict.items(), 'FEDOT, all datasets', file=progress_file):
             try:
-                timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_train else TEST_TIMEOUT
+                timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
                 run_date = datetime.now()
                 fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT')
                 save_evaluation(run_results, run_date, experiment_date, save_dir)
@@ -307,7 +307,8 @@ def main():
             except Exception:
                 logging.exception(f'Train dataset "{dataset_id}"')
 
-    mf_extractor, model_advisor = fit_offline_meta_learning_components(best_models_per_dataset)
+    best_models_per_dataset_test = {dataset_id: best_models_per_dataset[dataset_id] for dataset_id in dataset_ids_test}
+    mf_extractor, model_advisor = fit_offline_meta_learning_components(best_models_per_dataset_test)
 
     with open(progress_file_path, 'a') as progress_file:
         for dataset_id, dataset in tqdm(datasets_dict_test.items(), 'MetaFEDOT, Test datasets', file=progress_file):
