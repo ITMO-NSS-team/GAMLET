@@ -38,11 +38,12 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
         meta_feature_names = np.arange(108)
         with IndustrialModels():
             for d in tqdm(datasets_or_ids, desc='Feature_generation'):
+                idx = d.id_
                 if (use_cached and
-                        (mfs := self._get_meta_features_cache(d.id_, meta_feature_names))):
-                    meta_features[d.id_] = mfs
+                        (mfs := self._get_meta_features_cache(d, meta_feature_names))):
+                    meta_features[idx] = mfs.values()
                 else:
-                    idx = d.id_
+
                     features = d.get_data().x
                     input_data = InputData(idx=np.array([0]), features=np.array(features), target=None,
                                            task=Task(TaskTypesEnum.classification),
@@ -50,7 +51,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
                     meta_features[idx] = self._extractor.root_node.predict(input_data).predict[0]
                     mfs = dict(zip(meta_feature_names, meta_features[idx]))
                     if update_cached:
-                        self._update_meta_features_cache(d.id_, mfs)
+                        self._update_meta_features_cache(d, mfs)
 
         meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features

@@ -94,7 +94,7 @@ def get_cache_properties(class_name: str) -> CacheProperties:
         'TimeSeriesFeaturesExtractor': CacheProperties(
             type=CacheType.file,
             dir=get_cache_dir().joinpath('metafeatures/tsfe'),
-            path_template='{id_}.pkl')
+            path_template='{id}.pkl')
     }
     try:
         return cache_properties_by_class_name[class_name]
