@@ -1,5 +1,6 @@
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
+import json
 import numpy as np
 from fedot.core.pipelines.adapters import PipelineAdapter
 from golem.core.dag.graph import Graph
@@ -8,6 +9,10 @@ from golem.core.optimisers.meta.surrogate_model import SurrogateModel
 from torch_geometric.loader import DataLoader
 import torch
 
+def get_extractor_params(filename: str) -> Dict[str, str]:
+    with open(filename) as f:
+        extractor_params = json.load(f)
+    return extractor_params
 
 class DataPipelineSurrogate(SurrogateModel):
     """

@@ -3,20 +3,24 @@ import sys
 
 sys.path.append(os.getcwd())
 from functools import partial
+import openml
 
 from fedot.api.main import Fedot
 from fedot.core.repository.tasks import (Task, TaskTypesEnum,
                                          TsForecastingParams)
 from golem.core.optimisers.meta.surrogate_optimizer import SurrogateEachNgenOptimizer
-from thegolem.data_pipeline_surrogate import DataPipelineSurrogate
+from meta_automl.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
 
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.meta_features_extractors import OpenMLDatasetMetaFeaturesExtractor
+from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.surrogate.models import RankingPipelineDatasetSurrogateModel
+from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.datasets_loaders.custom_datasets_loader import CustomDatasetsLoader
 
-import openml
+from meta_automl.data_preparation.surrogate_dataset import dataset_from_id_without_data_loading
+
+dataset_from_id_without_data_loading
 
 if __name__ == '__main__':
     # Define data
@@ -29,22 +33,25 @@ if __name__ == '__main__':
 
     # Load surrogate model
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
-        checkpoint_path="./experiments/base/checkpoints/last.ckpt",
+        checkpoint_path="./experiments/base/checkpoints/best.ckpt",
         hparams_file="./experiments/base/hparams.yaml"
     )
     surrogate_model.eval()
     
     pipeline_features_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
-                                                                 operation_encoding="ordinal")
-
-    features_preprocessor = FeaturesPreprocessor(
-        load_path="./data/openml_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle")
-    meta_features_extractor = OpenMLDatasetMetaFeaturesExtractor(features_preprocessors=features_preprocessor)
-    dataset_meta_features = meta_features_extractor(dataset_id=open_ml_dataset_id)
-
+                                                                 operation_encoding="ordinal")   
+    datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_without_data_loading)
+    extractor_params = get_extractor_params('configs/use_features.json')
+    meta_features_extractor = PymfeExtractor(
+        extractor_params = extractor_params,
+        datasets_loader = datasets_loader_builder(),
+    )
+    meta_features_preprocessor = FeaturesPreprocessor(extractor_params=extractor_params)
+    datasets_meta_features = meta_features_extractor.extract([open_ml_dataset_id], fill_input_nans=True)
+        
     surrogate_pipeline = DataPipelineSurrogate(
         pipeline_features_extractor=pipeline_features_extractor,
-        dataset_meta_features=dataset_meta_features,
+        dataset_meta_features=datasets_meta_features,
         pipeline_estimator=surrogate_model
     )
 
