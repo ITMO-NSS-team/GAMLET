@@ -77,7 +77,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
                 mfs = dict(zip(feature_names, dataset_features))
 
-                if update_cached:
+                if update_cached and isinstance(dataset, int):
                     self._update_meta_features_cache(dataset.id_, mfs)
                 if is_sum_none:
                     dim_dataset = x.shape[1]
@@ -99,7 +99,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
         if is_sum_none:
             meta_features = pd.DataFrame.from_dict(meta_features)  
         else:
-           meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
+            meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
         return meta_features
 
     @staticmethod
