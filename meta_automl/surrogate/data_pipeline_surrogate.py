@@ -2,12 +2,14 @@ from typing import Any, Callable, Dict
 
 import json
 import numpy as np
+import pandas as pd
 from fedot.core.pipelines.adapters import PipelineAdapter
 from golem.core.dag.graph import Graph
 from golem.core.optimisers.meta.surrogate_model import SurrogateModel
 
-from torch_geometric.loader import DataLoader
 import torch
+from torch_geometric.loader import DataLoader
+from torch_geometric.data import Data
 
 def get_extractor_params(filename: str) -> Dict[str, str]:
     with open(filename) as f:
@@ -39,11 +41,21 @@ class DataPipelineSurrogate(SurrogateModel):
     def __init__(
             self,
             pipeline_features_extractor: Callable,
-            dataset_meta_features: np.ndarray,
+            dataset_meta_features: pd.DataFrame,
             pipeline_estimator: Callable,
         ):
         self.pipeline_features_extractor = pipeline_features_extractor
-        self.dataset_meta_features = torch.tensor(list(dataset_meta_features.values())).view(1,-1)
+        
+        
+        transformed = dataset_meta_features.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x: pd.Series(x))
+
+        
+        dset_data = Data()
+        dset_data.x = torch.tensor(transformed.values, dtype=torch.float32)
+        loader = DataLoader([dset_data], batch_size=1)
+        self.dset_data = next(iter(loader))
+
+        # self.dataset_meta_features = torch.tensor(list(dataset_meta_features.values)).view(1,-1)
         self.pipeline_estimator = pipeline_estimator
         self.pipeline_estimator.eval()
         self.pipeline_adapter = PipelineAdapter()
@@ -65,7 +77,7 @@ class DataPipelineSurrogate(SurrogateModel):
         batch = next(iter(loader))
         
         with torch.no_grad():
-            score = self.pipeline_estimator(batch, self.dataset_meta_features)
+            score = self.pipeline_estimator(batch, self.dset_data)
         score = score.view(-1).item()        
         return [score]
 

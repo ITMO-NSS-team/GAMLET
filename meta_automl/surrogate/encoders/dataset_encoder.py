@@ -10,7 +10,7 @@ from torch import Tensor
 from torch_geometric.nn.inits import reset
 
 
-class MyAggregation(aggr.Aggregation):
+class CustormAggregation(aggr.Aggregation):
     def __init__(
         self,
         local_nn: Optional[torch.nn.Module] = None,
@@ -88,7 +88,7 @@ class ColumnDatasetEncoder(nn.Module):
         )
         mlp1 = nn.Sequential(nn.BatchNorm1d(input_dim), nn.Linear(input_dim, hidden_dim), nn.ReLU())
         mlp2 = nn.Sequential(nn.BatchNorm1d(hidden_dim), nn.Linear(hidden_dim, hidden_dim), nn.ReLU())
-        agg_f = MyAggregation(mlp1, mlp2)
+        agg_f = CustormAggregation(mlp1, mlp2)
         self.multi_aggr = aggr.MultiAggregation(
             aggrs=['mean', agg_f],
             mode='cat')
