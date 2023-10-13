@@ -21,7 +21,7 @@ def dataset_to_pipelines(d_id):
     dir_to_search = Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets', d_id)
     try:
         history = OptHistory().load(Path(dir_to_search, 'opt_history.json'))
-    except:
+    except Exception as e:
         return None
 
     best_fitness = 1000000
