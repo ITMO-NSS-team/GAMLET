@@ -42,14 +42,13 @@ class DataPipelineSurrogate(SurrogateModel):
             self,
             pipeline_features_extractor: Callable,
             dataset_meta_features: pd.DataFrame,
+            meta_features_preprocessor: Any,
             pipeline_estimator: Callable,
         ):
         self.pipeline_features_extractor = pipeline_features_extractor
         
-        
-        transformed = dataset_meta_features.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x: pd.Series(x))
-
-        
+        transformed = meta_features_preprocessor.transform(dataset_meta_features, single=False).fillna(0)
+        transformed = transformed.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x: pd.Series(x))     
         dset_data = Data()
         dset_data.x = torch.tensor(transformed.values, dtype=torch.float32)
         loader = DataLoader([dset_data], batch_size=1)
@@ -76,8 +75,9 @@ class DataPipelineSurrogate(SurrogateModel):
         loader = DataLoader([pipeline_features], batch_size=1)
         batch = next(iter(loader))
         
+        # calculating with surrogate model; changing the sign!
         with torch.no_grad():
-            score = self.pipeline_estimator(batch, self.dset_data)
+            score = -self.pipeline_estimator(batch, self.dset_data)
         score = score.view(-1).item()        
         return [score]
 

@@ -107,9 +107,9 @@ class PipelineDatasetSurrogateModel(LightningModule):
 
         z_pipeline = self.pipeline_encoder(x_graph)
         z_dataset = self.dataset_encoder(dset)
-        if torch.isnan(z_dataset).any():
-            print(z_dataset)
-            quit()
+     
+        assert not torch.isnan(z_dataset).any()
+     
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:

@@ -165,6 +165,7 @@ class KnowledgeBaseToDataset:
             header=True,
             index=False,
         )
+        
 
     def _save_pipelines_objects(self, pipelines: List[Any]):
         with open(os.path.join(self.dataset_directory, self.split, "pipelines_fedot.pickle"), "wb") as f:
