@@ -96,7 +96,8 @@ class KnowledgeBaseToDataset:
 
         self._maybe_create_dataset_directory(os.path.join(self.dataset_directory, self.split))
 
-        self.pipeline_extractor = FEDOTPipelineFeaturesExtractor()
+        self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
+                                                            operation_encoding="ordinal")
         self.meta_features_extractor = meta_features_extractor
 
         self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory, **models_loader_kwargs)
@@ -133,9 +134,8 @@ class KnowledgeBaseToDataset:
         pipelines_fedot = task_pipe_comb.drop_duplicates(subset=['pipeline_id']) \
                                         .sort_values(by=['pipeline_id'])['predictor'] \
                                         .values.tolist()
-        pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
-                                                            operation_encoding="ordinal")
-        pipelines_data = [get_pipeline_features(pipeline_extractor, pl) for pl in pipelines_fedot]
+
+        pipelines_data = [get_pipeline_features(self.pipeline_extractor, pl) for pl in pipelines_fedot]
         return (
             task_pipe_comb[["task_id", "pipeline_id", "y"]],
             pipelines_fedot,
