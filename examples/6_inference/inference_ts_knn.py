@@ -95,15 +95,25 @@ def main():
         test_data = InputData(idx=np.arange(len(X)), features=X, target=y, task=task,
                               data_type=DataTypesEnum.ts)
         print(idx)
-        pipeline = predict[i][0].predictor
+        pipeline1 = predict[i][0].predictor
+
+
         # pipeline.show()
         # dataset_names_to_best_pipelines_test[idx].predictor.show()
         # pipeline = predict[np.random.choice(np.arange(len(predict)))][0].predictor
-        dists.append(get_distance_between(pipeline, dataset_names_to_best_pipelines_test[idx].predictor))
+        #dists.append(get_distance_between(pipeline, dataset_names_to_best_pipelines_test[idx].predictor))
 
-        pipeline.unfit()
-        pipeline.fit(train_data)
-        pred = np.ravel(pipeline.predict(test_data).predict)
+        pipeline1.unfit()
+        pipeline1.fit(train_data)
+        pred = np.ravel(pipeline1.predict(test_data).predict)
+
+        if len(predict[i]) > 1:
+            pipeline2 = predict[i][1].predictor
+            pipeline2.unfit()
+            pipeline2.fit(train_data)
+            pred2 = np.ravel(pipeline2.predict(test_data).predict)
+
+            pred = (pred + pred2) / 2
         df = pd.DataFrame({'value': y, 'predict': pred})
         df.to_csv(f'res/{idx}_forecast_vs_actual.csv')
 
