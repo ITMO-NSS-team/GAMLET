@@ -27,11 +27,11 @@ def test_load_new_datasets_on_demand(openml_dataset_ids):
 
 def test_group_load_new_datasets_ts(timeseries_dataset_ids):
     loader = TimeSeriesDatasetsLoader()
-    datasets = loader.load(timeseries_dataset_ids)
+    loader.load(timeseries_dataset_ids)
     assert loader.dataset_ids == set(timeseries_dataset_ids)
 
 
 def test_load_single_ts(timeseries_dataset_ids):
     loader = TimeSeriesDatasetsLoader()
     for dataset_id in timeseries_dataset_ids:
-        dataset = loader.load_single(dataset_id)
+        loader.load_single(dataset_id)

@@ -30,14 +30,12 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
                 fit_kwargs: Dict[str, Any] = None, extract_kwargs: Dict[str, Any] = None) -> pd.DataFrame:
 
         meta_features = {}
-        for dataset in datasets_or_ids:
-            if not isinstance(dataset, DatasetBase):
-                dataset = self._datasets_loader.load_single(dataset)
-
-        logging.critical(f'Extracting meta features of the time series datasets...')
+        logging.critical('Extracting meta features of the time series datasets...')
         meta_feature_names = np.arange(108)
         with IndustrialModels():
             for d in tqdm(datasets_or_ids, desc='Feature_generation'):
+                if not isinstance(d, DatasetBase):
+                    d = self._datasets_loader.load_single(d)
                 idx = d.id_
                 if (use_cached and
                         (mfs := self._get_meta_features_cache(d, meta_feature_names))):
