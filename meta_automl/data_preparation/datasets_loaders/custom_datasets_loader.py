@@ -8,8 +8,10 @@ from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 
 
 class CustomDatasetsLoader(DatasetsLoader):
+    dataset_class = CustomDataset
+
     def __init__(self,
-                 dataset_from_id_func: Callable[[DatasetIDType], DatasetBase] = CustomDataset):
+                 dataset_from_id_func: Callable[[DatasetIDType], CustomDataset] = CustomDataset):
         self.dataset_ids = set()
         self.dataset_from_id_func = dataset_from_id_func
 

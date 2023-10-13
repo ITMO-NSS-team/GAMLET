@@ -15,3 +15,9 @@ class DatasetsLoader:
     @abstractmethod
     def load_single(self, *args, **kwargs) -> DatasetBase:
         raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def dataset_class(self):
+        """ Should be implemented as a class field or property with corresponding name. """
+        pass
