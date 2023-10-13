@@ -3,16 +3,15 @@ from __future__ import annotations
 import logging
 import warnings
 from functools import partial
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from pymfe.mfe import MFE
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
-import json
 
 
 class PymfeExtractor(MetaFeaturesExtractor):

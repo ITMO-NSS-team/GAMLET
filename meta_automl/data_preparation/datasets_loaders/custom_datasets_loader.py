@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Sequence, Callable
+from typing import Callable, List, Sequence
 
-from meta_automl.data_preparation.dataset import DatasetIDType, CustomDataset, \
-    DatasetBase
+from meta_automl.data_preparation.dataset import CustomDataset, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 
 
