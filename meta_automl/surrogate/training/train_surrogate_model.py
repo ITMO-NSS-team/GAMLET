@@ -31,7 +31,7 @@ def get_datasets(path, is_pair=False, binary_y=True, index_col=0):
     """
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)
-    datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=index_col).fillna(0)
+    datasets = pd.read_csv(os.path.join(path, 'datasets_full.csv'), index_col=index_col).fillna(0)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'))
     task_pipe_comb = task_pipe_comb[task_pipe_comb.y < 10]
 

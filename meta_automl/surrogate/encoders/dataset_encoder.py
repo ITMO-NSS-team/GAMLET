@@ -65,9 +65,10 @@ class MLPDatasetEncoder(nn.Module):
             nn.BatchNorm1d(hidden_dim),
             nn.Linear(hidden_dim, output_dim),
         )
+        self.dim = output_dim
 
     def forward(self, data):
-        z = self.inp_layer(data.x_dset)
+        z = self.inp_layer(data.x)
         z = self.block1(z)
         z = self.block2(z)
         return z
@@ -92,6 +93,7 @@ class ColumnDatasetEncoder(nn.Module):
         self.multi_aggr = aggr.MultiAggregation(
             aggrs=['mean', agg_f],
             mode='cat')
+        self.dim = input_dim + hidden_dim
 
     def forward(self, data):
         z = data.x

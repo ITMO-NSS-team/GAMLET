@@ -68,8 +68,10 @@ class PipelineDatasetSurrogateModel(LightningModule):
                 hidden_dim=model_parameters['d_model_dset'],
                 output_dim=model_parameters['d_model_dset'],
             )
+        else:
+            raise ValueError("dataset_encoder_type should be 'column' or 'aggregated'")
 
-        cat_dim = model_parameters['d_model'] + model_parameters['dim_dataset'] + model_parameters['d_model_dset']
+        cat_dim = self.dataset_encoder.dim + self.pipeline_encoder.dim
         self.final_model = nn.Sequential(
             nn.BatchNorm1d(cat_dim),
             nn.Linear(cat_dim, cat_dim),
@@ -109,7 +111,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
         z_dataset = self.dataset_encoder(dset)
      
         assert not torch.isnan(z_dataset).any()
-     
+    
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
