@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import umap
 from fedot.core.data.data import InputData
 from fedot.core.pipelines.adapters import PipelineAdapter
 from fedot.core.pipelines.prediction_intervals.graph_distance import get_distance_between
@@ -10,6 +11,7 @@ from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum, TsForecastingParams
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import QuantileTransformer
 from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
@@ -56,6 +58,14 @@ def main():
     x_train, x_test = train_test_split(meta_features, train_size=0.75, random_state=42)
     y_train = x_train.index
     y_test = x_test.index
+    # Dimension reduction
+    q_t = QuantileTransformer(output_distribution='normal')
+    dim_reduction = umap.UMAP(n_components=5, min_dist=0.5, n_neighbors=10)
+    x_train_v = dim_reduction.fit_transform(q_t.fit_transform(x_train))
+    x_test_v = dim_reduction.transform(q_t.transform(x_test))
+    x_train = pd.DataFrame(data=x_train_v, index=x_train.index)
+    x_test = pd.DataFrame(data=x_test_v, index=x_test.index)
+
 
     # Define best models for datasets.
     dataset_names_to_best_pipelines = {}
