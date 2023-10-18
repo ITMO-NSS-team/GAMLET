@@ -7,6 +7,8 @@ from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 
 
 class OpenMLDatasetsLoader(DatasetsLoader):
+    dataset_class = OpenMLDataset
+
     def __init__(self, allow_names: bool = False):
         self.dataset_ids = set()
         self._allow_names = allow_names
