@@ -34,15 +34,15 @@ class PymfeExtractor(MetaFeaturesExtractor):
         fit_kwargs = fit_kwargs or {}
         extract_kwargs = extract_kwargs or {}
 
-        meta_features_dict = {}
+        columns_or_rows = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
 
         is_sum_none = True if "summary" in self.extractor_params and self.extractor_params["summary"] is None else False
         if is_sum_none:
-            meta_features_dict["dataset"] = []
-            meta_features_dict["feature"] = []
-            meta_features_dict["value"] = []
-            meta_features_dict["variable"] = []
+            columns_or_rows["dataset"] = []
+            columns_or_rows["feature"] = []
+            columns_or_rows["value"] = []
+            columns_or_rows["variable"] = []
 
         for dataset in datasets_or_ids:
             if isinstance(dataset, DatasetBase):
@@ -55,7 +55,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
 
             logging.critical(f'Extracting meta features of the dataset {dataset}...')
             if use_cached and meta_features_cached:
-                meta_features_dict[dataset_id] = meta_features_cached
+                columns_or_rows[dataset_id] = meta_features_cached
             else:
                 if not isinstance(dataset, DatasetBase):
                     dataset = self._datasets_loader.load_single(dataset)
@@ -91,18 +91,18 @@ class PymfeExtractor(MetaFeaturesExtractor):
                         if len(value) < dim_dataset:
                             value = [value[0]] * dim_dataset
 
-                        meta_features_dict["dataset"].extend([dataset.id_] * dim_dataset)
-                        meta_features_dict["variable"].extend(list(range(dim_dataset)))
-                        meta_features_dict["feature"].extend([key] * dim_dataset)
-                        meta_features_dict["value"].extend(value)
+                        columns_or_rows["dataset"].extend([dataset.id_] * dim_dataset)
+                        columns_or_rows["variable"].extend(list(range(dim_dataset)))
+                        columns_or_rows["feature"].extend([key] * dim_dataset)
+                        columns_or_rows["value"].extend(value)
                 else:
-                    meta_features_dict[dataset.id_] = meta_features_extracted
+                    columns_or_rows[dataset.id_] = meta_features_extracted
 
         if is_sum_none:
-            meta_features_dict = pd.DataFrame.from_dict(meta_features_dict)
+            columns_or_rows = pd.DataFrame.from_dict(columns_or_rows)
         else:
-            meta_features_dict = pd.DataFrame.from_dict(meta_features_dict, orient='index')
-        return meta_features_dict
+            columns_or_rows = pd.DataFrame.from_dict(columns_or_rows, orient='index')
+        return columns_or_rows
 
     @staticmethod
     def fill_nans(x):
