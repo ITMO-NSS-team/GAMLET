@@ -22,4 +22,3 @@ def openml_dataset_ids():
 def timeseries_dataset_ids():
     ids = TS_DATASETS_IDS_TO_LOAD
     yield ids
-

@@ -14,7 +14,6 @@ from meta_automl.data_preparation.meta_features_extractors.time_series.time_seri
     TimeSeriesFeaturesExtractor
 
 p = Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets')
-l = os.listdir(p)
 len_d = {i: len(pd.read_csv(Path(p, i, 'data.csv'))) for i in os.listdir(p)}
 
 tresholds = np.array([100, 200, 300, 500, 700, 1000, 2000, 4000])
