@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional, List, Any
 
 import numpy as np
-import pandas as pd
 
 from meta_automl.data_preparation.file_system import CacheOperator, get_dataset_cache_path
 
@@ -15,8 +14,8 @@ DatasetIDType = Any
 
 @dataclass
 class DatasetData:
-    x: pd.DataFrame
-    y: Optional[pd.DataFrame] = None
+    x: np.array
+    y: Optional[np.array] = None
     categorical_indicator: Optional[List[bool]] = None
     attribute_names: Optional[List[str]] = None
 

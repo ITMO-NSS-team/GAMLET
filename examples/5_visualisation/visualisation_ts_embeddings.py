@@ -34,7 +34,7 @@ def main():
     meta_features = meta_features.dropna(axis=1, how='any')
     idx = meta_features.index.values
     # Dimension reduction
-    dim_reduction = umap.UMAP(n_components=2)
+    dim_reduction = umap.UMAP(n_components=2, min_dist=0.5, n_neighbors=10)
     X = QuantileTransformer(output_distribution='normal').fit_transform(meta_features)
     X = dim_reduction.fit_transform(X)
 

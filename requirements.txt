@@ -2,7 +2,7 @@
 fedot==0.7.2
 openml==0.14.1
 pymfe==0.4.2
-fedot-ind>=0.0.0.4
+fedot-ind==0.3.0.1
 
 # variable versions
 numpy>=1.16.5

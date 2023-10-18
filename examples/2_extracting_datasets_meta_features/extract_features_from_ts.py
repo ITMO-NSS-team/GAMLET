@@ -8,7 +8,7 @@ from meta_automl.data_preparation.meta_features_extractors.time_series.time_seri
 
 
 def main():
-    dataset_names = os.listdir(Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets'))
+    dataset_names = os.listdir(Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets'))[:10]
 
     loader = TimeSeriesDatasetsLoader()
     extractor = TimeSeriesFeaturesExtractor()

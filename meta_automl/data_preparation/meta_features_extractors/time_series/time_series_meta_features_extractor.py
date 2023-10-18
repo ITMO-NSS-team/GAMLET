@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from fedot.core.data.data import InputData
 from fedot.core.pipelines.pipeline import Pipeline
-from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot_ind.core.repository.initializer_industrial_models import IndustrialModels
@@ -32,7 +31,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
 
         meta_features = {}
         logging.critical('Extracting meta features of the time series datasets...')
-        meta_feature_names = np.arange(3000)
+        meta_feature_names = np.arange(184)
         with IndustrialModels():
             for d in tqdm(datasets_or_ids, desc='Feature_generation'):
                 if not isinstance(d, DatasetBase):
@@ -45,10 +44,11 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
 
                     features = d.get_data().x
 
-                    input_data = InputData(idx=np.array([0]), features=np.array(features), target=None,
+                    input_data = InputData(idx=np.array([0]), features=np.array(features).reshape(1, -1), target=None,
                                            task=Task(TaskTypesEnum.classification),
                                            data_type=DataTypesEnum.table)
-                    meta_features[idx] = self._extractor.root_node.predict(input_data).predict[0]
+                    pred = self._extractor.root_node.predict(input_data).predict
+                    meta_features[idx] = pred[0]
                     mfs = dict(zip(meta_feature_names, meta_features[idx]))
                     if update_cached:
                         self._update_meta_features_cache(d, mfs)
@@ -57,14 +57,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
 
     def _load_extractor(self):
         with IndustrialModels():
-            pipeline = PipelineBuilder() \
-                            .add_branch('quantile_extractor', 'topological_extractor') \
-                            .join_branches('cat_features') \
-                           .build()
-            pipeline.show()
-            dummy_data = InputData(idx=np.array(np.arange(1)), features=np.array(
-                [np.random.random(30) for _ in range(2)]),
-                                   target=None,
-                                   task=Task(TaskTypesEnum.classification), data_type=DataTypesEnum.table)
-            pipeline._fit(dummy_data)
+            pipeline = Pipeline().load(
+                Path(get_project_root(), 'meta_automl', 'data_preparation', 'meta_features_extractors', 'time_series',
+                     'extractor', '0_pipeline_saved', '0_pipeline_saved.json'))
             return pipeline

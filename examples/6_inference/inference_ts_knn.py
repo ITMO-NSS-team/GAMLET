@@ -3,12 +3,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import umap
 from fedot.core.data.data import InputData
 from fedot.core.pipelines.adapters import PipelineAdapter
-from fedot.core.pipelines.prediction_intervals.graph_distance import get_distance_between
 from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum, TsForecastingParams
+from golem.core.dag.linked_graph import get_distance_between
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import QuantileTransformer
@@ -54,18 +53,17 @@ def main():
     # Extract meta-features and load on demand.
     extractor = TimeSeriesFeaturesExtractor()
     meta_features = extractor.extract(datasets)
+    meta_features = meta_features.dropna(axis=1, how='any')
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
     x_train, x_test = train_test_split(meta_features, train_size=0.75, random_state=42)
     y_train = x_train.index
     y_test = x_test.index
     # Dimension reduction
     q_t = QuantileTransformer(output_distribution='normal')
-    dim_reduction = umap.UMAP(n_components=5, min_dist=0.5, n_neighbors=10)
-    x_train_v = dim_reduction.fit_transform(q_t.fit_transform(x_train))
-    x_test_v = dim_reduction.transform(q_t.transform(x_test))
+    x_train_v = q_t.fit_transform(x_train)
+    x_test_v = q_t.transform(x_test)
     x_train = pd.DataFrame(data=x_train_v, index=x_train.index)
     x_test = pd.DataFrame(data=x_test_v, index=x_test.index)
-
 
     # Define best models for datasets.
     dataset_names_to_best_pipelines = {}
@@ -88,8 +86,12 @@ def main():
             dataset_names_to_best_pipelines_test[d_id] = model
 
     dists = []
+    dists_random = []
     for i in tqdm(range(len(x_test))):
+
         idx = x_test.index[i]
+        if idx not in dataset_names_to_best_pipelines_test:
+            continue
         # Define datasets.
         loader = TimeSeriesDatasetsLoader(forecast_length=forecast_length[idx[3]])
         dataset = loader.load([idx])[0]
@@ -105,29 +107,23 @@ def main():
         test_data = InputData(idx=np.arange(len(X)), features=X, target=y, task=task,
                               data_type=DataTypesEnum.ts)
         print(idx)
-        pipeline1 = predict[i][0].predictor
-
+        pipeline = predict[i][0].predictor
 
         # pipeline.show()
         # dataset_names_to_best_pipelines_test[idx].predictor.show()
-        # pipeline = predict[np.random.choice(np.arange(len(predict)))][0].predictor
-        #dists.append(get_distance_between(pipeline, dataset_names_to_best_pipelines_test[idx].predictor))
+        pipeline_random = np.random.choice(list(dataset_names_to_best_pipelines.values())).predictor
+        dists.append(get_distance_between(pipeline, dataset_names_to_best_pipelines_test[idx].predictor))
+        dists_random.append(get_distance_between(pipeline_random, dataset_names_to_best_pipelines_test[idx].predictor))
+        # #
+        pipeline.unfit()
+        pipeline.fit(train_data)
+        pred = np.ravel(pipeline.predict(test_data).predict)
 
-        pipeline1.unfit()
-        pipeline1.fit(train_data)
-        pred = np.ravel(pipeline1.predict(test_data).predict)
-
-        if len(predict[i]) > 1:
-            pipeline2 = predict[i][1].predictor
-            pipeline2.unfit()
-            pipeline2.fit(train_data)
-            pred2 = np.ravel(pipeline2.predict(test_data).predict)
-
-            pred = (pred + pred2) / 2
         df = pd.DataFrame({'value': y, 'predict': pred})
         df.to_csv(f'res/{idx}_forecast_vs_actual.csv')
 
-    print(np.array(dists).mean())
+    print(f'Dist mean: {np.array(dists).mean()}')
+    print(f'Dist random mean: {np.array(dists_random).mean()}')
 
 
 if __name__ == '__main__':
