@@ -41,7 +41,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
                     d = self._datasets_loader.load_single(d)
                 idx = d.id_
                 if (use_cached and
-                        (mfs := self._get_meta_features_cache(d, meta_feature_names))):
+                        (mfs := self._get_meta_features_cache(d, self.meta_feature_names))):
                     meta_features[idx] = mfs.values()
                 else:
 
@@ -52,7 +52,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
                                            data_type=DataTypesEnum.table)
                     pred = self._extractor.root_node.predict(input_data).predict
                     meta_features[idx] = pred[0]
-                    mfs = dict(zip(meta_feature_names, meta_features[idx]))
+                    mfs = dict(zip(self.meta_feature_names, meta_features[idx]))
                     if update_cached:
                         self._update_meta_features_cache(d, mfs)
         meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
