@@ -19,8 +19,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install -U numpy
         pip install git+https://github.com/aimclub/Fedot.Industrial@init_hotfix
+        pip install -U numpy
+        
         pip install pytest
         pip install pytest-cov
     - name: Run tests and collect coverage
