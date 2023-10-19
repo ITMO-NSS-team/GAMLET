@@ -16,6 +16,8 @@ from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader imp
 from meta_automl.data_preparation.file_system import get_project_root
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 
+TS_FEATURES_COUNT = 184
+
 
 class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
     default_params: Optional[Dict[str, Any]] = None
@@ -23,6 +25,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
     def __init__(self, custom_path=None):
         self._extractor = self._load_extractor()
         self._datasets_loader = TimeSeriesDatasetsLoader(custom_path=custom_path)
+        self.meta_feature_names = np.arange(TS_FEATURES_COUNT)
 
     def extract(self,
                 datasets_or_ids: List[Union[DatasetBase, DatasetIDType]],
@@ -31,7 +34,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
 
         meta_features = {}
         logging.critical('Extracting meta features of the time series datasets...')
-        meta_feature_names = np.arange(184)
+
         with IndustrialModels():
             for d in tqdm(datasets_or_ids, desc='Feature_generation'):
                 if not isinstance(d, DatasetBase):
