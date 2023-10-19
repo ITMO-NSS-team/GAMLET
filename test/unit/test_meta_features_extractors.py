@@ -52,7 +52,7 @@ def test_table_meta_features_extraction(dataset_ids):
 def test_ts_meta_features_extraction(timeseries_dataset_ids):
     extractor = TimeSeriesFeaturesExtractor(custom_path=Path(get_project_root(), 'test', 'data', 'cache', 'datasets',
                                                      'custom_dataset'))
-    meta_features = extractor.extract(timeseries_dataset_ids)
+    meta_features = extractor.extract(timeseries_dataset_ids, use_cached=False)
     assert list(meta_features.index) == timeseries_dataset_ids
     for dataset_id in timeseries_dataset_ids:
         meta_features_cache_path = get_meta_features_cache_path(TimeSeriesFeaturesExtractor, TimeSeriesDataset,
