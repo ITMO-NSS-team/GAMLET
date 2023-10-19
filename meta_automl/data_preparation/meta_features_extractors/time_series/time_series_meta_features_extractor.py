@@ -20,9 +20,9 @@ from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesEx
 class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
     default_params: Optional[Dict[str, Any]] = None
 
-    def __init__(self):
+    def __init__(self, custom_path=None):
         self._extractor = self._load_extractor()
-        self._datasets_loader = TimeSeriesDatasetsLoader()
+        self._datasets_loader = TimeSeriesDatasetsLoader(custom_path=custom_path)
 
     def extract(self,
                 datasets_or_ids: List[Union[DatasetBase, DatasetIDType]],

@@ -1,10 +1,12 @@
 import shutil
+from pathlib import Path
 
 import pytest
 
 from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
-from meta_automl.data_preparation.file_system import get_dataset_cache_path_by_id, get_meta_features_cache_path
+from meta_automl.data_preparation.file_system import get_dataset_cache_path_by_id, get_meta_features_cache_path, \
+    get_project_root
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
     TimeSeriesFeaturesExtractor
@@ -48,7 +50,8 @@ def test_table_meta_features_extraction(dataset_ids):
 
 
 def test_ts_meta_features_extraction(timeseries_dataset_ids):
-    extractor = TimeSeriesFeaturesExtractor()
+    extractor = TimeSeriesFeaturesExtractor(custom_path=Path(get_project_root(), 'test', 'data', 'cache', 'datasets',
+                                                     'custom_dataset'))
     meta_features = extractor.extract(timeseries_dataset_ids)
     assert list(meta_features.index) == timeseries_dataset_ids
     for dataset_id in timeseries_dataset_ids:
