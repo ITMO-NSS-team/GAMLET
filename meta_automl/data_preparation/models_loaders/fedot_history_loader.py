@@ -1,17 +1,17 @@
 from itertools import chain
-from typing import Dict, List
+from typing import List
 
 from fedot.core.pipelines.adapters import PipelineAdapter
 from golem.core.optimisers.fitness import SingleObjFitness
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 
-from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
-from meta_automl.data_preparation.model import Model
+from meta_automl.data_preparation.dataset import DatasetBase
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 
 
 def extract_best_models_from_history(dataset: DatasetBase, history: OptHistory,
-                                     n_best_models_to_load: int) -> List[Model]:
+                                     n_best_models_to_load: int) -> List[EvaluatedModel]:
     best_models = []
     if history.individuals:
         best_individuals = sorted(chain(*history.individuals),
@@ -27,12 +27,12 @@ def extract_best_models_from_history(dataset: DatasetBase, history: OptHistory,
         for individual in best_individuals:
             pipeline = PipelineAdapter().restore(individual.graph)
             fitness = individual.fitness or SingleObjFitness()
-            model = Model(pipeline, fitness, history.objective.metric_names[0], dataset)
+            model = EvaluatedModel(pipeline, fitness, history.objective.metric_names[0], dataset)
             best_models.append(model)
 
     if history.tuning_result:
         final_pipeline = PipelineAdapter().restore(history.tuning_result)
-        final_model = Model(final_pipeline, SingleObjFitness(), history.objective.metric_names[0], dataset)
+        final_model = EvaluatedModel(final_pipeline, SingleObjFitness(), history.objective.metric_names[0], dataset)
         best_models.insert(0, final_model)
 
     return best_models
@@ -40,8 +40,9 @@ def extract_best_models_from_history(dataset: DatasetBase, history: OptHistory,
 
 class FedotHistoryLoader(ModelsLoader):
 
-    def load(self, datasets, histories, n_best_dataset_models_to_load: int) -> List[List[Model]]:
-        result = [extract_best_models_from_history(dataset, history, n_best_dataset_models_to_load)
-                  for dataset, history in zip(datasets, histories)]
-
+    def load(self, datasets, histories, n_best_dataset_models_to_load: int) -> List[List[EvaluatedModel]]:
+        result = []
+        for dataset, histories in zip(datasets, histories):
+            result += [extract_best_models_from_history(dataset, history, n_best_dataset_models_to_load)
+                       for history in histories]
         return result
