@@ -1,11 +1,11 @@
 from abc import ABC
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 
-from meta_automl.data_preparation.dataset import DatasetIDType
+from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.meta_algorithm.datasets_similarity_assessors.datasets_similarity_assessor import (
     DatasetsSimilarityAssessor,
 )
@@ -45,15 +45,17 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         model = NearestNeighbors(n_neighbors=n_neighbors, **model_params)
         super().__init__(model, n_neighbors)
 
-    def fit(self, meta_features: pd.DataFrame, datasets: Iterable[DatasetIDType]) -> None:
+    def fit(self, meta_features: pd.DataFrame, dataset_ids: Iterable[Union[DatasetIDType, DatasetBase]]) -> None:
         """Fit the meta features to the model. The DataFrame should be indexed by dataset identifier
 
         Args:
             meta_features: Pandas dataframe with the dataset meta-features.
-            datasets: Iterable object of dataset names.
+            dataset_ids: Iterable object of dataset ids.
         """
         meta_features = self.preprocess_meta_features(meta_features)
-        self._datasets = np.array(datasets)
+        dataset_ids = [dataset_id.id_ if isinstance(dataset_id, DatasetBase) else dataset_id
+                       for dataset_id in dataset_ids]
+        self._datasets = np.array(dataset_ids)
         self._inner_model.fit(meta_features)
 
     @staticmethod
@@ -74,7 +76,7 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
             meta_features:
                 Pandas dataframe with the dataset meta-features.
             return_distance: default=False:
-                Whether or not to return the distances.
+                Whether to return the distances.
                 See the documentation of `sklearn.neighbors.NearestNeighbors.kneighbors
                 <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.NearestNeighbors.html>`_
                 for more information.
@@ -91,7 +93,7 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
             return np.take(self._datasets, dataset_indexes, axis=0)
 
     @property
-    def datasets(self) -> Optional[Iterable[str]]:
+    def datasets(self) -> Optional[Iterable[DatasetIDType]]:
         return self._datasets
 
     @property

@@ -3,6 +3,7 @@ from typing import Callable, Iterable, List, Optional
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.dag.linked_graph import get_distance_between
 
+from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import SimpleSimilarityModelAdvisor
@@ -28,7 +29,7 @@ class DiverseFEDOTPipelineAdvisor(SimpleSimilarityModelAdvisor):
             n_best_to_advise: default=None
                 Number of dataset names to output.
             minimal_distance: default=1.0
-                Mininal distance between first model and others.
+                Minimal distance between first model and others.
             distance_func: default=`get_distance_between`
                 Function that calculates distance from `pipeline_1` to `pipeline_2`.
         """
@@ -37,16 +38,16 @@ class DiverseFEDOTPipelineAdvisor(SimpleSimilarityModelAdvisor):
         self.n_best_to_advise = n_best_to_advise
         self.distance_func = distance_func
 
-    def _predict_single(self, similar_dataset_names: Iterable[str]) -> List[Model]:
+    def _predict_single(self, similar_dataset_ids: Iterable[DatasetIDType]) -> List[Model]:
         """Advices list of dataset names closer to the most similar dataset.
 
         Args:
-            similar_dataset_names: Iterable object of dataset names.
+            similar_dataset_ids: Iterable object of dataset names.
 
         Returns:
-            List of divirsed dataset names.
+            List of advised models.
         """
-        dataset_advice = super()._predict_single(similar_dataset_names)
+        dataset_advice = super()._predict_single(similar_dataset_ids)
         first_model = dataset_advice[0]
         diverse_dataset_advice = [first_model]
         for model in dataset_advice[1:]:
