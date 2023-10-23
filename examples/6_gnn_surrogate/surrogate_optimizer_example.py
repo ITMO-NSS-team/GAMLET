@@ -25,7 +25,6 @@ if __name__ == '__main__':
     open_ml_dataset_id = dset.id
     train_data = datasets_loader.load_single(open_ml_dataset_id)
  
-
     # Load surrogate model
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
         checkpoint_path="./experiments/base/checkpoints/best.ckpt",

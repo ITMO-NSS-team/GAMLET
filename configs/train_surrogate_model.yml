@@ -22,12 +22,12 @@ model:
     global_pool: "mean"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
-    dataset_encoder_type: "column"
+    dataset_encoder_type: "aggregated"  #"column"
   weight_decay: 0.0001
   lr: 0.001
   temperature: 5
   
-
+# "column"
 dataset_params:
   root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
   # root_path: "./data/openml/"

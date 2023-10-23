@@ -1,11 +1,11 @@
 import sys   
 sys.path.append('.')  
-import pandas as pd
+import os
+import pickle
 
 from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.meta_algorithm.model_advisors import SurrogateGNNPipelineAdvisor
-
 import yaml
 
 
@@ -16,11 +16,15 @@ def main():
     
     with open('configs/run_surrogate_model.yml') as f:
         config = yaml.load(f, yaml.Loader)
-    advisor = SurrogateGNNPipelineAdvisor(config)
-    
-    pipelines, scores = advisor.predict(dataset[0].get_data().x, k = 3)
-    return pipelines
+        
+    with open(os.path.join(config["dataset_params"]["root_path"], "pipelines.pickle"), "rb") as input_file:
+        pipelines_data = pickle.load(input_file) 
+    with open(os.path.join(config["dataset_params"]["root_path"], "pipelines_fedot.pickle"), "rb") as input_file:
+        pipelines_fedot = pickle.load(input_file)    
 
+    advisor = SurrogateGNNPipelineAdvisor(config, pipelines_data, pipelines_fedot)
+
+    return advisor.predict(dataset[0]) 
 
 if __name__ == '__main__':
     result = main()
