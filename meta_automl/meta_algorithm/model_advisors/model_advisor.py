@@ -80,5 +80,5 @@ class SimpleSimilarityModelAdvisor(ModelAdvisor):
         """
         dataset_pipelines = []
         for dataset_id in similar_dataset_ids:
-            dataset_pipelines += list(self.best_models.get(dataset_id))
+            dataset_pipelines += [self.best_models.get(dataset_id)]
         return dataset_pipelines
