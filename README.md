@@ -2,7 +2,7 @@
 
 [![ITMO](https://github.com/ITMO-NSS-team/open-source-ops/blob/add_badge/badges/ITMO_badge_rus.svg)](https://itmo.ru)
 [![licence](https://img.shields.io/github/license/itmo-nss-team/metafedot)](https://github.com/itmo-nss-team/metafedot/blob/main/LICENSE)
-[![package](https://badge.fury.io/py/metafedot.svg)](https://badge.fury.io/py/metafedot)
+[![package](https://badge.fury.io/py/gamlet.svg)](https://badge.fury.io/py/gamlet)
 [![Build](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml/badge.svg)](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml)
 [![Documentation Status](https://readthedocs.org/projects/gamlet/badge/?version=latest)](https://gamlet.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/ITMO-NSS-team/GAMLET/graph/badge.svg?token=N3Z9YTPHP9)](https://codecov.io/gh/ITMO-NSS-team/GAMLET)

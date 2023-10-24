@@ -10,7 +10,7 @@ Frequently asked questions and answers
 
 .. topic:: Can I install GAMLET using pip/conda?
 
-    *Yes, just write the following command:* ``$ pip install GAMLET``
+    *Yes, just write the following command:* ``$ pip install gamlet``
 
 .. topic:: Can I use GAMLET in my project/research/etc?
 

@@ -7,4 +7,4 @@ Installation from GitHub
 
 Installation from PyPI
 ======================
-  | ``$ pip install GAMLET``
+  | ``$ pip install gamlet``
