@@ -2,7 +2,7 @@
 fedot==0.7.2
 openml==0.14.1
 pymfe==0.4.2
-fedot-ind @ git+https://github.com/aimclub/Fedot.Industrial@init_hotfix
+fedot-ind @ git+https://github.com/aimclub/Fedot.Industrial
 
 # variable versions
 numpy>=1.16.5
