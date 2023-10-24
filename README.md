@@ -4,7 +4,7 @@
 [![licence](https://img.shields.io/github/license/itmo-nss-team/metafedot)](https://github.com/itmo-nss-team/metafedot/blob/main/LICENSE)
 [![package](https://badge.fury.io/py/metafedot.svg)](https://badge.fury.io/py/metafedot)
 [![Build](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml/badge.svg)](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml)
-[![Documentation Status](https://readthedocs.org/projects/metafedot/badge/?version=latest)](https://metafedot.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/gamlet/badge/?version=latest)](https://gamlet.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/ITMO-NSS-team/GAMLET/graph/badge.svg?token=N3Z9YTPHP9)](https://codecov.io/gh/ITMO-NSS-team/GAMLET)
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT&countColor=%23263759&style=plastic&labelStyle=lower)](https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT)
 
