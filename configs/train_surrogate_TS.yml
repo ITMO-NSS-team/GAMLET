@@ -39,7 +39,7 @@ trainer:
   devices: "auto"
 
 tensorboard_logger:
-  save_dir: "./experiments/TS"
+  save_dir: "./logs/TS"
   name: "model_training"
 
 model_checkpoint_callback:

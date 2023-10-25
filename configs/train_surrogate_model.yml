@@ -22,7 +22,7 @@ model:
     global_pool: "mean"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
-    dataset_encoder_type: "aggregated"  #"column"
+    dataset_encoder_type: "column"  #"column" or "aggregated"
   weight_decay: 0.0001
   lr: 0.001
   temperature: 5
@@ -42,7 +42,7 @@ trainer:
   devices: "auto"
 
 tensorboard_logger:
-  save_dir: "./experiments/openml_meta_features_and_fedot_pipelines/train_surrogate_model_best"
+  save_dir: "./logs/openml_meta_features_and_fedot_pipelines/train_surrogate_model_best"
   name: "model_training"
 
 model_checkpoint_callback:

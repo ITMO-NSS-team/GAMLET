@@ -134,6 +134,3 @@ data/
 .idea/
 .run/
 .vscode/
-
-# Experiment folder
-/experiments
