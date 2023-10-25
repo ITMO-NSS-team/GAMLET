@@ -45,7 +45,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
                                                           extractor_params=extractor_params) 
 
     def _preprocess_dataset_features(self, dataset):
-        x = self.meta_features_extractor.extract([dataset], fill_input_nans=True).fillna(0)
+        x = self.meta_features_extractor.extract([dataset], fill_input_nans=True, use_cached=False).fillna(0)
         x = self.meta_features_preprocessor.transform(x, single=False).fillna(0)
         transformed = x.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x: pd.Series(x))     
         dset_data = Data()
@@ -53,22 +53,21 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         dset_data_loader = DataLoader([dset_data], batch_size=1)
         return next(iter(dset_data_loader))
 
-    def predict(self, dataset: DatasetBase, k: int = 5) -> List[Model]:
+    def _predict_single(self, dataset: DatasetBase, k) -> List[Model]:
         """Predict optimal pipelines for given dataset.
         Parameters
         ----------
-        dataset: pd.DataFrame
-            pandas DataFrame of a dataset
+        dataset: DatasetBase
+            dataset
         k: int, optional
             number of pipelines to predict (default: 5)
         Returns
         -------
-        top_pipelines : [Pipeline]
-            Top pipelines for dataset.
-        scores : [float]
-            Scores of the returned pipelines.
+        top_models : [Model]
+            Top models for dataset.
         """     
         x_dset = self._preprocess_dataset_features(dataset)
+        
         scores = []
         with torch.no_grad():
             for batch in self.pipeline_dataloader:
@@ -86,3 +85,18 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
                     'surrogate_fitness', 
                     None))
         return best_models
+    
+    def predict(self, datasets:  List[DatasetBase], k: int = 5) -> List[List[Model]]:
+        """Predict optimal pipelines for given list of datasets dataset.
+        Parameters
+        ----------
+        datasets: List[DatasetBase]
+            list of DatasetBase objects
+        k: int, optional
+            number of pipelines to predict (default: 5)
+        Returns
+        -------
+        top_models : List[List[Model]]
+            List of top models for each dataset.
+        """             
+        return [self._predict_single(dset, k) for dset in datasets]

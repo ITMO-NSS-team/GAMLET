@@ -10,7 +10,7 @@ import yaml
 
 
 def main():
-    # Define datasets.
+    # Define datasets
     dataset = OpenMLDatasetsLoader().load(['apsfailure'], allow_names=True)
     # Extract meta-features and load on demand.
     
@@ -23,8 +23,8 @@ def main():
         pipelines_fedot = pickle.load(input_file)    
 
     advisor = SurrogateGNNPipelineAdvisor(config, pipelines_data, pipelines_fedot)
-
-    return advisor.predict(dataset[0]) 
+    
+    return advisor.predict(dataset) 
 
 if __name__ == '__main__':
     result = main()
