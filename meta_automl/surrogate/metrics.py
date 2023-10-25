@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from scipy.stats import rankdata
 import math
@@ -78,7 +80,6 @@ def mapk(actual: List[list], predicted: List[list], k: int = 10) -> float:
         mark: float
             The mean average precision at k (map@k)
     """
-    mapk = []
     if len(actual) != len(predicted):
         raise AssertionError("Length mismatched")
     return np.mean([_apk(a, p, k) for a, p in zip(actual, predicted)])

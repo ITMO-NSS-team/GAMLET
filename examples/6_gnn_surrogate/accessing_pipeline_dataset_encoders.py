@@ -3,15 +3,12 @@ import sys
 
 sys.path.append(os.getcwd())
 
-from thegolem.data_pipeline_surrogate import DataPipelineSurrogate, PipelineVectorizer
-
-from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.meta_features_extractors import OpenMLDatasetMetaFeaturesExtractor
-from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.surrogate.models import RankingPipelineDatasetSurrogateModel
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-
 import openml
+
+from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+from meta_automl.surrogate.data_pipeline_surrogate import PipelineVectorizer
+from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
 if __name__ == '__main__':
     dataset_name = 'higgs'
@@ -26,14 +23,12 @@ if __name__ == '__main__':
         hparams_file="./experiments/base/hparams.yaml"
     )
     surrogate_model.eval()
-    
+
     # Trained pipeline encoder model (pipeline -> vec)
     print(surrogate_model.pipeline_encoder)
 
     # Trained dataset encoder model (dataset -> vec)
     print(surrogate_model.dataset_encoder)
-    
-    
 
     pipeline_features_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")

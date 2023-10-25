@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import torch
-import torch.nn.functional as F
 import torch_geometric.nn as gnn
 from einops import repeat
 from torch import nn
@@ -86,7 +85,6 @@ class GraphTransformer(nn.Module):
 
         self.max_seq_len = max_seq_len
         self.dim = d_model
-        
 
     def forward(self, data, return_attn=False):
         x, edge_index, edge_attr = data.x.to(dtype=torch.long), data.edge_index, data.edge_attr

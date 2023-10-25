@@ -60,7 +60,7 @@ def normalize_adj(edge_index, edge_weight=None, num_nodes=None):
         edge_weight = torch.ones(edge_index.size(1),
                                  device=edge_index.device)
     num_nodes = utils.num_nodes.maybe_num_nodes(edge_index, num_nodes)
-    row, col = edge_index[0], edge_index[1]
+    row = edge_index[0]
     deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
     deg_inv = 1.0 / deg
     deg_inv.masked_fill_(deg_inv == float('inf'), 0)

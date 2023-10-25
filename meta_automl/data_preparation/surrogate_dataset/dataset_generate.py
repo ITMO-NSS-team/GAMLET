@@ -1,20 +1,20 @@
 import sys
+
 sys.path.append("..")
 
 import json
 import os
 import pathlib
 import pickle
-import pandas as pd
 
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
 from torch_geometric.data import Data
 
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
-from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 
@@ -22,10 +22,12 @@ from meta_automl.data_preparation.dataset import (CustomDataset,
                                                   DataNotFoundError,
                                                   DatasetData, DatasetIDType)
 
+
 def dataset_from_id_without_data_loading(dataset_id: DatasetIDType) -> CustomDataset:
     """ Creates the CustomDataset object without loading the data. Use if your don't need the models
     to load the datasets data into memory, or if you have loaded the cache manually. """
     return CustomDataset(dataset_id)
+
 
 def dataset_from_id_with_data_loading(dataset_id: DatasetIDType) -> CustomDataset:
     """ Load dataset from '//10.9.14.114/calc/Nikitin/datasets/' into the project cache directory.
@@ -69,18 +71,18 @@ def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor,
 
 class KnowledgeBaseToDataset:
     def __init__(
-        self,
-        knowledge_base_directory: str,
-        dataset_directory: str,
-        meta_features_extractor: MetaFeaturesExtractor,
-        split: Optional[str] = "all",  # Can be train, test, all
-        train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
-        task_type: Optional[str] = "classification",
-        fitness_metric: Optional[str] = "f1",
-        exclude_datasets: Optional[List[str]] = [],
-        meta_features_preprocessors: Dict[str, Any] = None,
-        use_hyperpar: bool = False,
-        models_loader_kwargs: Dict[str, Any] = {},
+            self,
+            knowledge_base_directory: str,
+            dataset_directory: str,
+            meta_features_extractor: MetaFeaturesExtractor,
+            split: Optional[str] = "all",  # Can be train, test, all
+            train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
+            task_type: Optional[str] = "classification",
+            fitness_metric: Optional[str] = "f1",
+            exclude_datasets: Optional[List[str]] = [],
+            meta_features_preprocessors: Dict[str, Any] = None,
+            use_hyperpar: bool = False,
+            models_loader_kwargs: Dict[str, Any] = {},
     ) -> None:
         if task_type != "classification":
             raise NotImplementedError(f"Current version if for `'classification'` `task_type`")
@@ -97,7 +99,7 @@ class KnowledgeBaseToDataset:
         self._maybe_create_dataset_directory(os.path.join(self.dataset_directory, self.split))
 
         self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
-                                                            operation_encoding="ordinal")
+                                                                 operation_encoding="ordinal")
         self.meta_features_extractor = meta_features_extractor
 
         self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory, **models_loader_kwargs)
@@ -132,8 +134,8 @@ class KnowledgeBaseToDataset:
             codes, _ = pd.factorize(task_pipe_comb['pipeline_hash'])
             task_pipe_comb['pipeline_id'] = codes
         pipelines_fedot = task_pipe_comb.drop_duplicates(subset=['pipeline_id']) \
-                                        .sort_values(by=['pipeline_id'])['predictor'] \
-                                        .values.tolist()
+            .sort_values(by=['pipeline_id'])['predictor'] \
+            .values.tolist()
 
         pipelines_data = [get_pipeline_features(self.pipeline_extractor, pl) for pl in pipelines_fedot]
         return (
@@ -165,7 +167,6 @@ class KnowledgeBaseToDataset:
             header=True,
             index=False,
         )
-        
 
     def _save_pipelines_objects(self, pipelines: List[Any]):
         with open(os.path.join(self.dataset_directory, self.split, "pipelines_fedot.pickle"), "wb") as f:
