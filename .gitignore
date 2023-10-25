@@ -128,7 +128,7 @@ dmypy.json
 .pyre/
 
 # User data
-data/
+data/cache
 
 # IDEs
 .idea/
