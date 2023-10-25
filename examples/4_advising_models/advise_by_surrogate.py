@@ -1,13 +1,14 @@
 import os
-import pickle
 import sys
+
+sys.path.append(os.getcwd())
+
+import pickle
 
 import yaml
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.meta_algorithm.model_advisors import SurrogateGNNPipelineAdvisor
-
-sys.path.append(os.getcwd())
 
 
 def main():
