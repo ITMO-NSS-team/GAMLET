@@ -1,22 +1,21 @@
 import os
-import sys
-
-sys.path.append(os.getcwd())
-
 import pickle
+import sys
 
 import yaml
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.meta_algorithm.model_advisors import SurrogateGNNPipelineAdvisor
 
+sys.path.append(os.getcwd())
+
 
 def main():
     # Define datasets
-    dataset = OpenMLDatasetsLoader().load(['apsfailure'], allow_names=True)
+    dataset = OpenMLDatasetsLoader().load(["apsfailure"], allow_names=True)
     # Extract meta-features and load on demand.
 
-    with open('configs/run_surrogate_model.yml') as f:
+    with open("configs/run_surrogate_model.yml") as f:
         config = yaml.load(f, yaml.Loader)
 
     with open(os.path.join(config["dataset_params"]["root_path"], "pipelines.pickle"), "rb") as input_file:
@@ -29,6 +28,6 @@ def main():
     return advisor.predict(dataset)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     result = main()
     print(result)
