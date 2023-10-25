@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Any
+from typing import Any, List, Optional
 
 import numpy as np
 

@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 
 
 class FeaturesPreprocessor:
@@ -19,10 +19,10 @@ class FeaturesPreprocessor:
     """
 
     def __init__(
-        self,
-        preprocessors: Dict[Union[str, int], Any] = None,
-        load_path: str = None,
-        extractor_params: Dict[str, Any] = None,
+            self,
+            preprocessors: Dict[Union[str, int], Any] = None,
+            load_path: str = None,
+            extractor_params: Dict[str, Any] = None,
     ):
         if load_path is not None:
             print("Load from file. `preprocessors` argument will be ignored.")
@@ -43,16 +43,16 @@ class FeaturesPreprocessor:
             self.features = self.extractor_params["features"]
 
     def __call__(
-        self,
-        data: Dict[Union[str, int], Union[int, float]],
-        single: bool = True,
+            self,
+            data: Dict[Union[str, int], Union[int, float]],
+            single: bool = True,
     ) -> Dict[str, Union[float, np.ndarray]]:
         return self.transform(data, single)
 
     def transform(
-        self,
-        data: Dict[Union[str, int], Union[int, float]],
-        single: bool = False,
+            self,
+            data: Dict[Union[str, int], Union[int, float]],
+            single: bool = False,
     ) -> Dict[str, Union[float, np.ndarray]]:
         result = data.copy()
         if self.is_sum_none:

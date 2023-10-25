@@ -109,9 +109,9 @@ class PipelineDatasetSurrogateModel(LightningModule):
 
         z_pipeline = self.pipeline_encoder(x_graph)
         z_dataset = self.dataset_encoder(dset)
-     
+
         assert not torch.isnan(z_dataset).any()
-    
+
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
@@ -266,22 +266,23 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         If the parameter is `None`, one should implement `self.loss` method in a subclass.
     lr: Learning rate.
     """
-#     def loss(self, score1: Tensor, score2: Tensor, target: Tensor) -> Tensor:
-#         """Ranknet loss.
 
-#         Parameters:
-#         -----------
-#         score1: Predicted score of the first pipeline.
-#         score2: Predicted score of the second pipeline.
-#         target: Target value.
+    #     def loss(self, score1: Tensor, score2: Tensor, target: Tensor) -> Tensor:
+    #         """Ranknet loss.
 
-#         Returns:
-#         Loss value.
-#         """
+    #         Parameters:
+    #         -----------
+    #         score1: Predicted score of the first pipeline.
+    #         score2: Predicted score of the second pipeline.
+    #         target: Target value.
 
-#         o = torch.sigmoid(score1 - score2)
-#         loss = (-target * o + F.softplus(o)).mean()
-#         return loss
+    #         Returns:
+    #         Loss value.
+    #         """
+
+    #         o = torch.sigmoid(score1 - score2)
+    #         loss = (-target * o + F.softplus(o)).mean()
+    #         return loss
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
         """Training step.

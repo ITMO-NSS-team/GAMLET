@@ -20,9 +20,9 @@ class FEDOTPipelineFeaturesExtractor:
     """
 
     def __init__(
-        self,
-        include_operations_hyperparameters: Optional[bool] = False,
-        operation_encoding: Optional[str] = "ordinal",
+            self,
+            include_operations_hyperparameters: Optional[bool] = False,
+            operation_encoding: Optional[str] = "ordinal",
     ):
         models_repo = OperationTypesRepository()
         self.operation_types = []
@@ -48,7 +48,7 @@ class FEDOTPipelineFeaturesExtractor:
                 vector[i] = 1
                 result[operation_name] = vector
             elif self.operation_encoding == "ordinal":
-                vector = np.array(i).reshape(1,)
+                vector = np.array(i).reshape(1, )
                 result[operation_name] = vector
             else:
                 raise ValueError(f"Unsuppored operation encoding: {self.operation_encoding}")
@@ -134,7 +134,7 @@ class FEDOTPipelineFeaturesExtractor:
             'params': {},
             'nodes_from': []
         }
-        dataset_node = [dataset_node,]
+        dataset_node = [dataset_node, ]
         nodes = dataset_node + nodes
 
         operations_ids = self._get_operations_ids(nodes)

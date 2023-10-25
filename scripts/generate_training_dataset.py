@@ -11,7 +11,6 @@ from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 
 
 def main():
-    # datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_with_data_loading)
     datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_without_data_loading)
     extractor_params = get_extractor_params('configs/use_features.json')
 
@@ -19,7 +18,6 @@ def main():
         extractor_params=extractor_params,
         datasets_loader=datasets_loader_builder(),
     )
-    # OpenMLDatasetMetaFeaturesExtractor(meta_features_data_columns=self.meta_features_data_columns)
 
     meta_features_preprocessor = FeaturesPreprocessor(extractor_params=extractor_params)
 

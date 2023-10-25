@@ -1,9 +1,9 @@
+import math
 import warnings
+from typing import List
 
 import numpy as np
 from scipy.stats import rankdata
-import math
-from typing import List
 from sklearn.metrics import ndcg_score
 
 

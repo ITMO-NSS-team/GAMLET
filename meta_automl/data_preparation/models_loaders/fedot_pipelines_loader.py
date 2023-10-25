@@ -1,7 +1,6 @@
 from functools import partial
 from pathlib import Path
-from typing import List, Union, Optional
-from typing_extensions import Literal
+from typing import List, Optional, Union
 
 import numpy as np
 from fedot.core.data.data import InputData
@@ -14,10 +13,11 @@ from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot.core.validation.split import tabular_cv_generator
 from golem.core.log import default_log
 from tqdm import tqdm
+from typing_extensions import Literal
 
-from meta_automl.data_preparation.file_system import PathType
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
+from meta_automl.data_preparation.file_system import PathType
 from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 

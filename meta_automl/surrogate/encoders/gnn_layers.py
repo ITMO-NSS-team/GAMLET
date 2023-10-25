@@ -65,9 +65,9 @@ def get_simple_gnn_layer(gnn_type, embed_dim, **kwargs):
         scalers = ['identity']
         deg = kwargs.get('deg', None)
         # TODO: ask @eegoro to fix it
-        layer = PNAConv_towers(embed_dim, embed_dim,
-                               aggregators=aggregators, scalers=scalers,
-                               deg=deg, towers=4, divide_input=True, edge_dim=edge_dim)
+        layer = gnn.PNAConv(embed_dim, embed_dim,
+                            aggregators=aggregators, scalers=scalers,
+                            deg=deg, towers=4, divide_input=True, edge_dim=edge_dim)
         return layer
     elif gnn_type == "pna3":
         aggregators = ['mean', 'sum', 'max']

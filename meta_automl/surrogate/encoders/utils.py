@@ -2,7 +2,6 @@
 import numpy as np
 import torch
 from torch_geometric.utils import scatter
-# from torch_scatter import scatter
 
 
 def count_parameters(model):

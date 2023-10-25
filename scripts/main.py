@@ -1,13 +1,13 @@
-import yaml
 import argparse
+import os
+import sys
+
+import yaml
 
 # TODO: Maybe not the best solution. It enables code running not from PyCharm.
-import sys
-import os
 sys.path.append(os.getcwd())
 
 from meta_automl.surrogate import training
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

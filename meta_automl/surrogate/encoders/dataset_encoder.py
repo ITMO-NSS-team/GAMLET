@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-import torch
-from torch import nn
-from torch_geometric.nn.models import MLP
-from torch_geometric.nn import aggr
-
-
 from typing import Optional
-from torch import Tensor
+
+import torch
+from torch import Tensor, nn
+from torch_geometric.nn import aggr
 from torch_geometric.nn.inits import reset
 
 

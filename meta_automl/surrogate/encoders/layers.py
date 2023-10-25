@@ -5,7 +5,6 @@ import torch_geometric.utils as utils
 from einops import rearrange
 from torch import nn
 from torch_geometric.utils import scatter
-# from torch_scatter import scatter
 
 from .gnn_layers import EDGE_GNN_TYPES, get_simple_gnn_layer
 from .utils import pad_batch, unpad_batch

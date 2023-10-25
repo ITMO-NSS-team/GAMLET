@@ -3,6 +3,7 @@ from typing import Dict, List
 import numpy as np
 import openml
 import pandas as pd
+
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 
 
@@ -31,11 +32,11 @@ class OpenMLDatasetMetaFeaturesExtractor:
     ]
 
     def __init__(
-        self,
-        dataset_id: int = None,
-        meta_features_data_columns: List[str] = None,
-        return_type: str = "dict",
-        features_preprocessors: FeaturesPreprocessor = None,
+            self,
+            dataset_id: int = None,
+            meta_features_data_columns: List[str] = None,
+            return_type: str = "dict",
+            features_preprocessors: FeaturesPreprocessor = None,
     ):
         if meta_features_data_columns is not None:
             self.meta_features_data_columns = meta_features_data_columns
@@ -46,7 +47,7 @@ class OpenMLDatasetMetaFeaturesExtractor:
             self.meta_features = self._get_features(dataset_id)
 
     def _get_features(self, dataset_id: int) -> Dict[str, int]:
-        dataset_info = openml.datasets.list_datasets([dataset_id,], output_format="dataframe").iloc[0].to_dict()
+        dataset_info = openml.datasets.list_datasets([dataset_id, ], output_format="dataframe").iloc[0].to_dict()
         meta_features = {}
         for key in self.meta_features_data_columns:
             try:
@@ -63,6 +64,6 @@ class OpenMLDatasetMetaFeaturesExtractor:
         if self.return_type == "dict":
             return features
         elif self.return_type == "dataframe":
-            return pd.DataFrame.from_dict({k: [v,] for k, v in features})
+            return pd.DataFrame.from_dict({k: [v, ] for k, v in features})
         elif self.return_type == "ndarray":
             return np.array(list(features.values()))

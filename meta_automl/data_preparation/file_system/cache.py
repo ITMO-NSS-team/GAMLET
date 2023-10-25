@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
-
-from typing import Type, Any, Dict, TYPE_CHECKING
+from typing import Any, Dict, TYPE_CHECKING, Type
 
 import openml
 
 from meta_automl.data_preparation.file_system.cache_properties import CacheProperties, CacheType
-from meta_automl.data_preparation.file_system.file_system import get_data_dir, ensure_dir_exists
+from meta_automl.data_preparation.file_system.file_system import ensure_dir_exists, get_data_dir
 
 if TYPE_CHECKING:
     from meta_automl.data_preparation.dataset import DatasetBase

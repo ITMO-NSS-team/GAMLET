@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Union, Optional, Sequence
+from typing import List, Optional, Sequence, Union
 
 from meta_automl.data_preparation.dataset import OpenMLDataset, OpenMLDatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
