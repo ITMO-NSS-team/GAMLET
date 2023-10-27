@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 import warnings
 from functools import partial
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
+import numpy as np
 import pandas as pd
 from pymfe.mfe import MFE
 
@@ -33,18 +34,31 @@ class PymfeExtractor(MetaFeaturesExtractor):
         fit_kwargs = fit_kwargs or {}
         extract_kwargs = extract_kwargs or {}
 
-        meta_features = {}
+        columns_or_rows = {}
         meta_feature_names = self._extractor.extract_metafeature_names()
 
+        is_sum_none = True if "summary" in self.extractor_params and self.extractor_params["summary"] is None else False
+        if is_sum_none:
+            columns_or_rows["dataset"] = []
+            columns_or_rows["feature"] = []
+            columns_or_rows["value"] = []
+            columns_or_rows["variable"] = []
+
         for dataset in datasets_or_ids:
-            if not isinstance(dataset, DatasetBase):
-                dataset = self._datasets_loader.load_single(dataset)
+            if isinstance(dataset, DatasetBase):
+                dataset_id = dataset.id_
+                dataset_class = dataset.__class__
+            else:
+                dataset_id = dataset
+                dataset_class = self.datasets_loader.dataset_class
+            meta_features_cached = self._get_meta_features_cache(dataset_id, dataset_class, meta_feature_names)
 
             logging.critical(f'Extracting meta features of the dataset {dataset}...')
-            if (use_cached and
-                    (mfs := self._get_meta_features_cache(dataset, meta_feature_names))):
-                meta_features[dataset.id_] = mfs
+            if use_cached and meta_features_cached:
+                columns_or_rows[dataset_id] = meta_features_cached
             else:
+                if not isinstance(dataset, DatasetBase):
+                    dataset = self._datasets_loader.load_single(dataset)
                 dataset_data = dataset.get_data()
                 cat_cols_indicator = dataset_data.categorical_indicator
                 if cat_cols_indicator is not None:
@@ -58,17 +72,37 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 fit_extractor = self._extractor.fit
                 fit_extractor = partial(fit_extractor, x, y, cat_cols=cat_cols, **fit_kwargs)
                 try:
-                    mfe = fit_extractor()
+                    mfe = fit_extractor(transform_cat=None)
                 except RecursionError:
                     warnings.warn('PyMFE did not manage to do fit. Trying "one-hot" categorical encoder...')
                     mfe = fit_extractor(transform_cat='one-hot')
                 feature_names, dataset_features = mfe.extract(out_type=tuple, **extract_kwargs)
-                mfs = dict(zip(feature_names, dataset_features))
+                meta_features_extracted = dict(zip(feature_names, dataset_features))
+
                 if update_cached:
-                    self._update_meta_features_cache(dataset, mfs)
-                meta_features[dataset.id_] = mfs
-        meta_features = pd.DataFrame.from_dict(meta_features, orient='index')
-        return meta_features
+                    self._update_meta_features_cache(dataset_id, dataset_class, meta_features_extracted)
+                if is_sum_none:
+                    dim_dataset = x.shape[1]
+
+                    for key, value in meta_features_extracted.items():
+                        value = value.tolist() if (isinstance(value, np.ndarray)) else [value] * dim_dataset
+                        if len(value) == 0 or len(value) > dim_dataset:
+                            value = [np.nan] * dim_dataset
+                        if len(value) < dim_dataset:
+                            value = [value[0]] * dim_dataset
+
+                        columns_or_rows["dataset"].extend([dataset.id_] * dim_dataset)
+                        columns_or_rows["variable"].extend(list(range(dim_dataset)))
+                        columns_or_rows["feature"].extend([key] * dim_dataset)
+                        columns_or_rows["value"].extend(value)
+                else:
+                    columns_or_rows[dataset.id_] = meta_features_extracted
+
+        if is_sum_none:
+            columns_or_rows = pd.DataFrame.from_dict(columns_or_rows)
+        else:
+            columns_or_rows = pd.DataFrame.from_dict(columns_or_rows, orient='index')
+        return columns_or_rows
 
     @staticmethod
     def fill_nans(x):
