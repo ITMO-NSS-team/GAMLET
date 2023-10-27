@@ -1,16 +1,15 @@
 import logging
+from functools import partial
+from itertools import chain
+from multiprocessing import Pool, cpu_count
 from os import PathLike
 from pathlib import Path, PureWindowsPath
-from typing import Union, Optional, Sequence, List
-from typing_extensions import Literal
-import pandas as pd
-from itertools import chain
-from functools import partial
-from multiprocessing import Pool, cpu_count
-import numpy as np
+from typing import List, Optional, Sequence, Union
 
+import numpy as np
+import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
-from golem.core.optimisers.fitness import SingleObjFitness
+from typing_extensions import Literal
 
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.file_system import get_data_dir
@@ -46,9 +45,9 @@ def process_record(df, knowledge_base_path):
 
 class KnowledgeBaseModelsLoader(ModelsLoader):
     def __init__(
-        self,
-        knowledge_base_path: Union[str, PathLike] = DEFAULT_KNOWLEDGE_BASE_PATH,
-        datasets_loader: DatasetsLoader = OpenMLDatasetsLoader,
+            self,
+            knowledge_base_path: Union[str, PathLike] = DEFAULT_KNOWLEDGE_BASE_PATH,
+            datasets_loader: DatasetsLoader = OpenMLDatasetsLoader,
     ):
         self.knowledge_base_path: Path = Path(knowledge_base_path)
         self.df_knowledge_base: Optional[pd.DataFrame] = None
@@ -56,9 +55,9 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
         self.datasets_loader = datasets_loader
 
     def load(
-        self,
-        dataset_ids: Optional[Sequence[str]] = None,
-        fitness_metric: str = 'f1',
+            self,
+            dataset_ids: Optional[Sequence[str]] = None,
+            fitness_metric: str = 'f1',
     ) -> List[Model]:
         if self.df_knowledge_base is None:
             knowledge_base_split_file = self.knowledge_base_path.joinpath('knowledge_base.csv')

@@ -73,13 +73,17 @@ class KnowledgeBaseToDataset:
             train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
             task_type: Optional[str] = "classification",
             fitness_metric: Optional[str] = "f1",
-            exclude_datasets: Optional[List[str]] = [],
+            exclude_datasets=None,
             meta_features_preprocessors: Dict[str, Any] = None,
             use_hyperpar: bool = False,
-            models_loader_kwargs: Dict[str, Any] = {},
+            models_loader_kwargs=None,
     ) -> None:
+        if exclude_datasets is None:
+            exclude_datasets = []
+        if models_loader_kwargs is None:
+            models_loader_kwargs = {}
         if task_type != "classification":
-            raise NotImplementedError(f"Current version if for `'classification'` `task_type`")
+            raise NotImplementedError("Current version is for `task_type='classification'`")
 
         self.knowledge_base_directory = knowledge_base_directory
         self.dataset_directory = dataset_directory

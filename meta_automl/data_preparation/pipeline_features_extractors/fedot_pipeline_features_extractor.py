@@ -14,7 +14,8 @@ class FEDOTPipelineFeaturesExtractor:
 
     Parameters:
     -----------
-    include_operations_hyperparameters: Whether to include operation hyperparameters. Currently not supported. Default: `False`.
+    include_operations_hyperparameters: Whether to include operation hyperparameters. Currently not supported.
+     Default: `False`.
     operation_type2name: Mapping of operation type to its implementation name. Default mapping is adapted from FEDOT.
     operation_encoding: Type of operation encoding. Can be `"ordinal"` or `"onehot"`. Default: `"ordinal"`.
     """
