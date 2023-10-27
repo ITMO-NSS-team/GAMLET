@@ -221,11 +221,11 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     )
     model_class = getattr(surrogate_model, config["model"].pop("name"))
     chpoint_dir = config["model_data"]["save_dir"] + "checkpoints/"
-    surrogate_model = model_class.load_from_checkpoint(
+    model = model_class.load_from_checkpoint(
         checkpoint_path=chpoint_dir + os.listdir(chpoint_dir)[0],
         hparams_file=config["model_data"]["save_dir"] + "hparams.yaml"
     )
-    surrogate_model.eval()
+    model.eval()
 
     task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
     with torch.no_grad():
