@@ -245,9 +245,9 @@ class PipelineDatasetSurrogateModel(LightningModule):
         self.test_step_outputs.clear()
 
     def configure_optimizers(self) -> optim.Optimizer:
-        optimizer = optim.AdamW(list(self.pipeline_encoder.parameters())
-                                + list(self.dataset_encoder.parameters())
-                                + list(self.final_model.parameters()),
+        optimizer = optim.AdamW(list(self.pipeline_encoder.parameters()) +
+                                list(self.dataset_encoder.parameters()) +
+                                list(self.final_model.parameters()),
                                 lr=self.lr,
                                 weight_decay=self.weight_decay)
         return optimizer
