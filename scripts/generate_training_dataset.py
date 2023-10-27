@@ -1,18 +1,18 @@
 from meta_automl.data_preparation.datasets_loaders.custom_datasets_loader import CustomDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.meta_features_extractors import (PymfeExtractor)
+from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.surrogate_dataset.dataset_generate import KnowledgeBaseToDataset, \
     dataset_from_id_without_data_loading
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 
 
 def main():
-    datasets_loader_builder = lambda: CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_without_data_loading)
+    datasets_loader = CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_without_data_loading)
     extractor_params = get_extractor_params('configs/use_features.json')
 
     meta_features_extractor = PymfeExtractor(
         extractor_params=extractor_params,
-        datasets_loader=datasets_loader_builder(),
+        datasets_loader=datasets_loader,
     )
 
     meta_features_preprocessor = FeaturesPreprocessor(extractor_params=extractor_params)
@@ -25,7 +25,7 @@ def main():
         task_type="classification",
         fitness_metric="fitness",
         meta_features_preprocessors=meta_features_preprocessor,
-        models_loader_kwargs={"datasets_loader": datasets_loader_builder()}
+        models_loader_kwargs={"datasets_loader": datasets_loader}
     )
     converter.convert_pipelines()
     converter.convert_datasets()

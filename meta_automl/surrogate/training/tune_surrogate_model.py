@@ -118,10 +118,7 @@ def objective(
     )
 
     if config["tensorboard_logger"] is not None:
-        config["tensorboard_logger"]["name"] = (
-                config["tensorboard_logger"]["name"] +
-                f"__trial_id_{trial._trial_id}"
-        )
+        config["tensorboard_logger"]["name"] += f"__trial_id_{trial._trial_id}"
 
     test_metric = []
     for i_it in range(5):
