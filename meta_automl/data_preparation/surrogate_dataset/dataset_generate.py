@@ -1,12 +1,7 @@
-import sys
-
-sys.path.append("..")
-
 import json
 import os
 import pathlib
 import pickle
-
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -14,13 +9,12 @@ import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
 from torch_geometric.data import Data
 
-from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
-from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
-from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-
 from meta_automl.data_preparation.dataset import (CustomDataset,
                                                   DataNotFoundError,
                                                   DatasetData, DatasetIDType)
+from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
+from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
+from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 
 
 def dataset_from_id_without_data_loading(dataset_id: DatasetIDType) -> CustomDataset:

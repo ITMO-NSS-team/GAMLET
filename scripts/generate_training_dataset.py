@@ -1,7 +1,3 @@
-import os
-import sys
-
-sys.path.append(os.getcwd())
 from meta_automl.data_preparation.datasets_loaders.custom_datasets_loader import CustomDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.meta_features_extractors import (PymfeExtractor)

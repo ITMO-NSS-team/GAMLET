@@ -1,22 +1,15 @@
-import os
-import sys
-
-sys.path.append(os.getcwd())
 from functools import partial
 
+import openml
 from fedot.api.main import Fedot
-from fedot.core.repository.tasks import (Task, TaskTypesEnum,
-                                         TsForecastingParams)
 from golem.core.optimisers.meta.surrogate_optimizer import SurrogateEachNgenOptimizer
 
-from meta_automl.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
+from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+from meta_automl.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
-
-import openml
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 
 if __name__ == '__main__':
     dataset_name = 'sylvine'  # Specify your OpenML dataset here to get the dataset meta-features.

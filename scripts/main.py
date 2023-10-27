@@ -1,11 +1,6 @@
 import argparse
-import os
-import sys
 
 import yaml
-
-# TODO: Maybe not the best solution. It enables code running not from PyCharm.
-sys.path.append(os.getcwd())
 
 from meta_automl.surrogate import training
 
