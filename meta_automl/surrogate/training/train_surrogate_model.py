@@ -22,7 +22,7 @@ from meta_automl.data_preparation.surrogate_dataset import (GraphDataset,
 from meta_automl.surrogate import surrogate_model
 
 
-def get_datasets(path, is_pair=False, binary_y=True, index_col=0):
+def get_datasets(path, is_pair=False, index_col=0):
     """Loading preprocessed data and creating Dataset objects for model training
     Parameters:
     -----------
@@ -141,11 +141,8 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     else:
         index_col = 0
 
-    train_dataset, val_dataset, test_dataset, meta_data = get_datasets(
-        config["dataset_params"]["root_path"],
-        is_pair,
-        index_col=index_col,
-    )
+    train_dataset, val_dataset, test_dataset, meta_data = get_datasets(config["dataset_params"]["root_path"], is_pair,
+                                                                       index_col=index_col)
     assert len(train_dataset) != 0
     assert len(val_dataset) != 0
     assert len(test_dataset) != 0
@@ -207,12 +204,7 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     else:
         index_col = 0
 
-    _, _, test_dataset, _ = get_datasets(
-        config["dataset_params"]["root_path"],
-        False,
-        False,
-        index_col=index_col,
-    )
+    _, _, test_dataset, _ = get_datasets(config["dataset_params"]["root_path"], False, index_col=index_col)
 
     test_loader = DataLoader(
         test_dataset,
