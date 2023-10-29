@@ -14,6 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
+lib/
 lib64/
 parts/
 sdist/
@@ -128,9 +129,18 @@ dmypy.json
 .pyre/
 
 # User data
+/data/cache
+
+# VSCode user setting
+.vscode
+
+# MacOS
+.DS_Store
+
+# Big dataset
+data/knowledge_base_1_v2/
 data/cache
 
-# IDEs
-.idea/
-.run/
-.vscode/
+
+/experiment_logs
+data/no_meta_features_and_fedot_pipelines__no_type_with_hyperparams(4_with_learnables)

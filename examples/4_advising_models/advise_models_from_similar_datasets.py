@@ -33,7 +33,7 @@ def main():
     best_models_train = [[EvaluatedModel(pipeline, SingleObjFitness(1), 'some_metric_name', OpenMLDataset(dataset_id))]
                          for dataset_id, pipeline in zip(did_train, best_pipelines)]
 
-    # Train the component that calculates similarity between datasets
+     # Train the component that calculates similarity between datasets
     assessor = KNeighborsSimilarityAssessor(n_neighbors=2).fit(mf_train, did_train)
     # Train the component remembers best models for datasets
     advisor = DiverseModelAdvisor(minimal_distance=2).fit(dataset_ids=did_train, models=best_models_train)
@@ -41,6 +41,12 @@ def main():
     did_pred = assessor.predict(mf_test)
     # Predict models for similar datasets
     return advisor.predict(dataset_ids=did_pred)
+
+    #dataset_names_to_best_pipelines = dict(zip(y_train, best_models))
+    #advisor = DiverseFEDOTPipelineAdvisor(assessor, minimal_distance=2).fit(dataset_names_to_best_pipelines)
+
+    #return advisor.predict(x_test)
+
 
 
 if __name__ == '__main__':

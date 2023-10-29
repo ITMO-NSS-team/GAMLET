@@ -1,0 +1,45 @@
+training_method: train_hetero_surrogate_model
+batch_size: 256
+num_dataloader_workers: 4
+model:
+  weight_decay: 0.0001
+  lr: 0.001
+  validation_metrics:
+    - ndcg
+    - precision
+    - kendalltau
+  class: FusionRankNet
+  model_parameters:
+    pipeline_encoder:
+      node_homogenizer:
+        op_hyperparams_embedder:
+          class: HyperparametersEmbedder
+          out_dim: 8
+        op_name_embedder:
+          class: NameEmbedder
+          out_dim: 2
+        embedding_joiner:
+          class: CatEmbeddingJoiner
+      gnn:
+        type: simple_graph_encoder
+        d_model: 64
+        in_size: null  # This parameter is infered
+        num_heads: 8
+        num_layers: 2
+        dropout: 0.3
+        in_embed: false
+        batch_norm: true
+        gnn_type: graphsage
+        k_hop: 2
+        se: gnn
+        deg: null
+        global_pool: mean
+        use_edge_attr: false
+    dataset_encoder:
+      in_size: 7  # TODO: Make this parameter infered from dataset
+      hidden_dim: 16
+    embedding_joiner:
+      hidden_channels: 16
+      num_layers: 2
+      dropout: 0.0
+      norm: null
