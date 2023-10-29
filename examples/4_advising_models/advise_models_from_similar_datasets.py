@@ -35,8 +35,10 @@ def main():
 
     dataset_names_to_best_pipelines = dict(zip(y_train, best_models))
     advisor = DiverseFEDOTPipelineAdvisor(assessor, minimal_distance=2).fit(dataset_names_to_best_pipelines)
+
     return advisor.predict(x_test)
 
 
 if __name__ == '__main__':
     result = main()
+    print(result)
