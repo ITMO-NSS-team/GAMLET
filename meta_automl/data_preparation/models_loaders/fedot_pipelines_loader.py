@@ -81,7 +81,7 @@ class FEDOTPipelinesLoader(ModelsLoader):
         models = []
         for dataset, candidate_pipelines in tqdm(list(zip(datasets, self.candidate_pipelines)),
                                                  desc='Selecting best models', unit='dataset'):
-            best_performers = get_n_best_fedot_performers(dataset, candidate_pipelines, self.datasets_loader, n_best)
+            best_performers = get_n_best_fedot_performers(dataset, candidate_pipelines, n_best)
             models.append(best_performers)
         return models
 
