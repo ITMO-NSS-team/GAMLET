@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Sequence, Union
 
 from meta_automl.data_preparation.dataset import DatasetIDType
-from meta_automl.data_preparation.model import Model
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 
 
 class ModelAdvisor(ABC):
@@ -12,7 +12,7 @@ class ModelAdvisor(ABC):
     """
 
     @abstractmethod
-    def predict(self, *args, **kwargs) -> List[List[Model]]:
+    def predict(self, *args, **kwargs) -> List[List[EvaluatedModel]]:
         raise NotImplementedError()
 
 
@@ -28,9 +28,9 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
             fitted_similarity_assessor: dataset similarity assessor.
         """
         self.n_best_to_advise = n_best_to_advise
-        self.best_models: Dict[DatasetIDType, Sequence[Model]] = {}
+        self.best_models: Dict[DatasetIDType, Sequence[EvaluatedModel]] = {}
 
-    def fit(self, dataset_ids: Sequence[DatasetIDType], models: Sequence[Sequence[Model]]):
+    def fit(self, dataset_ids: Sequence[DatasetIDType], models: Sequence[Sequence[EvaluatedModel]]):
         """Update the collection of recommended pipelines.
 
         Args:
@@ -42,7 +42,7 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
         self.best_models.update(dict(zip(dataset_ids, models)))
         return self
 
-    def predict(self, dataset_ids: Sequence[Sequence[DatasetIDType]]) -> List[List[Model]]:
+    def predict(self, dataset_ids: Sequence[Sequence[DatasetIDType]]) -> List[List[EvaluatedModel]]:
         """Advises pipelines based on meta-learning.
 
         Args:
@@ -57,7 +57,7 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
         return advised_pipelines
 
     def _predict_single(self, dataset_ids: Sequence[DatasetIDType],
-                        n_best_to_advise: Optional[int] = None) -> List[Model]:
+                        n_best_to_advise: Optional[int] = None) -> List[EvaluatedModel]:
         """ Advises pipelines based on identifiers of datasets,
             looking for similar datasets and corresponding models in its knowledge base.
 
@@ -76,14 +76,14 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
 
         return dataset_models
 
-    def _get_all_models_for_datasets(self, similar_dataset_ids: Sequence[DatasetIDType]) -> List[Model]:
+    def _get_all_models_for_datasets(self, similar_dataset_ids: Sequence[DatasetIDType]) -> List[EvaluatedModel]:
         dataset_models = []
         for dataset_id in similar_dataset_ids:
             dataset_models += list(self.best_models.get(dataset_id))
         return dataset_models
 
     @staticmethod
-    def _sort_models_by_fitness(models: Sequence[Model], n_best_to_advise: Union[int, None]) -> List[Model]:
+    def _sort_models_by_fitness(models: Sequence[EvaluatedModel], n_best_to_advise: Union[int, None]) -> List[EvaluatedModel]:
         if n_best_to_advise is not None:
             models = list(sorted(models, key=lambda m: m.fitness, reverse=True))
             models = models[: n_best_to_advise]

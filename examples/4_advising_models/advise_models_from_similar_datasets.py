@@ -4,8 +4,8 @@ from sklearn.model_selection import train_test_split
 
 from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
-from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
 
@@ -30,7 +30,7 @@ def main():
         PipelineBuilder().add_node('normalization').add_node('logit').build(),
         PipelineBuilder().add_node('rf').add_node('logit').build()
     ]
-    best_models_train = [[Model(pipeline, SingleObjFitness(1), 'some_metric_name', OpenMLDataset(dataset_id))]
+    best_models_train = [[EvaluatedModel(pipeline, SingleObjFitness(1), 'some_metric_name', OpenMLDataset(dataset_id))]
                          for dataset_id, pipeline in zip(did_train, best_pipelines)]
 
     # Train the component that calculates similarity between datasets

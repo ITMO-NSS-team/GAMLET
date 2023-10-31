@@ -11,9 +11,8 @@ Datasets Loader & Dataset
 
 | Automate dataset management, including retrieval, caching, and loading into memory. 
 | Optimize experiments by minimizing calls to the dataset source and conserve memory usage.
-
-Models Loader & Model
----------------------
+Models Loader & EvaluatedModel
+------------------------------
 
 | Import and consolidate model evaluation data for datasets.
 | Support experiment selection based on predefined criteria, currently compatible with FEDOT AutoML framework results.

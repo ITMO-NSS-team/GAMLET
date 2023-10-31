@@ -17,8 +17,8 @@ from typing_extensions import Literal
 
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.file_system import PathType
-from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 
 
@@ -30,7 +30,7 @@ def evaluate_classification_fedot_pipeline(pipeline, input_data):
     return fitness
 
 
-def get_n_best_fedot_performers(dataset: DatasetBase, pipelines: List[Pipeline], n_best: int = 1) -> List[Model]:
+def get_n_best_fedot_performers(dataset: DatasetBase, pipelines: List[Pipeline], n_best: int = 1) -> List[EvaluatedModel]:
     data = dataset.get_data()
     X, y_test = data.x.to_numpy(), data.y.to_numpy()
     input_data = InputData(idx=np.arange(0, len(X)), features=X, target=y_test, data_type=DataTypesEnum.table,
@@ -41,7 +41,7 @@ def get_n_best_fedot_performers(dataset: DatasetBase, pipelines: List[Pipeline],
     for pipeline in tqdm(pipelines, desc='Evaluating pipelines'):
         fitness = evaluate_classification_fedot_pipeline(pipeline, input_data)
         fitnesses.append(fitness)
-        models.append(Model(pipeline, fitness, metric_name, dataset))
+        models.append(EvaluatedModel(pipeline, fitness, metric_name, dataset))
 
     best_models = [models.pop(np.argmax(fitnesses)) for _ in range(min(n_best, len(pipelines)))]
     return best_models
@@ -69,7 +69,7 @@ class FEDOTPipelinesLoader(ModelsLoader):
             candidate_pipeline_paths = candidate_pipeline_paths or self._define_pipeline_paths()
             self._import_pipelines(candidate_pipeline_paths)
 
-    def load(self, datasets: Union[List[str], Literal['auto']] = 'auto', n_best: int = 1) -> List[List[Model]]:
+    def load(self, datasets: Union[List[str], Literal['auto']] = 'auto', n_best: int = 1) -> List[List[EvaluatedModel]]:
         if datasets != 'auto':
             datasets = self._get_datasets_from_names(datasets)
             difference = set(d.name for d in datasets) - set(self.dataset_ids)

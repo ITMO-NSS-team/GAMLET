@@ -4,7 +4,7 @@ from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.dag.linked_graph import get_distance_between
 
 from meta_automl.data_preparation.dataset import DatasetIDType
-from meta_automl.data_preparation.model import Model
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.meta_algorithm.model_advisors import DatasetSimilarityModelAdvisor
 
 
@@ -35,7 +35,7 @@ class DiverseModelAdvisor(DatasetSimilarityModelAdvisor):
         self.distance_func = distance_func
 
     def _predict_single(self, similar_dataset_ids: Iterable[DatasetIDType], n_best_to_advise: Optional[int] = None,
-                        minimal_distance: Optional[float] = None) -> List[Model]:
+                        minimal_distance: Optional[float] = None) -> List[EvaluatedModel]:
         """Advices list of dataset names closer to the most similar dataset.
 
         Args:

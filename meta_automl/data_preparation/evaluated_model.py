@@ -10,7 +10,7 @@ PredictorType = Any
 
 
 @dataclass
-class Model:
+class EvaluatedModel:
     predictor: PredictorType
     fitness: Fitness
     fitness_metric_name: str

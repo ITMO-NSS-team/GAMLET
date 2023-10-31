@@ -8,9 +8,9 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
 from meta_automl.data_preparation.dataset import DatasetBase
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
-from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
@@ -55,7 +55,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         dset_data_loader = DataLoader([dset_data], batch_size=1)
         return next(iter(dset_data_loader))
 
-    def _predict_single(self, dataset: DatasetBase, k) -> List[Model]:
+    def _predict_single(self, dataset: DatasetBase, k) -> List[EvaluatedModel]:
         """Predict optimal pipelines for given dataset.
         Parameters
         ----------
@@ -81,14 +81,14 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         best_models = []
         for i in indx[-k:][::-1]:
             best_models.append(
-                Model(
+                EvaluatedModel(
                     self.pipelines_fedot[i],
                     SingleObjFitness(scores[i]),
                     'surrogate_fitness',
                     dataset))
         return best_models
 
-    def predict(self, datasets: List[DatasetBase], k: int = 5) -> List[List[Model]]:
+    def predict(self, datasets: List[DatasetBase], k: int = 5) -> List[List[EvaluatedModel]]:
         """Predict optimal pipelines for given list of datasets dataset.
         Parameters
         ----------
@@ -98,7 +98,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
             number of pipelines to predict (default: 5)
         Returns
         -------
-        top_models : List[List[Model]]
+        top_models : List[List[EvaluatedModel]]
             List of top models for each dataset.
         """
         return [self._predict_single(dset, k) for dset in datasets]

@@ -16,10 +16,10 @@ from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
 from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.file_system import get_project_root
 from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
     TimeSeriesFeaturesExtractor
-from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
 
@@ -42,8 +42,8 @@ def dataset_to_models(d_id):
         for ind in gen:
             if ind.fitness.value < best_fitness:
                 pipeline = adapter.restore(ind.graph)
-                best_model = Model(pipeline, ind.fitness.value, history.objective.metric_names[0],
-                                   TimeSeriesDataset(d_id))
+                best_model = EvaluatedModel(pipeline, ind.fitness.value, history.objective.metric_names[0],
+                                            TimeSeriesDataset(d_id))
                 best_fitness = ind.fitness.value
     return [best_model]
 
