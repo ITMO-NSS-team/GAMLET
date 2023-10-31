@@ -1,8 +1,8 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import List
 
 
-class DatasetSimilarityAssessor:
+class DatasetSimilarityAssessor(ABC):
     """The Datasets similarity assessor is designed to assess the similarity of datasets by meta-features.
 
     At the knowledge acquisition stage, a table of meta-features of datasets is input.

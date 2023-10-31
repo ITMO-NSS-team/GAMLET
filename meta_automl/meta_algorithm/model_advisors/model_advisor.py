@@ -1,11 +1,11 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Sequence, Union
 
 from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.data_preparation.model import Model
 
 
-class ModelAdvisor:
+class ModelAdvisor(ABC):
     """Root class for model recommendation.
 
     Suggests pre-saved models for the most similar datasets.

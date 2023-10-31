@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import List, Sequence
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 
 
-class DatasetsLoader:
+class DatasetsLoader(ABC):
 
     def load(self, dataset_ids: Sequence[DatasetIDType]) -> List[DatasetBase]:
         datasets = []
