@@ -3,17 +3,17 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 import torch
-from torch_geometric.loader import DataLoader
+from golem.core.optimisers.fitness import SingleObjFitness
 from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 
+from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.model import Model
 from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
-from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
-from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
-from golem.core.optimisers.fitness import SingleObjFitness
+from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
 
 class SurrogateGNNPipelineAdvisor(ModelAdvisor):
@@ -85,7 +85,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
                     self.pipelines_fedot[i],
                     SingleObjFitness(scores[i]),
                     'surrogate_fitness',
-                    None))
+                    dataset))
         return best_models
 
     def predict(self, datasets: List[DatasetBase], k: int = 5) -> List[List[Model]]:
