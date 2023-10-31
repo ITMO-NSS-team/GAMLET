@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC
 from typing import Iterable, List, Optional, Union
 
@@ -6,12 +8,10 @@ import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
-from meta_automl.meta_algorithm.datasets_similarity_assessors.datasets_similarity_assessor import (
-    DatasetsSimilarityAssessor,
-)
+from meta_automl.meta_algorithm.dataset_similarity_assessors import DatasetSimilarityAssessor
 
 
-class ModelBasedSimilarityAssessor(ABC, DatasetsSimilarityAssessor):
+class ModelBasedSimilarityAssessor(ABC, DatasetSimilarityAssessor):
     """
     Assesses the similarity of datasets based on the meta-features of the dataset.
     For a given dataset, provides a list of similar datasets and optionally provides similarity measures.
@@ -30,7 +30,7 @@ class ModelBasedSimilarityAssessor(ABC, DatasetsSimilarityAssessor):
         self._datasets: Optional[Iterable[DatasetIDType]] = None
 
 
-class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
+class KNeighborsSimilarityAssessor(ModelBasedSimilarityAssessor):
     def __init__(self, n_neighbors: int = 1, **model_params):
         """
         Args:
@@ -45,7 +45,8 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         model = NearestNeighbors(n_neighbors=n_neighbors, **model_params)
         super().__init__(model, n_neighbors)
 
-    def fit(self, meta_features: pd.DataFrame, dataset_ids: Iterable[Union[DatasetIDType, DatasetBase]]) -> None:
+    def fit(self, meta_features: pd.DataFrame,
+            dataset_ids: Iterable[Union[DatasetIDType, DatasetBase]]) -> KNeighborsSimilarityAssessor:
         """Fit the meta features to the model. The DataFrame should be indexed by dataset identifier
 
         Args:
@@ -56,7 +57,8 @@ class KNeighborsBasedSimilarityAssessor(ModelBasedSimilarityAssessor):
         dataset_ids = [dataset_id.id_ if isinstance(dataset_id, DatasetBase) else dataset_id
                        for dataset_id in dataset_ids]
         self._datasets = np.array(dataset_ids)
-        self._inner_model.fit(meta_features)
+        self._inner_model.fit(meta_features, None)
+        return self
 
     @staticmethod
     def preprocess_meta_features(meta_features: pd.DataFrame) -> pd.DataFrame:
