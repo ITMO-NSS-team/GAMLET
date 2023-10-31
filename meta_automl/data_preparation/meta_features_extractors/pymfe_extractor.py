@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 import pandas as pd
 from pymfe.mfe import MFE
+from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
@@ -44,7 +45,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             columns_or_rows["value"] = []
             columns_or_rows["variable"] = []
 
-        for dataset in datasets_or_ids:
+        for dataset in tqdm(datasets_or_ids, desc='Extracting meta features of the datasets'):
             if isinstance(dataset, DatasetBase):
                 dataset_id = dataset.id_
                 dataset_class = dataset.__class__
@@ -53,7 +54,6 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 dataset_class = self.datasets_loader.dataset_class
             meta_features_cached = self._get_meta_features_cache(dataset_id, dataset_class, meta_feature_names)
 
-            logging.critical(f'Extracting meta features of the dataset {dataset}...')
             if use_cached and meta_features_cached:
                 columns_or_rows[dataset_id] = meta_features_cached
             else:

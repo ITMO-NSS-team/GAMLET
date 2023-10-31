@@ -7,7 +7,7 @@ from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot_ind.core.repository.initializer_industrial_models import IndustrialModels
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
