@@ -12,11 +12,11 @@ from meta_automl.data_preparation.file_system import get_project_root
 from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
     TimeSeriesFeaturesExtractor
 from meta_automl.data_preparation.model import Model
-from meta_automl.meta_algorithm.datasets_similarity_assessors import KNeighborsBasedSimilarityAssessor
-from meta_automl.meta_algorithm.model_advisors import DiverseFEDOTPipelineAdvisor
+from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
+from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
 
 
-def dataset_to_pipelines(d_id):
+def dataset_to_models(d_id):
     adapter = PipelineAdapter()
     dir_to_search = Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets', d_id)
     try:
@@ -34,7 +34,7 @@ def dataset_to_pipelines(d_id):
                 best_model = Model(pipeline, ind.fitness.value, history.objective.metric_names[0],
                                    TimeSeriesDataset(d_id))
                 best_fitness = ind.fitness.value
-    return best_model
+    return [best_model]
 
 
 def main():
@@ -47,22 +47,30 @@ def main():
     extractor = TimeSeriesFeaturesExtractor()
     meta_features = extractor.extract(datasets)
     meta_features = meta_features.dropna(axis=1, how='any')
+    dataset_ids = meta_features.index
 
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
-    x_train, x_test = train_test_split(meta_features, train_size=0.75, random_state=42)
-    y_train = x_train.index
+    mf_train, mf_test, did_train, did_test = train_test_split(meta_features, dataset_ids, train_size=0.75,
+                                                              random_state=42)
 
     # Define best models for datasets.
-    dataset_names_to_best_pipelines = {}
-    for d_id in tqdm(y_train):
-        if dataset_to_pipelines(d_id) is not None:
-            dataset_names_to_best_pipelines[d_id] = dataset_to_pipelines(d_id)
-    x_train = x_train[x_train.index.isin(dataset_names_to_best_pipelines.keys())]
-    y_train = y_train[y_train.isin(dataset_names_to_best_pipelines.keys())]
-    assessor = KNeighborsBasedSimilarityAssessor(n_neighbors=2)
-    assessor.fit(x_train, y_train)
-    advisor = DiverseFEDOTPipelineAdvisor(assessor, minimal_distance=2).fit(dataset_names_to_best_pipelines)
-    return advisor.predict(x_test)
+    dataset_ids_to_best_models = {}
+    for d_id in tqdm(did_train, 'Loading models for train datasets'):
+        best_models_train = dataset_to_models(d_id)
+        if best_models_train is not None:
+            dataset_ids_to_best_models[d_id] = best_models_train
+    mf_train = mf_train[mf_train.index.isin(dataset_ids_to_best_models.keys())]
+    did_train = did_train[did_train.isin(dataset_ids_to_best_models.keys())]
+    dataset_ids_train, best_models_train = zip(*dataset_ids_to_best_models.items())
+
+    # Train the component that calculates similarity between datasets
+    assessor = KNeighborsSimilarityAssessor(n_neighbors=2).fit(mf_train, did_train)
+    # Train the component remembers best models for datasets
+    advisor = DiverseModelAdvisor(minimal_distance=2).fit(dataset_ids_train, best_models_train)
+    # Predict similar datasets from train
+    did_pred = assessor.predict(mf_test)
+    # Predict models for similar datasets
+    return advisor.predict(did_pred)
 
 
 if __name__ == '__main__':

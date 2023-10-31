@@ -39,7 +39,7 @@ if __name__ == '__main__':
         extractor_params=extractor_params)
     x_dset = meta_features_extractor.extract([train_data], fill_input_nans=True).fillna(0)
 
-    # Compose extractors and model into joint sturcture
+    # Compose extractors and model into joint structure
     surrogate_pipeline = DataPipelineSurrogate(
         pipeline_features_extractor=pipeline_features_extractor,
         dataset_meta_features=x_dset,
