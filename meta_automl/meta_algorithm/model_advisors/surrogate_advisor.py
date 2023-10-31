@@ -10,6 +10,7 @@ from torch_geometric.loader import DataLoader
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
+from meta_automl.data_preparation.file_system import get_data_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
@@ -31,9 +32,10 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         self.pipeline_dataloader = DataLoader(pipelines, batch_size=1)
 
         # loading surrogate model
+        surrogate_knowledge_base_dir = get_data_dir() / 'knowledge_base_surrogate'
         self.surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
-            checkpoint_path="./experiments/base/checkpoints/best.ckpt",
-            hparams_file="./experiments/base/hparams.yaml"
+            checkpoint_path=surrogate_knowledge_base_dir / 'checkpoints/best.ckpt',
+            hparams_file=surrogate_knowledge_base_dir / 'hparams.yaml'
         )
         self.surrogate_model.eval()
 

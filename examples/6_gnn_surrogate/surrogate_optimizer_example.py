@@ -6,6 +6,7 @@ from golem.core.optimisers.meta.surrogate_optimizer import SurrogateEachNgenOpti
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
+from meta_automl.data_preparation.file_system import get_data_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from meta_automl.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
@@ -17,11 +18,12 @@ if __name__ == '__main__':
     dset = openml.datasets.get_dataset(dataset_name)
     open_ml_dataset_id = dset.id
     train_data = datasets_loader.load_single(open_ml_dataset_id)
+    surrogate_knowledge_base_dir = get_data_dir() / 'knowledge_base_surrogate'
 
     # Load surrogate model
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
-        checkpoint_path="./experiments/base/checkpoints/best.ckpt",
-        hparams_file="./experiments/base/hparams.yaml"
+        checkpoint_path=surrogate_knowledge_base_dir / "checkpoints/best.ckpt",
+        hparams_file=surrogate_knowledge_base_dir / "hparams.yaml"
     )
     surrogate_model.eval()
 
