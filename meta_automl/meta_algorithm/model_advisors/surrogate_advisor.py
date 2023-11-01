@@ -11,6 +11,7 @@ from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.file_system import get_data_dir
+from meta_automl.data_preparation.file_system.file_system import get_configs_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
@@ -40,12 +41,13 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         self.surrogate_model.eval()
 
         # Prepare dataset extractor and extract metafeatures
-        extractor_params = get_extractor_params('configs/use_features.json')
+        config_dir = get_configs_dir() / 'use_features.json'
+        extractor_params = get_extractor_params(config_dir)
         self.meta_features_extractor = PymfeExtractor(
             extractor_params=extractor_params,
         )
         self.meta_features_preprocessor = FeaturesPreprocessor(
-            load_path="./data/pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
+            load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
             extractor_params=extractor_params)
 
     def _preprocess_dataset_features(self, dataset):

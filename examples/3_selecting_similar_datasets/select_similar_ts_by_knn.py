@@ -21,7 +21,8 @@ def main():
     # Preprocess meta-features, as KNN does not support NaNs.
     meta_features = meta_features.dropna(axis=1, how='any')
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
-    mf_train, mf_test, did_train, did_test = train_test_split(meta_features, meta_features.index, train_size=0.75, random_state=42)
+    mf_train, mf_test, did_train, did_test = train_test_split(meta_features, meta_features.index, train_size=0.75,
+                                                              random_state=42)
     assessor = KNeighborsSimilarityAssessor(n_neighbors=3)
     assessor.fit(mf_train, did_train)
     # Get the closest datasets from train.

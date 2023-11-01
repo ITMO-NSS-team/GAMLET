@@ -4,6 +4,7 @@ import pickle
 import yaml
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.file_system.file_system import get_configs_dir
 from meta_automl.meta_algorithm.model_advisors import SurrogateGNNPipelineAdvisor
 
 
@@ -11,8 +12,7 @@ def main():
     # Define datasets
     dataset = OpenMLDatasetsLoader().load(["apsfailure"], allow_names=True)
     # Extract meta-features and load on demand.
-
-    with open("configs/run_surrogate_model.yml") as f:
+    with open(get_configs_dir() / 'run_surrogate_model.yml') as f:
         config = yaml.load(f, yaml.Loader)
 
     with open(os.path.join(config["dataset_params"]["root_path"], "pipelines.pickle"), "rb") as input_file:

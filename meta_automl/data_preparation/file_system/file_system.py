@@ -23,5 +23,10 @@ def get_project_root() -> Path:
 
 
 def get_data_dir() -> Path:
-    data_dir = get_project_root().joinpath(DATA_SUBDIR)
+    data_dir = get_project_root() / DATA_SUBDIR
     return data_dir
+
+
+def get_configs_dir() -> Path:
+    configs_dir = get_project_root() / 'configs'
+    return configs_dir

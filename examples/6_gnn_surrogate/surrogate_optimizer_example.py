@@ -7,6 +7,7 @@ from golem.core.optimisers.meta.surrogate_optimizer import SurrogateEachNgenOpti
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.file_system import get_data_dir
+from meta_automl.data_preparation.file_system.file_system import get_configs_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from meta_automl.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
@@ -32,12 +33,12 @@ if __name__ == '__main__':
                                                                  operation_encoding="ordinal")
 
     # Prepare dataset extractor and extract metafeatures
-    extractor_params = get_extractor_params('configs/use_features.json')
+    extractor_params = get_extractor_params(get_configs_dir() / 'use_features.json')
     meta_features_extractor = PymfeExtractor(
         extractor_params=extractor_params,
     )
     meta_features_preprocessor = FeaturesPreprocessor(
-        load_path="./data/pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
+        load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
         extractor_params=extractor_params)
     x_dset = meta_features_extractor.extract([train_data], fill_input_nans=True).fillna(0)
 

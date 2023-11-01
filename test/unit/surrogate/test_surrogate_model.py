@@ -1,15 +1,14 @@
-import pathlib
-
 import pytest
 import torch
 import yaml
 
+from meta_automl.data_preparation.file_system.file_system import get_configs_dir, get_data_dir
 from meta_automl.surrogate import surrogate_model
 
 
 @pytest.fixture(scope='module')
 def read_config():
-    with open('configs/train_surrogate_model.yml') as f:
+    with open(get_configs_dir() / 'train_surrogate_model.yml') as f:
         config = yaml.load(f, yaml.Loader)
     return config
 
@@ -26,8 +25,7 @@ def create_model_from_config(read_config, x_pipe, x_dset):
 
 
 def get_test_data():
-    path = pathlib.Path(__file__).parent.parent.parent.resolve()
-    path = path.joinpath('data/surr_data/')
+    path = get_data_dir() / 'surr_data'
     x_pipe = torch.load(path / 'data_pipe_test.pt')
     x_dset = torch.load(path / 'data_dset_test.pt')
     return x_pipe, x_dset
