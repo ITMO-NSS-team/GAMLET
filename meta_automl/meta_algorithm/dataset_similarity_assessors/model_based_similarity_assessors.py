@@ -11,7 +11,7 @@ from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.meta_algorithm.dataset_similarity_assessors import DatasetSimilarityAssessor
 
 
-class ModelBasedSimilarityAssessor(ABC, DatasetSimilarityAssessor):
+class ModelBasedSimilarityAssessor(DatasetSimilarityAssessor, ABC):
     """
     Assesses the similarity of datasets based on the meta-features of the dataset.
     For a given dataset, provides a list of similar datasets and optionally provides similarity measures.
@@ -57,7 +57,7 @@ class KNeighborsSimilarityAssessor(ModelBasedSimilarityAssessor):
         dataset_ids = [dataset_id.id_ if isinstance(dataset_id, DatasetBase) else dataset_id
                        for dataset_id in dataset_ids]
         self._datasets = np.array(dataset_ids)
-        self._inner_model.fit(meta_features, None)
+        self._inner_model.fit(meta_features)
         return self
 
     @staticmethod
