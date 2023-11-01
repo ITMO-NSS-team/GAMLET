@@ -25,7 +25,8 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
     def __init__(self, n_best_to_advise: Optional[int] = None):
         """
         Args:
-            fitted_similarity_assessor: dataset similarity assessor.
+            n_best_to_advise: Number of models to output. Defaults to `None` => all pipelines from memory.
+
         """
         self.n_best_to_advise = n_best_to_advise
         self.best_models: Dict[DatasetIDType, Sequence[EvaluatedModel]] = {}
@@ -83,7 +84,8 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
         return dataset_models
 
     @staticmethod
-    def _sort_models_by_fitness(models: Sequence[EvaluatedModel], n_best_to_advise: Union[int, None]) -> List[EvaluatedModel]:
+    def _sort_models_by_fitness(models: Sequence[EvaluatedModel],
+                                n_best_to_advise: Union[int, None]) -> List[EvaluatedModel]:
         if n_best_to_advise is not None:
             models = list(sorted(models, key=lambda m: m.fitness, reverse=True))
             models = models[: n_best_to_advise]

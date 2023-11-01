@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, List, Optional
+from typing import Callable, List, Optional, Sequence
 
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.dag.linked_graph import get_distance_between
@@ -34,7 +34,7 @@ class DiverseModelAdvisor(DatasetSimilarityModelAdvisor):
         self.n_best_to_advise = n_best_to_advise
         self.distance_func = distance_func
 
-    def _predict_single(self, similar_dataset_ids: Iterable[DatasetIDType], n_best_to_advise: Optional[int] = None,
+    def _predict_single(self, similar_dataset_ids: Sequence[DatasetIDType], n_best_to_advise: Optional[int] = None,
                         minimal_distance: Optional[float] = None) -> List[EvaluatedModel]:
         """Advices list of dataset names closer to the most similar dataset.
 
