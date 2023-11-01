@@ -74,6 +74,7 @@ def main():
         if models is not None:
             dataset_ids_to_best_models[d_id] = models
     did_train, best_models_train = zip(*dataset_ids_to_best_models.items())
+    mf_train = mf_train[mf_train.index.isin(did_train)]
     assessor = KNeighborsSimilarityAssessor(n_neighbors=2)
     assessor.fit(mf_train, did_train)
     advisor = DiverseModelAdvisor(minimal_distance=2).fit(did_train, best_models_train)
@@ -88,8 +89,7 @@ def main():
 
     dists = []
     dists_random = []
-    for dataset_id, models in tqdm(zip(did_test, best_models_pred)):
-
+    for dataset_id, models in tqdm(zip(did_test, best_models_pred), 'Test datasets', len(did_test)):
         if dataset_id not in dataset_names_to_best_models_test:
             continue
         # Define datasets.
@@ -106,7 +106,6 @@ def main():
 
         test_data = InputData(idx=np.arange(len(X)), features=X, target=y, task=task,
                               data_type=DataTypesEnum.ts)
-        print(dataset_id)
         pipeline = models[0].predictor
 
         pipeline_random = random.choice(list(dataset_names_to_best_models_test.values())[0]).predictor
