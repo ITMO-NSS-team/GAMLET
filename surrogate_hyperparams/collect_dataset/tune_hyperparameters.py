@@ -191,8 +191,6 @@ def main(
 
     for dataset_id, model_files in tqdm(selected_graphs.items()):
         for model_file in model_files:
-            pipeline = Pipeline().load(model_file)
-
             model_filename = Path(model_file).name
 
             indices = model_filenames == model_filename  # Preliminary check shows that the names are unique.
@@ -209,6 +207,19 @@ def main(
             fold_id = record.fold_id
             fitness_metric = record.fitness_metric
 
+            study_directory = save_directory.joinpath(dataset_id)
+            if not study_directory.exists():
+                study_directory.mkdir(parents=True, exist_ok=True)
+                
+            study_file = study_directory.joinpath(model_filename.replace(".json", ".pickle"))
+            # Skip already processed model.
+            if study_file.exists():
+                with open(study_file, "rb") as f:
+                    study = pickle.load(f)
+                if len(study.trials) == 50:
+                    print("The model is already processed")
+                    continue
+
             train_x_filename = f"train_{dataset_name}_fold{fold_id}.npy"
             test_x_filename = f"test_{dataset_name}_fold{fold_id}.npy"
             train_y_filename = f"trainy_{dataset_name}_fold{fold_id}.npy"
@@ -221,13 +232,8 @@ def main(
 
             trains, tests = get_train_test_data(train_x, test_x, train_y, test_y, task)
 
-            if not save_directory.exists():
-                save_directory.mkdir(parents=True, exist_ok=True)
-
-            study_directory = save_directory.joinpath(dataset_id).joinpath(model_filename.replace(".json", ""))
-
-            study_file = study_directory.joinpath("study.pickle")
-
+            pipeline = Pipeline().load(model_file)
+            
             tune_hyperparameters(pipeline, trains, tests, fitness_metric, study_file, iterations)
 
 
