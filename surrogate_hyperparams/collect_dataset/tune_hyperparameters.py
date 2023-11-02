@@ -207,10 +207,13 @@ def main(
             fold_id = record.fold_id
             fitness_metric = record.fitness_metric
 
+            if fitness_metric == "logloss":  # TODO: currently not supported due to hard-coded direction in optuna
+                continue
+
             study_directory = save_directory.joinpath(dataset_id)
             if not study_directory.exists():
                 study_directory.mkdir(parents=True, exist_ok=True)
-                
+
             study_file = study_directory.joinpath(model_filename.replace(".json", ".pickle"))
             # Skip already processed model.
             if study_file.exists():
@@ -233,7 +236,7 @@ def main(
             trains, tests = get_train_test_data(train_x, test_x, train_y, test_y, task)
 
             pipeline = Pipeline().load(model_file)
-            
+
             tune_hyperparameters(pipeline, trains, tests, fitness_metric, study_file, iterations)
 
 
