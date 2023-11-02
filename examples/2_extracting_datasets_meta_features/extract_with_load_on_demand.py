@@ -1,5 +1,3 @@
-import openml
-
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 
