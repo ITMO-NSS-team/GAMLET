@@ -1,13 +1,12 @@
 from functools import partial
 
-import openml
 from fedot.api.main import Fedot
 from golem.core.optimisers.meta.surrogate_optimizer import SurrogateEachNgenOptimizer
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.file_system import get_data_dir
-from meta_automl.data_preparation.file_system.file_system import get_configs_dir
+from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from meta_automl.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
@@ -16,10 +15,8 @@ from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogat
 if __name__ == '__main__':
     dataset_name = 'sylvine'  # Specify your OpenML dataset here to get the dataset meta-features.
     datasets_loader = OpenMLDatasetsLoader()
-    dset = openml.datasets.get_dataset(dataset_name)
-    open_ml_dataset_id = dset.id
-    train_data = datasets_loader.load_single(open_ml_dataset_id)
-    surrogate_knowledge_base_dir = get_data_dir() / 'knowledge_base_surrogate'
+    train_data = datasets_loader.load_single(dataset_name, allow_name=True)
+    surrogate_knowledge_base_dir = get_checkpoints_dir() / 'tabular'
 
     # Load surrogate model
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(

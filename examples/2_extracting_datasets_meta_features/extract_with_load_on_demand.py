@@ -8,11 +8,12 @@ def main():
     dataset_names = [
         'nomao', 'sylvine'
     ]
-    dataset_ids = [openml.datasets.get_dataset(name, download_data=False, download_qualities=False).dataset_id for name in dataset_names]
-    extractor = PymfeExtractor(extractor_params={'groups': 'general'}, datasets_loader=OpenMLDatasetsLoader())
-    meta_features = extractor.extract(dataset_ids)
+    datasets = OpenMLDatasetsLoader(allow_names=True).load(dataset_names)
+    extractor = PymfeExtractor(extractor_params={'groups': 'general'})
+    meta_features = extractor.extract(datasets)
     return meta_features
 
 
 if __name__ == '__main__':
     result = main()
+    print(result)

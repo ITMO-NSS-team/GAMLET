@@ -30,3 +30,7 @@ def get_data_dir() -> Path:
 def get_configs_dir() -> Path:
     configs_dir = get_project_root() / 'configs'
     return configs_dir
+
+
+def get_checkpoints_dir() -> Path:
+    return get_project_root() / 'model_checkpoints'
