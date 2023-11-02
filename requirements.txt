@@ -20,3 +20,7 @@ pytest>=7.4.0
 scikit-learn>=1.0.0
 scipy>=1.7.3
 tqdm>=4.65.0
+
+#dev-dependencies
+black
+isort
