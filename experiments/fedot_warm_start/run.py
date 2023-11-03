@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import os
 import pickle
 import timeit
 from dataclasses import dataclass, field
@@ -56,6 +57,8 @@ MF_EXTRACTOR_PARAMS = config['mf_extractor_params']
 COLLECT_METRICS = config['collect_metrics']
 COMMON_FEDOT_PARAMS = config['common_fedot_params']
 BASELINE_MODEL = config['baseline_model']
+TMPDIR = config.get('tmpdir')
+
 UPDATE_TRAIN_TEST_DATASETS_SPLIT = config.get('update_train_test_datasets_split')
 
 # Postprocess constants
@@ -324,6 +327,7 @@ def main():
     experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
     save_dir = get_save_dir(experiment_date_for_path)
     setup_logging(save_dir)
+    os.environ.putenv('TMPDIR', TMPDIR)
     progress_file_path = save_dir.joinpath('progress.txt')
     meta_learner_path = save_dir.joinpath('meta_learner.pkl')
 
