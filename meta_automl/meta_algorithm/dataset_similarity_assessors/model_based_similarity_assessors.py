@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Iterable, List, Optional, Union
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ class ModelBasedSimilarityAssessor(DatasetSimilarityAssessor, ABC):
         """
         self._inner_model = model
         self.n_best = n_best
-        self._datasets: Optional[Iterable[DatasetIDType]] = None
+        self._datasets: Optional[Sequence[DatasetIDType]] = None
 
 
 class KNeighborsSimilarityAssessor(ModelBasedSimilarityAssessor):
@@ -46,12 +46,12 @@ class KNeighborsSimilarityAssessor(ModelBasedSimilarityAssessor):
         super().__init__(model, n_neighbors)
 
     def fit(self, meta_features: pd.DataFrame,
-            dataset_ids: Iterable[Union[DatasetIDType, DatasetBase]]) -> KNeighborsSimilarityAssessor:
+            dataset_ids: Sequence[Union[DatasetIDType, DatasetBase]]) -> KNeighborsSimilarityAssessor:
         """Fit the meta features to the model. The DataFrame should be indexed by dataset identifier
 
         Args:
             meta_features: Pandas dataframe with the dataset meta-features.
-            dataset_ids: Iterable object of dataset ids.
+            dataset_ids: Sequence object of dataset ids.
         """
         meta_features = self.preprocess_meta_features(meta_features)
         dataset_ids = [dataset_id.id_ if isinstance(dataset_id, DatasetBase) else dataset_id
@@ -71,7 +71,7 @@ class KNeighborsSimilarityAssessor(ModelBasedSimilarityAssessor):
         """
         return meta_features.dropna(axis=1, how="any")
 
-    def predict(self, meta_features: pd.DataFrame, return_distance: bool = False) -> Iterable[Iterable[DatasetIDType]]:
+    def predict(self, meta_features: pd.DataFrame, return_distance: bool = False) -> Sequence[Sequence[DatasetIDType]]:
         """Find the closest dataset names to the passed meta features.
 
         Args:
@@ -95,7 +95,7 @@ class KNeighborsSimilarityAssessor(ModelBasedSimilarityAssessor):
             return np.take(self._datasets, dataset_indexes, axis=0)
 
     @property
-    def datasets(self) -> Optional[Iterable[DatasetIDType]]:
+    def datasets(self) -> Optional[Sequence[DatasetIDType]]:
         return self._datasets
 
     @property

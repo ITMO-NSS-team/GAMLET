@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             raise ValueError("Datasets loader not provided!")
         return self._datasets_loader
 
-    def extract(self, datasets_or_ids: List[Union[DatasetBase, DatasetIDType]],
+    def extract(self, datasets_or_ids: Sequence[Union[DatasetBase, DatasetIDType]],
                 fill_input_nans: bool = False, use_cached: bool = True, update_cached: bool = True,
                 fit_kwargs: Dict[str, Any] = None, extract_kwargs: Dict[str, Any] = None) -> pd.DataFrame:
         fit_kwargs = fit_kwargs or {}
