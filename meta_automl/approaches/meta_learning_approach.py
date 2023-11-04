@@ -15,11 +15,6 @@ class MetaLearningApproach(ABC):
     class Components:
         pass
 
-    def __init__(self, *args, **kwargs):
-        self.parameters = self.Parameters(*args, **kwargs)
-        self.data = self.Data()
-        self.components = self.Components()
-
     @abstractmethod
     def fit(self, *args, **kwargs):
         raise NotImplementedError()

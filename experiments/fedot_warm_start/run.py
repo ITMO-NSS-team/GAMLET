@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import pickle
+import shutil
 import timeit
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -70,18 +71,31 @@ COMMON_FEDOT_PARAMS['seed'] = SEED
 class KNNSimilarityAdvice(MetaLearningApproach):
     def __init__(self, n_best_dataset_models_to_memorize: int,
                  mf_extractor_params: dict, assessor_params: dict, advisor_params: dict):
-        super().__init__(
+
+        self.parameters = self.Parameters(
             n_best_dataset_models_to_memorize=n_best_dataset_models_to_memorize,
             mf_extractor_params=mf_extractor_params,
             assessor_params=assessor_params,
             advisor_params=advisor_params,
         )
-        self.components.datasets_loader = OpenMLDatasetsLoader()
-        self.components.mf_extractor = PymfeExtractor(extractor_params=mf_extractor_params,
-                                                      datasets_loader=self.components.datasets_loader)
-        self.components.mf_scaler = MinMaxScaler()
-        self.components.datasets_similarity_assessor = KNeighborsSimilarityAssessor(**assessor_params)
-        self.components.model_advisor = DiverseModelAdvisor(**advisor_params)
+        self.data = self.Data()
+
+        datasets_loader = OpenMLDatasetsLoader()
+        mf_extractor = PymfeExtractor(extractor_params=mf_extractor_params,
+                                      datasets_loader=datasets_loader)
+        datasets_similarity_assessor = KNeighborsSimilarityAssessor(**assessor_params)
+
+        models_loader = FedotHistoryLoader()
+        model_advisor = DiverseModelAdvisor(**advisor_params)
+
+        self.components = self.Components(
+            datasets_loader=datasets_loader,
+            models_loader=models_loader,
+            mf_extractor=mf_extractor,
+            mf_scaler=MinMaxScaler(),
+            datasets_similarity_assessor=datasets_similarity_assessor,
+            model_advisor=model_advisor,
+        )
 
     @dataclass
     class Parameters:
@@ -89,58 +103,58 @@ class KNNSimilarityAdvice(MetaLearningApproach):
         mf_extractor_params: dict = field(default_factory=dict)
         assessor_params: dict = field(default_factory=dict)
         advisor_params: dict = field(default_factory=dict)
-        advisor_class = DiverseModelAdvisor
 
     @dataclass
     class Data:
         meta_features: pd.DataFrame = None
         datasets: List[DatasetBase] = None
-        dateset_ids: List[DatasetIDType] = None
+        dataset_ids: List[DatasetIDType] = None
         best_models: List[List[EvaluatedModel]] = None
 
     @dataclass
     class Components:
-        datasets_loader: OpenMLDatasetsLoader = None
-        models_loader: FedotHistoryLoader = None
-        mf_extractor: PymfeExtractor = None
-        mf_scaler = None
-        datasets_similarity_assessor: KNeighborsSimilarityAssessor = None
-        model_advisor: DiverseModelAdvisor = None
+        datasets_loader: OpenMLDatasetsLoader
+        models_loader: FedotHistoryLoader
+        mf_extractor: PymfeExtractor
+        mf_scaler: Any
+        datasets_similarity_assessor: KNeighborsSimilarityAssessor
+        model_advisor: DiverseModelAdvisor
 
-    def load_models(self, dataset_ids: Sequence[DatasetIDType], histories: Sequence[Sequence[OptHistory]]):
-        self.data.dataset_ids = list(dataset_ids)
-        self.components.models_loader = FedotHistoryLoader()
-        self.data.best_models = self.components.models_loader.load(
+    def load_models(self, dataset_ids: Sequence[DatasetIDType],
+                    histories: Sequence[Sequence[OptHistory]]) -> List[List[EvaluatedModel]]:
+        return self.components.models_loader.load(
             dataset_ids, histories,
             self.parameters.n_best_dataset_models_to_memorize
         )
 
-    def extract_train_meta_features(self):
+    def extract_train_meta_features(self, dataset_ids: List[DatasetIDType]) -> pd.DataFrame:
         meta_features_train = self.components.mf_extractor.extract(
-            self.data.dataset_ids, fill_input_nans=True)
+            dataset_ids, fill_input_nans=True)
         meta_features_train = meta_features_train.fillna(0)
-        meta_features_train = pd.DataFrame(self.components.mf_scaler.fit_transform(meta_features_train),
-                                           columns=meta_features_train.columns)
-        self.data.meta_features = meta_features_train
+        meta_features_train = pd.DataFrame(
+            self.components.mf_scaler.fit_transform(meta_features_train),
+            columns=meta_features_train.columns
+        )
+        return meta_features_train
 
-    def fit_datasets_similarity_assessor(self):
-        data = self.data
-        components = self.components
-        components.datasets_similarity_assessor.fit(data.meta_features, data.dataset_ids)
+    def fit_datasets_similarity_assessor(self, meta_features: pd.DataFrame, dataset_ids: List[DatasetIDType]
+                                         ) -> KNeighborsSimilarityAssessor:
+        return self.components.datasets_similarity_assessor.fit(meta_features, dataset_ids)
 
-    def fit_model_advisor(self):
-        data = self.data
-        components = self.components
-        components.model_advisor.fit(data.dataset_ids, data.best_models)
+    def fit_model_advisor(self, dataset_ids: List[DatasetIDType], best_models: Sequence[Sequence[EvaluatedModel]]
+                          ) -> DiverseModelAdvisor:
+        return self.components.model_advisor.fit(dataset_ids, best_models)
 
     def fit(self, dataset_ids: Sequence[DatasetIDType], histories: Sequence[Sequence[OptHistory]]):
-        self.load_models(dataset_ids, histories)
-        self.extract_train_meta_features()
-        self.fit_datasets_similarity_assessor()
-        self.fit_model_advisor()
+        d = self.data
+        d.dataset_ids = list(dataset_ids)
+        d.meta_features = self.extract_train_meta_features(d.dataset_ids)
+        self.fit_datasets_similarity_assessor(d.meta_features, d.dataset_ids)
+        d.best_models = self.load_models(dataset_ids, histories)
+        self.fit_model_advisor(d.dataset_ids, d.best_models)
         return self
 
-    def predict(self, datasets_ids) -> List[List[EvaluatedModel]]:
+    def predict(self, datasets_ids: Sequence[DatasetIDType]) -> List[List[EvaluatedModel]]:
         extraction_params = dict(
             fill_input_nans=True, use_cached=False, update_cached=True
         )
@@ -182,7 +196,10 @@ def get_current_formatted_date() -> (datetime, str, str):
 def get_save_dir(time_now_for_path) -> Path:
     save_dir = get_cache_dir(). \
         joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
+    if save_dir.exists():
+        shutil.rmtree(save_dir)
     save_dir.mkdir(parents=True)
+
     return save_dir
 
 
@@ -327,7 +344,8 @@ def main():
     experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
     save_dir = get_save_dir(experiment_date_for_path)
     setup_logging(save_dir)
-    os.environ.putenv('TMPDIR', TMPDIR)
+    if TMPDIR:
+        os.environ.putenv('TMPDIR', TMPDIR)
     progress_file_path = save_dir.joinpath('progress.txt')
     meta_learner_path = save_dir.joinpath('meta_learner.pkl')
 
