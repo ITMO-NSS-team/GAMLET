@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import warnings
+from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, Sequence, Union
 
@@ -12,6 +14,8 @@ from tqdm import tqdm
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
+
+logger = logging.getLogger(__file__)
 
 
 class PymfeExtractor(MetaFeaturesExtractor):
@@ -51,6 +55,9 @@ class PymfeExtractor(MetaFeaturesExtractor):
             else:
                 dataset_id = dataset
                 dataset_class = self.datasets_loader.dataset_class
+            logger.debug(
+                f'{self.__class__.__name__}: extracting metafeatures of dataset {dataset_class.__name__}|{dataset_id}.'
+            )
             meta_features_cached = self._get_meta_features_cache(dataset_id, dataset_class, meta_feature_names)
 
             if use_cached and meta_features_cached:
@@ -59,15 +66,17 @@ class PymfeExtractor(MetaFeaturesExtractor):
                 if not isinstance(dataset, DatasetBase):
                     dataset = self._datasets_loader.load_single(dataset)
                 dataset_data = dataset.get_data()
+                x = dataset_data.x
+                y = dataset_data.y
                 cat_cols_indicator = dataset_data.categorical_indicator
+                if fill_input_nans:
+                    x = self.fill_nans(x, cat_cols_indicator)
+                x = x.to_numpy()
+                y = y.to_numpy()
                 if cat_cols_indicator is not None:
                     cat_cols = [i for i, val in enumerate(cat_cols_indicator) if val]
                 else:
                     cat_cols = 'auto'
-                x = dataset_data.x.to_numpy()
-                y = dataset_data.y.to_numpy()
-                if fill_input_nans:
-                    x = self.fill_nans(x)
                 fit_extractor = self._extractor.fit
                 fit_extractor = partial(fit_extractor, x, y, cat_cols=cat_cols, **fit_kwargs)
                 try:
@@ -104,8 +113,14 @@ class PymfeExtractor(MetaFeaturesExtractor):
         return columns_or_rows
 
     @staticmethod
-    def fill_nans(x):
-        if not isinstance(x, pd.DataFrame):
-            x = pd.DataFrame(x)
-        x = x.fillna(x.median())
-        return x.to_numpy()
+    def fill_nans(x: pd.DataFrame, cat_cols_indicator: Sequence[bool]):
+        x_new = deepcopy(x)
+        for idx, col in enumerate(x.columns):
+            is_categorical = cat_cols_indicator[idx]
+            if is_categorical:
+                most_frequent = x_new[col].value_counts(sort=True, ascending=False).values[0]
+                x_new[col].fillna(most_frequent, inplace=True)
+            else:
+                median = x_new[col].median()
+                x_new[col].fillna(median, inplace=True)
+        return x_new

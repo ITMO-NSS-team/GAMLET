@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from pathlib import Path
 from typing import List, Optional, Union
@@ -11,7 +12,6 @@ from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.quality_metrics_repository import ClassificationMetricsEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot.core.validation.split import tabular_cv_generator
-from golem.core.log import default_log
 from tqdm import tqdm
 from typing_extensions import Literal
 
@@ -20,6 +20,8 @@ from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenML
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.file_system import PathType
 from meta_automl.data_preparation.models_loaders import ModelsLoader
+
+logger = logging.getLogger(__file__)
 
 
 def evaluate_classification_fedot_pipeline(pipeline, input_data):
@@ -55,8 +57,6 @@ class FEDOTPipelinesLoader(ModelsLoader):
                  candidate_pipeline_paths: Optional[List[List[PathType]]] = None,
                  launch_dir: Optional[PathType] = None,
                  datasets_loader: Optional[DatasetsLoader] = None):
-
-        self.log = default_log(self)
 
         self.datasets_loader = datasets_loader or OpenMLDatasetsLoader(allow_names=True)
 
@@ -106,7 +106,7 @@ class FEDOTPipelinesLoader(ModelsLoader):
                                    desc='Importing pipelines', unit='dataset'):
             candidates_for_dataset = [Pipeline.from_serialized(str(p)) for p in paths]
             if not candidates_for_dataset:
-                self.log.warning(f'No pipelines found for the dataset "{dataset}".')
+                logger.warning(f'No pipelines found for the dataset "{dataset}".')
             candidate_pipelines.append(candidates_for_dataset)
         self.candidate_pipelines = candidate_pipelines
 
