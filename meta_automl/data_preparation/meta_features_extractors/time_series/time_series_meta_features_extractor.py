@@ -10,8 +10,7 @@ from fedot_ind.core.repository.initializer_industrial_models import IndustrialMo
 from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
-from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
-from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
+from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, TimeSeriesDatasetsLoader
 from meta_automl.data_preparation.file_system import get_project_root
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 

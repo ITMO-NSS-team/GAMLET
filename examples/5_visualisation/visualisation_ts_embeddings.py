@@ -8,10 +8,9 @@ from matplotlib import pyplot as plt
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import QuantileTransformer
 
-from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
+from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
 from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
-    TimeSeriesFeaturesExtractor
+from meta_automl.data_preparation.meta_features_extractors import TimeSeriesFeaturesExtractor
 
 p = Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets')
 len_d = {i: len(pd.read_csv(Path(p, i, 'data.csv'))) for i in os.listdir(p)}

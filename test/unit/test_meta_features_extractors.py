@@ -3,15 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from meta_automl.data_preparation.dataset import OpenMLDataset
-from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
-from meta_automl.data_preparation.file_system import get_dataset_cache_path_by_id, get_meta_features_cache_path, \
-    get_project_root
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
-from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
-    TimeSeriesFeaturesExtractor
-from test.constants import DATASETS_WITH_CACHED_META_FEATURES, OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD, \
-    TS_DATASETS_IDS_TO_LOAD, TS_DATASETS_WITH_CACHED_META_FEATURES
+from meta_automl.data_preparation.dataset import OpenMLDataset, TimeSeriesDataset
+from meta_automl.data_preparation.file_system import (get_dataset_cache_path_by_id, get_meta_features_cache_path,
+                                                      get_project_root)
+from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor, TimeSeriesFeaturesExtractor
+from test.constants import (DATASETS_WITH_CACHED_META_FEATURES, OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD,
+                            TS_DATASETS_IDS_TO_LOAD, TS_DATASETS_WITH_CACHED_META_FEATURES)
 from test.unit.datasets.general_checks import assert_cache_file_exists, assert_file_unmodified_during_test
 
 

@@ -6,12 +6,11 @@ from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
-from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
+from meta_automl.data_preparation.dataset import TimeSeriesDataset
+from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
-    TimeSeriesFeaturesExtractor
+from meta_automl.data_preparation.meta_features_extractors import TimeSeriesFeaturesExtractor
 from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
 

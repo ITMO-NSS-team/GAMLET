@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from meta_automl.data_preparation.dataset.dataset_base import TimeSeriesData
-from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
+from meta_automl.data_preparation.dataset import TimeSeriesData, TimeSeriesDataset
 from meta_automl.data_preparation.file_system import get_project_root
 
 

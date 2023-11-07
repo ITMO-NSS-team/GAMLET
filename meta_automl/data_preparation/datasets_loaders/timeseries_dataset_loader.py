@@ -1,5 +1,4 @@
-from meta_automl.data_preparation.dataset import DatasetIDType
-from meta_automl.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
+from meta_automl.data_preparation.dataset import DatasetIDType, TimeSeriesDataset
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 
 
