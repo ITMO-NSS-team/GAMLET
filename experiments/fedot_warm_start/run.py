@@ -23,7 +23,6 @@ from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from fedot.core.repository.quality_metrics_repository import MetricsRepository, QualityMetricsEnum
 from fedot.core.validation.split import tabular_cv_generator
-from golem.core.log import Log
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
@@ -71,7 +70,6 @@ COMMON_FEDOT_PARAMS['seed'] = SEED
 class KNNSimilarityAdvice(MetaLearningApproach):
     def __init__(self, n_best_dataset_models_to_memorize: int,
                  mf_extractor_params: dict, assessor_params: dict, advisor_params: dict):
-
         self.parameters = self.Parameters(
             n_best_dataset_models_to_memorize=n_best_dataset_models_to_memorize,
             mf_extractor_params=mf_extractor_params,
@@ -171,13 +169,13 @@ class KNNSimilarityAdvice(MetaLearningApproach):
 def setup_logging(save_dir: Path):
     """ Creates "log.txt" at the "save_dir" and redirects all logging output to it. """
     log_file = save_dir.joinpath('log.txt')
-    Log(log_file=log_file)
     logging.basicConfig(
         filename=log_file,
         filemode='a',
         format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
         datefmt='%H:%M:%S',
         force=True,
+        level=logging.DEBUG,
     )
 
 
@@ -196,6 +194,8 @@ def get_current_formatted_date() -> (datetime, str, str):
 def get_save_dir(time_now_for_path) -> Path:
     save_dir = get_cache_dir(). \
         joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
+    if 'debug' in CONFIG_PATH.name:
+        save_dir = save_dir.with_name('debug_' + save_dir.name)
     if save_dir.exists():
         shutil.rmtree(save_dir)
     save_dir.mkdir(parents=True)
@@ -268,7 +268,8 @@ def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_as
     x, y = transform_data_for_fedot(dataset.get_data())
 
     time_start = timeit.default_timer()
-    fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **COMMON_FEDOT_PARAMS)
+    fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, logging_level=logging.DEBUG,
+                  **COMMON_FEDOT_PARAMS)
     fedot.fit(x, y)
     automl_time = timeit.default_timer() - time_start
 
