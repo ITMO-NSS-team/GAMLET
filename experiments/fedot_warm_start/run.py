@@ -20,7 +20,6 @@ from fedot.core.optimisers.objective import MetricsObjective, PipelineObjectiveE
 from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from fedot.core.repository.quality_metrics_repository import MetricsRepository, QualityMetricsEnum
-from golem.core.log import Log
 from golem.core.optimisers.fitness import Fitness
 from pecapiku import CacheDict
 from sklearn.model_selection import train_test_split
@@ -66,13 +65,13 @@ COLLECT_METRICS[COLLECT_METRICS.index('neg_log_loss')] = 'logloss'
 def setup_logging(save_dir: Path):
     """ Creates "log.txt" at the "save_dir" and redirects all logging output to it. """
     log_file = save_dir.joinpath('log.txt')
-    Log(log_file=log_file)
     logging.basicConfig(
         filename=log_file,
         filemode='a',
         format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
         datefmt='%H:%M:%S',
         force=True,
+        level=logging.DEBUG,
     )
 
 
@@ -91,6 +90,8 @@ def get_current_formatted_date() -> Tuple[datetime, str, str]:
 def get_save_dir(time_now_for_path) -> Path:
     save_dir = get_cache_dir(). \
         joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
+    if 'debug' in CONFIG_PATH.name:
+        save_dir = save_dir.with_name('debug_' + save_dir.name)
     if save_dir.exists():
         shutil.rmtree(save_dir)
     save_dir.mkdir(parents=True)
