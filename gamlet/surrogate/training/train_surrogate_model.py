@@ -22,7 +22,7 @@ from gamlet.data_preparation.surrogate_dataset import (GraphDataset,
 from gamlet.surrogate import surrogate_model
 
 
-def get_datasets(path, is_pair=False, index_col=0):
+def get_datasets(path, is_pair=False, is_folded = False index_col=0):
     """Loading preprocessed data and creating Dataset objects for model training
     Parameters:
     -----------
@@ -31,10 +31,12 @@ def get_datasets(path, is_pair=False, index_col=0):
     """
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)
-    datasets = pd.read_csv(os.path.join(path, 'datasets_full.csv'), index_col=index_col).fillna(0)
+    datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=index_col).fillna(0)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'))
     task_pipe_comb = task_pipe_comb[task_pipe_comb.y < 10]
 
+    print('len(task_pipe_comb)', len(task_pipe_comb))
+    
     VAL_R = 0.15
     TEST_R = 0.15
     tasks_in_file = set(datasets.index.get_level_values(0))
@@ -51,14 +53,19 @@ def get_datasets(path, is_pair=False, index_col=0):
             (VAL_R, TEST_R),
         )
 
+    print('len0        ', len(train_task_set), len(val_task_set), len(test_task_set))
+    
     if len(val_task_set) == 0:
         dataset_types = defaultdict(list)
         for t in train_task_set:
             dataset_types[t.split('_')[0]].append(t)
+            
+            
         train_task_types, val_task_types = random_train_val_test_split(list(dataset_types.keys()), (VAL_R,))
         train_task_set = set([item for d_type in train_task_types for item in dataset_types[d_type]])
         val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
-
+        
+    print('len1        ', len(train_task_set), len(val_task_set), len(test_task_set))
     if is_pair:
         train_dataset = PairDataset(
             task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -90,6 +97,8 @@ def get_datasets(path, is_pair=False, index_col=0):
     else:
         meta_data["in_size"] = len(pipelines[0].in_size)
     meta_data["dim_dataset"] = datasets.shape[1]
+    
+    print('len', len(train_task_set), len(val_task_set), len(test_task_set))
     return train_dataset, val_dataset, test_dataset, meta_data
 
 
@@ -136,7 +145,7 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
         is_pair = True
 
-    if config["model"]["model_parameters"]["dataset_encoder_type"] == "column":
+    if config["model"]["model_parameters"]["dataset_encoder_type"] == "l":
         index_col = [0, 1]
     else:
         index_col = 0
