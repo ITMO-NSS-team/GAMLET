@@ -56,9 +56,8 @@ def main():
     meta_features = extractor.extract(datasets)
     meta_features = meta_features.dropna(axis=1, how='any')
     # Split datasets to train (preprocessing) and test (actual meta-algorithm objects).
-    mf_train, mf_test = train_test_split(meta_features, train_size=0.75, random_state=42)
-    did_train = mf_train.index
-    did_test = mf_test.index
+    mf_train, mf_test, did_train, did_test = train_test_split(meta_features, meta_features.index, train_size=0.75,
+                                                              random_state=42)
     # Dimension reduction
     q_t = QuantileTransformer(output_distribution='normal')
     mf_train_v = q_t.fit_transform(mf_train)
