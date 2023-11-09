@@ -12,18 +12,16 @@ def main():
     extractor_params = get_extractor_params(get_configs_dir() / "use_features.json")
 
     converter = KnowledgeBaseToDataset(
-        knowledge_base_directory=get_data_dir() / "knowledge_base_1",
-        dataset_directory=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines",
-        meta_features_extractor=PymfeExtractor(**extractor_params),
+        knowledge_base_directory=get_data_dir() / "knowledge_base_time_series_0/knowledge_base_time_series_0",
+        # knowledge_base_1"
+        dataset_directory=get_data_dir() / "timeseries",  # pymfe_meta_features_and_fedot_pipelines
+        data_type="ts",
         datasets_loader=datasets_loader,
-        train_test_split_name="train_test_datasets_classification.csv",
-        task_type="classification",
-        fitness_metric="fitness",
-        meta_features_preprocessor=FeaturesPreprocessor(),
-        models_loader_kwargs={"datasets_loader": datasets_loader}
+        meta_features_extractor=PymfeExtractor(**extractor_params),
+        meta_features_preprocessor=FeaturesPreprocessor()
     )
     converter.convert_pipelines()
-    converter.convert_datasets()
+    # converter.convert_datasets()
 
 
 if __name__ == '__main__':

@@ -2,17 +2,16 @@ import json
 import os
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Tuple
 
 import numpy as np
 import pandas as pd
 from fedot.core.pipelines.pipeline import Pipeline
 from torch_geometric.data import Data
 
-from gamlet.components.datasets_loaders import DatasetsLoader
 from gamlet.components.feature_preprocessors import FeaturesPreprocessor
 from gamlet.components.meta_features_extractors import MetaFeaturesExtractor
-from gamlet.components.models_loaders import KnowledgeBaseModelsLoader
+from gamlet.components.models_loaders import KBTSModelsLoader, KnowledgeBaseModelsLoader
 from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from gamlet.data_preparation.dataset import (CustomDataset,
                                              DataNotFoundError,
@@ -71,45 +70,36 @@ class KnowledgeBaseToDataset:
             self,
             knowledge_base_directory: os.PathLike,
             dataset_directory: os.PathLike,
+            data_type: str,
             meta_features_extractor: MetaFeaturesExtractor,
-            datasets_loader: DatasetsLoader,
-            split: Literal['train', 'test', 'all'] = 'all',
-            train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
-            task_type: Optional[str] = "classification",
-            fitness_metric: Optional[str] = "f1",
+            split: Literal['train', 'test', 'all'] = "all",
             exclude_datasets=None,
             meta_features_preprocessor: FeaturesPreprocessor = None,
             use_hyperpar: bool = False,
-            models_loader_kwargs=None,
     ) -> None:
         if exclude_datasets is None:
             exclude_datasets = []
-        if models_loader_kwargs is None:
-            models_loader_kwargs = {}
-        if task_type != "classification":
-            raise NotImplementedError("Current version is for `task_type='classification'`")
 
         self.knowledge_base_directory = knowledge_base_directory
         self.dataset_directory = dataset_directory
-        self.train_test_split_name = train_test_split_name
-        self.task_type = task_type
         self.split = split
-        self.fitness_metric = fitness_metric
         self.exclude_datasets = exclude_datasets
         self.meta_features_preprocessors = meta_features_preprocessor
+        self.use_hyperpar = use_hyperpar
 
         ensure_dir_exists(Path(self.dataset_directory, self.split))
 
         self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")
         self.meta_features_extractor = meta_features_extractor
-        self.datasets_loader = datasets_loader
 
-        self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory, **models_loader_kwargs)
-        df_datasets = self.models_loader.parse_datasets(self.split, self.task_type)
+        if data_type == 'table':
+            self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory)
+        elif data_type == 'ts':
+            self.models_loader = KBTSModelsLoader(self.knowledge_base_directory)
+        df_datasets = self.models_loader.load_dataset_split(self.split)
         self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x not in self.exclude_datasets)]
 
-        self.use_hyperpar = use_hyperpar
 
     def _check_for_duplicated_datasets(self):
         occurences = self.df_datasets.dataset_id.value_counts()
@@ -118,7 +108,7 @@ class KnowledgeBaseToDataset:
         assert unique_number_of_occurences.pop() == 1, f"Duplicated datasets detected. Check datasets: \n{occurences}"
 
     def _process(self) -> Tuple[pd.DataFrame, List[Dict[str, float]], List[Data], Dict[DatasetIDType, bool]]:
-        df_dataset_models = pd.DataFrame(self.models_loader.load(fitness_metric=self.fitness_metric))
+        df_dataset_models = pd.DataFrame(self.models_loader.load())
         df_dataset_models['task_id'] = df_dataset_models.metadata.apply(lambda x: x['dataset_id'])
         df_dataset_models['y'] = df_dataset_models['fitness'].astype(float)
 

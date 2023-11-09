@@ -22,14 +22,14 @@ model:
     global_pool: "mean"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
-    dataset_encoder_type: "agg"
+    dataset_encoder_type: "column"
   weight_decay: 0.0001
   lr: 0.001
   temperature: 5
   
 
 dataset_params:
-  root_path: "./data/TS"
+  root_path: "./data/timeseries/all"
 
 trainer:
   log_every_n_steps: 1
