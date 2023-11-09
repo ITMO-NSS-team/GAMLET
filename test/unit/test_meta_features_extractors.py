@@ -33,7 +33,7 @@ def timeseries_dataset_ids():
 
 def test_table_meta_features_extraction(dataset_ids):
     extractor = PymfeExtractor(extractor_params={'groups': 'general'})
-    meta_features = extractor.extract(dataset_ids)
+    meta_features = extractor.extract(dataset_ids, fill_input_nans=True)
     assert list(meta_features.index) == dataset_ids
     for dataset_id in dataset_ids:
         meta_features_cache_path = get_meta_features_cache_path(PymfeExtractor, OpenMLDataset, dataset_id)
