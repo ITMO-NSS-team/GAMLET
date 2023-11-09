@@ -56,8 +56,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
                 input_data = InputData(idx=np.array([0]), features=np.array(features).reshape(1, -1), target=None,
                                        task=Task(TaskTypesEnum.classification),
                                        data_type=DataTypesEnum.table)
-                with IndustrialModels():
-                    pred = self._extractor.root_node.predict(input_data).predict
+                pred = self._extractor.root_node.predict(input_data).predict
                 meta_features_extracted = pred[0]
                 meta_features_extracted = dict(zip(self.meta_feature_names, meta_features_extracted))
                 rows[dataset_id] = meta_features_extracted
