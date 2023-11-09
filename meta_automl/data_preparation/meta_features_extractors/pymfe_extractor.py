@@ -118,9 +118,8 @@ class PymfeExtractor(MetaFeaturesExtractor):
         for idx, col in enumerate(x.columns):
             is_categorical = cat_cols_indicator[idx]
             if is_categorical:
-                most_frequent = x_new[col].value_counts(sort=True, ascending=False).values[0]
-                x_new[col].fillna(most_frequent, inplace=True)
+                fill_value = x_new[col].mode(dropna=True)
             else:
-                median = x_new[col].median()
-                x_new[col].fillna(median, inplace=True)
+                fill_value = x_new[col].median(skipna=True)
+            x_new[col].fillna(fill_value, inplace=True)
         return x_new
