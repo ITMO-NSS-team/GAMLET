@@ -39,7 +39,7 @@ from meta_automl.data_preparation.models_loaders import FedotHistoryLoader
 from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
 
-CONFIG_PATH = Path(__file__).parent.joinpath('config.yaml')
+CONFIG_PATH = Path(__file__).parent.joinpath('config_light.yaml')
 
 with open(CONFIG_PATH, 'r') as config_file:
     config = yaml.load(config_file, yaml.Loader)
