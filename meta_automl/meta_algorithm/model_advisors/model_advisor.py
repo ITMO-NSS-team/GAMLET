@@ -1,84 +1,92 @@
-from abc import abstractmethod
-from typing import Dict, Iterable, List, Sequence
-
-import pandas as pd
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional, Sequence, Union
 
 from meta_automl.data_preparation.dataset import DatasetIDType
-from meta_automl.data_preparation.model import Model
-from meta_automl.meta_algorithm.datasets_similarity_assessors import DatasetsSimilarityAssessor
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 
 
-class ModelAdvisor:
+class ModelAdvisor(ABC):
     """Root class for model recommendation.
 
-    Suggests pre-saved models for for the most similar datasets.
+    Suggests pre-saved models for the most similar datasets.
     """
 
     @abstractmethod
-    def predict(self, *args, **kwargs) -> List[List[Model]]:
+    def predict(self, *args, **kwargs) -> List[List[EvaluatedModel]]:
         raise NotImplementedError()
 
 
-class SimpleSimilarityModelAdvisor(ModelAdvisor):
+class DatasetSimilarityModelAdvisor(ModelAdvisor):
     """Dataset similarity-based model advisor.
 
     Recommends stored models that are correlated with similar datasets.
     """
 
-    def __init__(self, fitted_similarity_assessor: DatasetsSimilarityAssessor) -> None:
+    def __init__(self, n_best_to_advise: Optional[int] = None):
         """
         Args:
-            fitted_similarity_assessor: dataset similarity assessor.
-        """
-        self.similarity_assessor = fitted_similarity_assessor
-        self.best_models: Dict[DatasetIDType, Sequence[Model]] = {}
+            n_best_to_advise: Number of models to output. Defaults to `None` => all pipelines from memory.
 
-    @property
-    def datasets(self) -> List[str]:
         """
-        Get the names of the datasets.
+        self.n_best_to_advise = n_best_to_advise
+        self.best_models: Dict[DatasetIDType, Sequence[EvaluatedModel]] = {}
 
-        Returns:
-            List of dataset names.
-        """
-        return self.similarity_assessor.datasets
-
-    def fit(self, dataset_names_to_best_pipelines: Dict[DatasetIDType, Sequence[Model]]):
+    def fit(self, dataset_ids: Sequence[DatasetIDType], models: Sequence[Sequence[EvaluatedModel]]):
         """Update the collection of recommended pipelines.
 
         Args:
-            dataset_names_to_best_pipelines: Dictionary of mapped dataset names to a collection of models.
+            dataset_ids: sequence of dataset ids.
+            models: sequence of model sequences for the datasets.
         Returns:
             Self instance.
         """
-        self.best_models.update(dataset_names_to_best_pipelines)
+        self.best_models.update(dict(zip(dataset_ids, models)))
         return self
 
-    def predict(self, meta_features: pd.DataFrame) -> List[List[Model]]:
+    def predict(self, dataset_ids: Sequence[Sequence[DatasetIDType]]) -> List[List[EvaluatedModel]]:
         """Advises pipelines based on meta-learning.
 
         Args:
-            meta_features: Pandas dataframe of meta features.
+            dataset_ids: sequence of sequences, storing dataset ids, for which the best models should be retrieved.
 
         Returns:
             List of lists of advised pipelines.
         """
-        assessor_predictions = self.similarity_assessor.predict(meta_features)
         advised_pipelines = []
-        for similar_datasets in assessor_predictions:
+        for similar_datasets in dataset_ids:
             advised_pipelines.append(self._predict_single(similar_datasets))
         return advised_pipelines
 
-    def _predict_single(self, similar_dataset_ids: Iterable[DatasetIDType]) -> List[Model]:
-        """Advises pipelines based on identifiers of similar datasets.
+    def _predict_single(self, dataset_ids: Sequence[DatasetIDType],
+                        n_best_to_advise: Optional[int] = None) -> List[EvaluatedModel]:
+        """ Advises pipelines based on identifiers of datasets,
+            looking for similar datasets and corresponding models in its knowledge base.
 
         Args:
-            similar_dataset_ids: Iterable object of dataset ids.
+            dataset_ids: Iterable object of dataset ids.
+            n_best_to_advise: default=None
+                Number of models to output. Defaults to `None` => all pipelines from memory.
 
         Returns:
             List of recommended models.
         """
-        dataset_pipelines = []
+        n_best_to_advise = n_best_to_advise or self.n_best_to_advise
+        dataset_models = self._get_all_models_for_datasets(dataset_ids)
+
+        dataset_models = self._sort_models_by_fitness(dataset_models, n_best_to_advise)
+
+        return dataset_models
+
+    def _get_all_models_for_datasets(self, similar_dataset_ids: Sequence[DatasetIDType]) -> List[EvaluatedModel]:
+        dataset_models = []
         for dataset_id in similar_dataset_ids:
-            dataset_pipelines += list(self.best_models.get(dataset_id))
-        return dataset_pipelines
+            dataset_models += list(self.best_models.get(dataset_id))
+        return dataset_models
+
+    @staticmethod
+    def _sort_models_by_fitness(models: Sequence[EvaluatedModel],
+                                n_best_to_advise: Union[int, None]) -> List[EvaluatedModel]:
+        if n_best_to_advise is not None:
+            models = list(sorted(models, key=lambda m: m.fitness, reverse=True))
+            models = models[: n_best_to_advise]
+        return models

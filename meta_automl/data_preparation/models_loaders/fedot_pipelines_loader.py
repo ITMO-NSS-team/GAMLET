@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from pathlib import Path
 from typing import List, Optional, Union
@@ -11,15 +12,16 @@ from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.quality_metrics_repository import ClassificationMetricsEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum
 from fedot.core.validation.split import tabular_cv_generator
-from golem.core.log import default_log
 from tqdm import tqdm
 from typing_extensions import Literal
 
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.file_system import PathType
-from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
+
+logger = logging.getLogger(__file__)
 
 
 def evaluate_classification_fedot_pipeline(pipeline, input_data):
@@ -30,7 +32,9 @@ def evaluate_classification_fedot_pipeline(pipeline, input_data):
     return fitness
 
 
-def get_n_best_fedot_performers(dataset: DatasetBase, pipelines: List[Pipeline], n_best: int = 1) -> List[Model]:
+def get_n_best_fedot_performers(dataset: DatasetBase,
+                                pipelines: List[Pipeline],
+                                n_best: int = 1) -> List[EvaluatedModel]:
     data = dataset.get_data()
     X, y_test = data.x.to_numpy(), data.y.to_numpy()
     input_data = InputData(idx=np.arange(0, len(X)), features=X, target=y_test, data_type=DataTypesEnum.table,
@@ -41,7 +45,7 @@ def get_n_best_fedot_performers(dataset: DatasetBase, pipelines: List[Pipeline],
     for pipeline in tqdm(pipelines, desc='Evaluating pipelines'):
         fitness = evaluate_classification_fedot_pipeline(pipeline, input_data)
         fitnesses.append(fitness)
-        models.append(Model(pipeline, fitness, metric_name, dataset))
+        models.append(EvaluatedModel(pipeline, fitness, metric_name, dataset))
 
     best_models = [models.pop(np.argmax(fitnesses)) for _ in range(min(n_best, len(pipelines)))]
     return best_models
@@ -53,8 +57,6 @@ class FEDOTPipelinesLoader(ModelsLoader):
                  candidate_pipeline_paths: Optional[List[List[PathType]]] = None,
                  launch_dir: Optional[PathType] = None,
                  datasets_loader: Optional[DatasetsLoader] = None):
-
-        self.log = default_log(self)
 
         self.datasets_loader = datasets_loader or OpenMLDatasetsLoader(allow_names=True)
 
@@ -69,7 +71,7 @@ class FEDOTPipelinesLoader(ModelsLoader):
             candidate_pipeline_paths = candidate_pipeline_paths or self._define_pipeline_paths()
             self._import_pipelines(candidate_pipeline_paths)
 
-    def load(self, datasets: Union[List[str], Literal['auto']] = 'auto', n_best: int = 1) -> List[List[Model]]:
+    def load(self, datasets: Union[List[str], Literal['auto']] = 'auto', n_best: int = 1) -> List[List[EvaluatedModel]]:
         if datasets != 'auto':
             datasets = self._get_datasets_from_names(datasets)
             difference = set(d.name for d in datasets) - set(self.dataset_ids)
@@ -104,7 +106,7 @@ class FEDOTPipelinesLoader(ModelsLoader):
                                    desc='Importing pipelines', unit='dataset'):
             candidates_for_dataset = [Pipeline.from_serialized(str(p)) for p in paths]
             if not candidates_for_dataset:
-                self.log.warning(f'No pipelines found for the dataset "{dataset}".')
+                logger.warning(f'No pipelines found for the dataset "{dataset}".')
             candidate_pipelines.append(candidates_for_dataset)
         self.candidate_pipelines = candidate_pipelines
 

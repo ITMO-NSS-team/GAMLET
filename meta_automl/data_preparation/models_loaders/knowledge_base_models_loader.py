@@ -12,8 +12,8 @@ from fedot.core.pipelines.pipeline import Pipeline
 from typing_extensions import Literal
 
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.file_system import get_data_dir
-from meta_automl.data_preparation.model import Model
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 
 DEFAULT_KNOWLEDGE_BASE_PATH = get_data_dir() / 'knowledge_base_0'
@@ -39,7 +39,7 @@ def process_record(df, knowledge_base_path):
         metric_value = row['fitness']
         # fitness = SingleObjFitness(metric_value)
         metadata = dict(row)
-        models.append(Model(predictor, metric_value, 'fitness', row['dataset_cache'], metadata))
+        models.append(EvaluatedModel(predictor, metric_value, 'fitness', row['dataset_cache'], metadata))
     return models
 
 
@@ -58,7 +58,7 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
             self,
             dataset_ids: Optional[Sequence[str]] = None,
             fitness_metric: str = 'f1',
-    ) -> List[Model]:
+    ) -> List[EvaluatedModel]:
         if self.df_knowledge_base is None:
             knowledge_base_split_file = self.knowledge_base_path.joinpath('knowledge_base.csv')
             self.df_knowledge_base = pd.read_csv(knowledge_base_split_file)

@@ -3,17 +3,19 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 import torch
-from torch_geometric.loader import DataLoader
-from torch_geometric.data import Data
-
-from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
-from meta_automl.data_preparation.model import Model
-from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
-from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
-from meta_automl.data_preparation.dataset import DatasetBase
-from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 from golem.core.optimisers.fitness import SingleObjFitness
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
+
+from meta_automl.data_preparation.dataset import DatasetBase
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
+from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
+from meta_automl.data_preparation.file_system import get_data_dir
+from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir
+from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
+from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
+from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
+from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
 
 class SurrogateGNNPipelineAdvisor(ModelAdvisor):
@@ -31,19 +33,21 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         self.pipeline_dataloader = DataLoader(pipelines, batch_size=1)
 
         # loading surrogate model
+        checkpoints_dir = get_checkpoints_dir() / 'tabular'
         self.surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
-            checkpoint_path="./experiments/base/checkpoints/best.ckpt",
-            hparams_file="./experiments/base/hparams.yaml"
+            checkpoint_path=checkpoints_dir / 'checkpoints/best.ckpt',
+            hparams_file=checkpoints_dir / 'hparams.yaml'
         )
         self.surrogate_model.eval()
 
         # Prepare dataset extractor and extract metafeatures
-        extractor_params = get_extractor_params('configs/use_features.json')
+        config_dir = get_configs_dir() / 'use_features.json'
+        extractor_params = get_extractor_params(config_dir)
         self.meta_features_extractor = PymfeExtractor(
             extractor_params=extractor_params,
         )
         self.meta_features_preprocessor = FeaturesPreprocessor(
-            load_path="./data/pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
+            load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
             extractor_params=extractor_params)
 
     def _preprocess_dataset_features(self, dataset):
@@ -55,7 +59,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         dset_data_loader = DataLoader([dset_data], batch_size=1)
         return next(iter(dset_data_loader))
 
-    def _predict_single(self, dataset: DatasetBase, k) -> List[Model]:
+    def _predict_single(self, dataset: DatasetBase, k) -> List[EvaluatedModel]:
         """Predict optimal pipelines for given dataset.
         Parameters
         ----------
@@ -81,14 +85,14 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         best_models = []
         for i in indx[-k:][::-1]:
             best_models.append(
-                Model(
+                EvaluatedModel(
                     self.pipelines_fedot[i],
                     SingleObjFitness(scores[i]),
                     'surrogate_fitness',
-                    None))
+                    dataset))
         return best_models
 
-    def predict(self, datasets: List[DatasetBase], k: int = 5) -> List[List[Model]]:
+    def predict(self, datasets: List[DatasetBase], k: int = 5) -> List[List[EvaluatedModel]]:
         """Predict optimal pipelines for given list of datasets dataset.
         Parameters
         ----------
@@ -98,7 +102,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
             number of pipelines to predict (default: 5)
         Returns
         -------
-        top_models : List[List[Model]]
+        top_models : List[List[EvaluatedModel]]
             List of top models for each dataset.
         """
         return [self._predict_single(dset, k) for dset in datasets]

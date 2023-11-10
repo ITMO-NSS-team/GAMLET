@@ -1,4 +1,4 @@
-from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
+from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
 
 
 def get_datasets():

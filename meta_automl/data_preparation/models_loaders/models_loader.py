@@ -1,12 +1,11 @@
-from abc import abstractmethod
-
+from abc import ABC, abstractmethod
 from typing import List
 
-from meta_automl.data_preparation.model import Model
+from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 
 
-class ModelsLoader:
+class ModelsLoader(ABC):
 
     @abstractmethod
-    def load(self, *args, **kwargs) -> List[List[Model]]:
+    def load(self, *args, **kwargs) -> List[List[EvaluatedModel]]:
         raise NotImplementedError()

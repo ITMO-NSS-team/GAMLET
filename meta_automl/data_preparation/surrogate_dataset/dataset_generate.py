@@ -1,8 +1,8 @@
 import json
 import os
-import pathlib
 import pickle
-from typing import Any, Dict, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,7 @@ from torch_geometric.data import Data
 from meta_automl.data_preparation.dataset import (CustomDataset,
                                                   DataNotFoundError,
                                                   DatasetData, DatasetIDType)
+from meta_automl.data_preparation.file_system.file_system import ensure_dir_exists
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
@@ -66,10 +67,10 @@ def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor,
 class KnowledgeBaseToDataset:
     def __init__(
             self,
-            knowledge_base_directory: str,
-            dataset_directory: str,
+            knowledge_base_directory: os.PathLike,
+            dataset_directory: os.PathLike,
             meta_features_extractor: MetaFeaturesExtractor,
-            split: Optional[str] = "all",  # Can be train, test, all
+            split: Literal['train', 'test', 'all'] = 'all',
             train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
             task_type: Optional[str] = "classification",
             fitness_metric: Optional[str] = "f1",
@@ -94,7 +95,7 @@ class KnowledgeBaseToDataset:
         self.exclude_datasets = exclude_datasets
         self.meta_features_preprocessors = meta_features_preprocessors
 
-        self._maybe_create_dataset_directory(os.path.join(self.dataset_directory, self.split))
+        ensure_dir_exists(Path(self.dataset_directory, self.split))
 
         self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")
@@ -112,11 +113,7 @@ class KnowledgeBaseToDataset:
         assert len(unique_number_of_occurences) == 1, f"Duplicated datasets detected. Check datasets: \n{occurences}"
         assert unique_number_of_occurences.pop() == 1, f"Duplicated datasets detected. Check datasets: \n{occurences}"
 
-    def _maybe_create_dataset_directory(self, directory: str) -> None:
-        if not os.path.exists(directory):
-            pathlib.Path(directory).mkdir(parents=True)
-
-    def _process(self) -> Tuple[List[Dict[str, Union[float, int]]], List[Dict[str, float]], List[int]]:
+    def _process(self) -> Tuple[pd.DataFrame, List[Dict[str, float]], List[Data], Dict[DatasetIDType, bool]]:
         df_dataset_models = pd.DataFrame(self.models_loader.load(fitness_metric=self.fitness_metric))
         df_dataset_models['task_id'] = df_dataset_models.metadata.apply(lambda x: x['dataset_id'])
         df_dataset_models['y'] = df_dataset_models['fitness'].astype(float)
@@ -126,7 +123,6 @@ class KnowledgeBaseToDataset:
             task_pipe_comb = df_dataset_models
         else:
             df_dataset_models['pipeline_hash'] = df_dataset_models.predictor.apply(calc_pipeline_hash).astype(str)
-            task_pipe_comb = df_dataset_models.groupby(['task_id', 'pipeline_hash'])['y'].max().reset_index()
             idxes = df_dataset_models.reset_index().groupby(['task_id', 'pipeline_hash'])['y'].idxmax()
             task_pipe_comb = df_dataset_models.loc[idxes]
             codes, _ = pd.factorize(task_pipe_comb['pipeline_hash'])
@@ -143,8 +139,7 @@ class KnowledgeBaseToDataset:
             self.df_datasets[['dataset_id', 'is_train']].set_index('dataset_id')['is_train'].to_dict(),
         )
 
-    def _save_task_pipe_comb(self, task_pipe_comb: List[Dict[str, Union[float, int]]]):
-        # task_pipe_comb_df = pd.DataFrame.from_records(task_pipe_comb)
+    def _save_task_pipe_comb(self, task_pipe_comb: pd.DataFrame):
         task_pipe_comb.to_csv(
             os.path.join(self.dataset_directory, self.split, "task_pipe_comb.csv"),
             index=False,
@@ -174,13 +169,13 @@ class KnowledgeBaseToDataset:
         with open(os.path.join(self.dataset_directory, self.split, "pipelines.pickle"), "wb") as f:
             pickle.dump(pipelines, f)
 
-    def _save_split(self, is_train_flags: List[int]):
+    def _save_split(self, is_train_flags: Dict[DatasetIDType, bool]):
         split = {
             "train": [],
             "test": [],
         }
         for key, flag in is_train_flags.items():
-            if flag == 1:
+            if flag:
                 split["train"].append(key)
             else:
                 split["test"].append(key)

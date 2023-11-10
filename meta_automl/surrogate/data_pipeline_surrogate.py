@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Any, Callable, Dict
 
 import pandas as pd
@@ -10,7 +11,7 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
 
-def get_extractor_params(filename: str) -> Dict[str, str]:
+def get_extractor_params(filename: os.PathLike) -> Dict[str, str]:
     with open(filename) as f:
         extractor_params = json.load(f)
     return extractor_params
@@ -97,8 +98,8 @@ class PipelineVectorizer:
     def _graph2pipeline_string(self, graph: Graph) -> str:
         pipeline = self.pipeline_adapter._restore(graph)
         pipeline.unfit()
-        pipline_string = pipeline.save()[0].encode()
-        return pipline_string
+        pipeline_string = pipeline.save()[0].encode()
+        return pipeline_string
 
     def _pipeline_to_batch(self, graph: Graph) -> Any:
         pipline_string = self._graph2pipeline_string(graph)

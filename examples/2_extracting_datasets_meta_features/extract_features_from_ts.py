@@ -1,10 +1,9 @@
 import os
 from pathlib import Path
 
-from meta_automl.data_preparation.datasets_loaders.timeseries_dataset_loader import TimeSeriesDatasetsLoader
+from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
 from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors.time_series.time_series_meta_features_extractor import \
-    TimeSeriesFeaturesExtractor
+from meta_automl.data_preparation.meta_features_extractors import TimeSeriesFeaturesExtractor
 
 
 def main():
@@ -20,3 +19,4 @@ def main():
 
 if __name__ == '__main__':
     result = main()
+    print(result)

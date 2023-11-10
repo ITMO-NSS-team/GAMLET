@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import logging
 import warnings
+from copy import deepcopy
 from functools import partial
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Sequence, Union
 
 import numpy as np
 import pandas as pd
 from pymfe.mfe import MFE
+from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset import DatasetBase, DatasetIDType
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
+
+logger = logging.getLogger(__file__)
 
 
 class PymfeExtractor(MetaFeaturesExtractor):
@@ -28,7 +32,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
             raise ValueError("Datasets loader not provided!")
         return self._datasets_loader
 
-    def extract(self, datasets_or_ids: List[Union[DatasetBase, DatasetIDType]],
+    def extract(self, datasets_or_ids: Sequence[Union[DatasetBase, DatasetIDType]],
                 fill_input_nans: bool = False, use_cached: bool = True, update_cached: bool = True,
                 fit_kwargs: Dict[str, Any] = None, extract_kwargs: Dict[str, Any] = None) -> pd.DataFrame:
         fit_kwargs = fit_kwargs or {}
@@ -44,31 +48,35 @@ class PymfeExtractor(MetaFeaturesExtractor):
             columns_or_rows["value"] = []
             columns_or_rows["variable"] = []
 
-        for dataset in datasets_or_ids:
+        for dataset in tqdm(datasets_or_ids, desc='Extracting meta features of the datasets'):
             if isinstance(dataset, DatasetBase):
                 dataset_id = dataset.id_
                 dataset_class = dataset.__class__
             else:
                 dataset_id = dataset
                 dataset_class = self.datasets_loader.dataset_class
+            logger.debug(
+                f'{self.__class__.__name__}: extracting metafeatures of dataset {dataset_class.__name__}|{dataset_id}.'
+            )
             meta_features_cached = self._get_meta_features_cache(dataset_id, dataset_class, meta_feature_names)
 
-            logging.critical(f'Extracting meta features of the dataset {dataset}...')
             if use_cached and meta_features_cached:
                 columns_or_rows[dataset_id] = meta_features_cached
             else:
                 if not isinstance(dataset, DatasetBase):
                     dataset = self._datasets_loader.load_single(dataset)
                 dataset_data = dataset.get_data()
+                x = dataset_data.x
+                y = dataset_data.y
                 cat_cols_indicator = dataset_data.categorical_indicator
+                if fill_input_nans:
+                    x = self.fill_nans(x, cat_cols_indicator)
+                x = x.to_numpy()
+                y = y.to_numpy()
                 if cat_cols_indicator is not None:
                     cat_cols = [i for i, val in enumerate(cat_cols_indicator) if val]
                 else:
                     cat_cols = 'auto'
-                x = dataset_data.x.to_numpy()
-                y = dataset_data.y.to_numpy()
-                if fill_input_nans:
-                    x = self.fill_nans(x)
                 fit_extractor = self._extractor.fit
                 fit_extractor = partial(fit_extractor, x, y, cat_cols=cat_cols, **fit_kwargs)
                 try:
@@ -105,8 +113,13 @@ class PymfeExtractor(MetaFeaturesExtractor):
         return columns_or_rows
 
     @staticmethod
-    def fill_nans(x):
-        if not isinstance(x, pd.DataFrame):
-            x = pd.DataFrame(x)
-        x = x.fillna(x.median())
-        return x.to_numpy()
+    def fill_nans(x: pd.DataFrame, cat_cols_indicator: Sequence[bool]):
+        x_new = deepcopy(x)
+        for idx, col in enumerate(x.columns):
+            is_categorical = cat_cols_indicator[idx]
+            if is_categorical:
+                fill_value = x_new[col].mode(dropna=True)
+            else:
+                fill_value = x_new[col].median(skipna=True)
+            x_new[col].fillna(fill_value, inplace=True)
+        return x_new

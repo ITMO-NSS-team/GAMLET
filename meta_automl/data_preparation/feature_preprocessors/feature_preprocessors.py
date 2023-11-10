@@ -1,3 +1,4 @@
+import os
 import pickle
 from typing import Any, Dict, Optional, Union
 
@@ -7,21 +8,21 @@ from sklearn.preprocessing import StandardScaler
 
 
 class FeaturesPreprocessor:
-    """Wrapper over features preporcessors.
+    """Wrapper over features preprocessors.
 
     If a feature preprocessor is not defined, use `sklearn.preprocessing.StandartScaler` by default during fit.
 
     Parameters:
     -----------
     preprocessors: Dict of features preprocessor. Preprocessors should implement `fit` and `transform` methods.
-                   Can be ommited if `load` argumnet is specified.
+                   Can be omitted if `load` argument is specified.
     load_path: Path to load preprocessors from. If specified, `preprocessors` argument will be ignored.
     """
 
     def __init__(
             self,
             preprocessors: Dict[Union[str, int], Any] = None,
-            load_path: str = None,
+            load_path: os.PathLike = None,
             extractor_params: Dict[str, Any] = None,
     ):
         if load_path is not None:
