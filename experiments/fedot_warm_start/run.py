@@ -372,7 +372,8 @@ def main():
     # Gathering knowledge base
     train_histories = {}
     with open(progress_file_path, 'a') as progress_file:
-        for dataset_id in tqdm(dataset_ids, 'FEDOT, all datasets', file=progress_file):
+        for dataset_id in (pbar := tqdm(dataset_ids, 'FEDOT, all datasets', file=progress_file)):
+            pbar.set_description(pbar.desc + f' ({dataset_id})')
             try:
                 timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
                 dataset = algorithm.components.datasets_loader.load_single(dataset_id)
@@ -393,7 +394,8 @@ def main():
         pickle.dump(algorithm, meta_learner_file)
 
     with open(progress_file_path, 'a') as progress_file:
-        for dataset_id in tqdm(dataset_ids_test, 'MetaFEDOT, Test datasets', file=progress_file):
+        for dataset_id in (pbar := tqdm(dataset_ids_test, 'MetaFEDOT, Test datasets', file=progress_file)):
+            pbar.set_description(pbar.desc + f' ({dataset_id})')
             try:
                 # Run meta AutoML
                 # 1
