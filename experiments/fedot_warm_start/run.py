@@ -31,7 +31,7 @@ from meta_automl.data_preparation.dataset import DatasetIDType, OpenMLDataset, T
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
 from meta_automl.data_preparation.file_system import get_cache_dir
 
-CONFIG_PATH = Path(__file__).parent.joinpath('config.yaml')
+CONFIG_PATH = Path(__file__).parent.joinpath('config_light.yaml')
 
 with open(CONFIG_PATH, 'r') as config_file:
     config = yaml.load(config_file, yaml.Loader)
