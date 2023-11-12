@@ -140,3 +140,6 @@ dmypy.json
 # Big dataset
 data/knowledge_base_1_v2/
 data/cache
+
+
+/experiment_logs
