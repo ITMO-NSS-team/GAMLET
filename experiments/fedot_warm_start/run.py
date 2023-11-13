@@ -214,20 +214,23 @@ def get_dataset_ids() -> List[DatasetIDType]:
 def split_datasets(dataset_ids, n_datasets: Optional[int] = None, update_train_test_split: bool = False) \
         -> Tuple[pd.DataFrame, pd.DataFrame]:
     split_path = Path(__file__).parent / 'train_test_datasets_split.csv'
-    if n_datasets is not None:
-        dataset_ids = pd.Series(dataset_ids)
-        dataset_ids = dataset_ids.sample(n=n_datasets, random_state=SEED)
 
-    if n_datasets is not None or update_train_test_split:
+    if update_train_test_split:
         df_split_datasets = openml_datasets_train_test_split(dataset_ids, test_size=TEST_SIZE, seed=SEED)
+        df_split_datasets.to_csv(split_path)
     else:
         df_split_datasets = pd.read_csv(split_path, index_col=0)
 
-    datasets_train = df_split_datasets[df_split_datasets['is_train'] == 1].index.to_list()
-    datasets_test = df_split_datasets[df_split_datasets['is_train'] == 0].index.to_list()
+    df_train = df_split_datasets[df_split_datasets['is_train'] == 1]
+    df_test = df_split_datasets[df_split_datasets['is_train'] == 0]
 
-    if update_train_test_split:
-        df_split_datasets.to_csv(split_path)
+    if n_datasets is not None:
+        frac = n_datasets / len(df_split_datasets)
+        df_train = df_train.sample(frac=frac, random_state=SEED)
+        df_test = df_test.sample(frac=frac, random_state=SEED)
+
+    datasets_train = df_train.index.to_list()
+    datasets_test = df_test.index.to_list()
 
     return datasets_train, datasets_test
 
