@@ -10,7 +10,6 @@ class OpenMLDatasetsLoader(DatasetsLoader):
     dataset_class = OpenMLDataset
 
     def __init__(self, allow_names: bool = False):
-        self.dataset_ids = set()
         self._allow_names = allow_names
 
     def load(self, dataset_ids: Sequence[Union[OpenMLDatasetIDType, str]],
@@ -33,7 +32,5 @@ class OpenMLDatasetsLoader(DatasetsLoader):
             dataset = OpenMLDataset.from_search(dataset_id)
         else:
             dataset = OpenMLDataset(dataset_id)
-
-        self.dataset_ids.add(dataset.id_)
 
         return dataset
