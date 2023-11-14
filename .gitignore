@@ -143,3 +143,4 @@ data/cache
 
 
 /experiment_logs
+data/no_meta_features_and_fedot_pipelines__no_type_with_hyperparams(4_with_learnables)
