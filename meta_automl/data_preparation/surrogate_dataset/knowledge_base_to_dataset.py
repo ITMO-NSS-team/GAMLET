@@ -77,6 +77,7 @@ class KnowledgeBaseToDataset:
             meta_features_preprocessors: Dict[str, Any] = None,
             use_hyperpar: bool = False,
             models_loader_kwargs=None,
+            pipeline_extractor: FEDOTPipelineFeaturesExtractor = FEDOTPipelineFeaturesExtractor("ordinal"),
     ) -> None:
         if exclude_datasets is None:
             exclude_datasets = []
@@ -96,8 +97,8 @@ class KnowledgeBaseToDataset:
 
         self._maybe_create_dataset_directory(os.path.join(self.dataset_directory, self.split))
 
-        self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
-                                                                 operation_encoding="ordinal")
+        self.pipeline_extractor = pipeline_extractor
+        
         self.meta_features_extractor = meta_features_extractor
 
         self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory, **models_loader_kwargs)
@@ -196,6 +197,8 @@ class KnowledgeBaseToDataset:
         self._save_task_pipe_comb(task_pipe_comb)
 
     def convert_datasets(self):
+        import os
+        
         datasets_meta_features = self.meta_features_extractor.extract(
             self.df_datasets['dataset_id'].values.tolist(),
             fill_input_nans=True,
