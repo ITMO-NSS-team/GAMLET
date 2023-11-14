@@ -205,9 +205,6 @@ def get_save_dir(time_now_for_path) -> Path:
 
 def get_dataset_ids() -> List[DatasetIDType]:
     dataset_ids = openml.study.get_suite(99).data
-    if N_DATASETS is not None:
-        dataset_ids = pd.Series(dataset_ids)
-        dataset_ids = dataset_ids.sample(n=N_DATASETS, random_state=SEED)
     return list(dataset_ids)
 
 
@@ -355,6 +352,7 @@ def main():
 
     dataset_ids = get_dataset_ids()
     dataset_ids_train, dataset_ids_test = split_datasets(dataset_ids, N_DATASETS, UPDATE_TRAIN_TEST_DATASETS_SPLIT)
+    dataset_ids = dataset_ids_train + dataset_ids_test
 
     algorithm = KNNSimilarityAdvice(
         N_BEST_DATASET_MODELS_TO_MEMORIZE,
@@ -399,7 +397,7 @@ def main():
 
     with open(progress_file_path, 'a') as progress_file:
         description = 'MetaFEDOT, Test datasets'
-        for dataset_id in (pbar := tqdm(dataset_ids_test, 'MetaFEDOT, Test datasets', file=progress_file)):
+        for dataset_id in (pbar := tqdm(dataset_ids_test, description, file=progress_file)):
             pbar.set_description(description + f' ({dataset_id})')
             try:
                 # Run meta AutoML
