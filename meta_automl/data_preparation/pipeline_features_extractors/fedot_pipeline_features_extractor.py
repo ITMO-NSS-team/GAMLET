@@ -112,7 +112,7 @@ class FEDOTPipelineFeaturesExtractor:
                     parameter_value = -1
                 hyperparams_vec.append(parameter_value)
         hyperparams_vec = np.asarray(hyperparams_vec).reshape(1, -1)
-        hyperparams_vec = self.hyperparameters_embedder(operation_name, hyperparams_vec)
+        hyperparams_vec = self.hyperparameters_embedder(operation_name, hyperparams_vec).reshape(-1)
         return hyperparams_vec
 
     def _operation2vec(self, operation_name: str, operation_parameters: Dict[str, Any]) -> np.ndarray:
@@ -130,7 +130,7 @@ class FEDOTPipelineFeaturesExtractor:
         operations_parameters: List[Dict[str, Any]],
     ) -> torch.Tensor:
         tensor = np.vstack([self._operation2vec(n, p) for n, p in zip(operations_names, operations_parameters)])
-        return torch.Tensor(tensor).to(dtype=torch.long)
+        return torch.Tensor(tensor).to(dtype=torch.float32)
 
     def _get_operations_parameters(self, nodes: List[Dict[str, Any]], order: List[int] = None) -> List[Dict[str, Any]]:
         def extract_parameters(node: Dict[str, Any]) -> Dict[str, Any]:
