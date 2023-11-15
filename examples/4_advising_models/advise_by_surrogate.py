@@ -4,13 +4,11 @@ Run this model from the repo root.
 """
 
 import pickle
-from pathlib import Path
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.data_preparation.file_system.file_system import get_configs_dir, get_project_root
 from meta_automl.meta_algorithm.model_advisors import SurrogateGNNModelAdvisor
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel

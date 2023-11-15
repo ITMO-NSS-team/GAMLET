@@ -71,6 +71,7 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
 
     def _predict_single(
         self,
+        dataset: DatasetBase,
         dataset_features: Data,
         pipelines: List[Pipeline],
         pipelines_features: List[Data],
@@ -80,6 +81,8 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
 
         Parameters
         ----------
+        dataset: DatasetBase
+            Dataset to select pipelines for.
         dataset_features: Data
             Dataset meta-features.
         pipelines: List[Pipeline]
@@ -147,4 +150,7 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
         if datasets_features is None:
             datasets_features = [self._preprocess_dataset_features(dataset) for dataset in datasets]
 
-        return [self._predict_single(dset_feats, pipelines, pipelines_features, k) for dset_feats in datasets_features]
+        top_models = []
+        for dset, dset_feats in zip(datasets, datasets_features):
+            top_models.append(self._predict_single(dset, dset_feats, pipelines, pipelines_features, k))
+        return top_models
