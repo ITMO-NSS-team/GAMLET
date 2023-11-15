@@ -6,7 +6,7 @@ import yaml
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.file_system.file_system import get_configs_dir, get_project_root
-from meta_automl.meta_algorithm.model_advisors import SurrogateGNNPipelineAdvisor
+from meta_automl.meta_algorithm.model_advisors import SurrogateGNNModelAdvisor
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
     with open(pipelines_fedot_data_path, "rb") as input_file:
         pipelines_fedot = pickle.load(input_file)
 
-    advisor = SurrogateGNNPipelineAdvisor(config, pipelines_data, pipelines_fedot)
+    advisor = SurrogateGNNModelAdvisor(config, pipelines_data, pipelines_fedot)
 
     return advisor.predict(dataset)
 

@@ -18,7 +18,7 @@ from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
 
-class SurrogateGNNPipelineAdvisor(ModelAdvisor):
+class SurrogateGNNModelAdvisor(ModelAdvisor):
     """Pipeline advisor based on surrogate GNN model.
 
     Parameters:
