@@ -24,6 +24,7 @@ from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from fedot.core.repository.quality_metrics_repository import MetricsRepository, QualityMetricsEnum
 from fedot.core.validation.split import tabular_cv_generator
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
+from pecapiku import CacheDict
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
@@ -372,6 +373,7 @@ def main():
     save_experiment_params(experiment_params_dict, save_dir)
     # Gathering knowledge base
     train_histories = {}
+    fit_fedot_cached = CacheDict.decorate(fit_fedot, get_cache_dir() / 'fedot_runs.pkl', inner_key='dataset.id')
     with open(progress_file_path, 'a') as progress_file:
         description = 'FEDOT, all datasets'
         for dataset_id in (pbar := tqdm(dataset_ids, description, file=progress_file)):
@@ -380,13 +382,13 @@ def main():
                 timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
                 dataset = algorithm.components.datasets_loader.load_single(dataset_id)
                 run_date = datetime.now()
-                fedot, run_results = fit_fedot(dataset=dataset, timeout=timeout, run_label='FEDOT')
+                fedot, run_results = fit_fedot_cached(dataset=dataset, timeout=timeout, run_label='FEDOT')
                 save_evaluation(run_results, run_date, experiment_date, save_dir)
                 # TODO:
                 #   x Start FEDOT `N_BEST_DATASET_MODELS_TO_MEMORIZE` times, but not in one run
                 if dataset_id not in dataset_ids_test:
                     history = fedot.history
-                    train_histories[dataset_id] = [history]
+                train_histories[dataset_id] = [history]
             except Exception:
                 logging.exception(f'Train dataset "{dataset_id}"')
 
@@ -395,6 +397,8 @@ def main():
     with open(meta_learner_path, 'wb') as meta_learner_file:
         pickle.dump(algorithm, meta_learner_file)
 
+    fit_metafedot_cached = CacheDict.decorate(fit_fedot, fit_fedot, get_cache_dir() / 'metafedot_runs.pkl',
+                                              inner_key='dataset.id')
     with open(progress_file_path, 'a') as progress_file:
         description = 'MetaFEDOT, Test datasets'
         for dataset_id in (pbar := tqdm(dataset_ids_test, description, file=progress_file)):
@@ -410,8 +414,10 @@ def main():
                 # 2
                 dataset = algorithm.components.datasets_loader.load_single(dataset_id)
                 run_date = datetime.now()
-                fedot_meta, fedot_meta_results = fit_fedot(dataset=dataset, timeout=TEST_TIMEOUT, run_label='MetaFEDOT',
-                                                           initial_assumption=assumption_pipelines)
+                fedot_meta, fedot_meta_results = fit_metafedot_cached(dataset=dataset,
+                                                                      timeout=TEST_TIMEOUT,
+                                                                      run_label='MetaFEDOT',
+                                                                      initial_assumption=assumption_pipelines)
                 fedot_meta_results['meta_learning_time_sec'] = meta_learning_time_sec
                 save_evaluation(fedot_meta_results, run_date, experiment_date, save_dir)
 
