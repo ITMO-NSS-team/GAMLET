@@ -1,23 +1,21 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
 import torch
-from golem.core.optimisers.fitness import SingleObjFitness
-from torch_geometric.data import Data
-from torch_geometric.loader import DataLoader
-from torch_geometric.data import Data, Batch
+import torch.nn as nn
 from fedot.core.pipelines.pipeline import Pipeline
+from golem.core.optimisers.fitness import SingleObjFitness
+from torch_geometric.data import Batch, Data
+from torch_geometric.loader import DataLoader
 
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir
-from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
-from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
-from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
+
 
 class SurrogateGNNModelAdvisor(ModelAdvisor):
     """Pipeline advisor based on surrogate GNN model.
@@ -30,6 +28,7 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
 
     def __init__(
         self,
+        surrogate_model: nn.Module,
         dataset_meta_features_extractor: Optional[MetaFeaturesExtractor] = None,
         dataset_meta_features_preprocessor: Optional[FeaturesPreprocessor] = None,
 pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
@@ -38,6 +37,8 @@ pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
 
         Parameters:
         -----------
+        surrogate_model: nn.Module
+            Surrogate model to be used.
         dataset_meta_features_extractor: MetaFeaturesExtractor, optional
             Extractor of a dataset meta-features (defaults: None).
             One can not specify the argument if use `datasets_data` argument in `predict` method.
@@ -50,16 +51,12 @@ pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
 
         """
         # loading surrogate model
-        checkpoints_dir = get_checkpoints_dir() / 'tabular'
-        self.surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
-            checkpoint_path=checkpoints_dir / 'checkpoints/best.ckpt',
-            hparams_file=checkpoints_dir / 'hparams.yaml'
-        )
+        self.surrogate_model = surrogate_model
         self.surrogate_model.eval()
-
         self.dataset_meta_features_extractor = dataset_meta_features_extractor
         self.dataset_meta_features_preprocessor = dataset_meta_features_preprocessor
         self.pipeline_extractor = pipeline_extractor
+        self.device = next(self.surrogate_model.parameters()).device
 
     def _preprocess_dataset_features(self, dataset: DatasetBase) -> Data:
         """Extract dataset features.
