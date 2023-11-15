@@ -10,12 +10,11 @@ from torch_geometric.loader import DataLoader
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.file_system import get_data_dir
-from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
+from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir
 from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
+from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 
 
 class SurrogateGNNModelAdvisor(ModelAdvisor):
@@ -27,7 +26,15 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
         Dict of model parameters. The parameters are: TODO.
     """
 
-    def __init__(self, config: Dict[str, Any], pipelines, pipelines_fedot):
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        pipelines,
+        pipelines_fedot,
+        meta_features_extractor: MetaFeaturesExtractor,
+        meta_features_preprocessor: FeaturesPreprocessor,
+
+    ):
         pipelines = pipelines
         self.pipelines_fedot = pipelines_fedot
         self.pipeline_dataloader = DataLoader(pipelines, batch_size=1)
@@ -40,12 +47,8 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
         )
         self.surrogate_model.eval()
 
-        # Prepare dataset extractor and extract metafeatures
-        config_dir = get_configs_dir() / 'use_features.json'
-        extractor_params = get_extractor_params(config_dir)
-        self.meta_features_extractor = PymfeExtractor(**extractor_params)
-        self.meta_features_preprocessor = FeaturesPreprocessor(
-            load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle")
+        self.meta_features_extractor = meta_features_extractor
+        self.meta_features_preprocessor = meta_features_preprocessor
 
     def _preprocess_dataset_features(self, dataset):
         x = self.meta_features_extractor.extract([dataset], fill_input_nans=True).fillna(0)
