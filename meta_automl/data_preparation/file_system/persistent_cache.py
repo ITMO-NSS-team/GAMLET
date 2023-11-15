@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import pickle
 from collections import defaultdict
@@ -13,6 +14,8 @@ from typing import Literal, Sequence
 from meta_automl.data_preparation.file_system import get_cache_dir
 
 CacheAccess = Literal['r', 're', 'ew', 'rew', 'e']
+
+logger = logging.getLogger(__file__)
 
 COMP_CACHE_FILE_NAME = '_comp_cache.pkl'
 
@@ -52,20 +55,17 @@ def _json_default(obj: object):
 
 def initialize_cache(file_path: os.PathLike) -> dict:
     try:
-        # TODO log
-        print('loading cache file...')
+        logger.info(f'Loading cache file "{file_path}"...')
         with open(file_path, 'rb') as f:
             cache_dict = pickle.load(f)
-    except (FileNotFoundError, AttributeError):
-        # TODO log
-        print('creating cache file...')
+    except FileNotFoundError:
+        logger.info(f'File "{file_path}" not found. Creating a new one...')
         cache_dict = defaultdict(NoCache)
     return cache_dict
 
 
 def update_cache(cache_dict, file_path: os.PathLike):
-    # TODO log
-    print(f'writing cache file...')
+    logger.info(f'Writing cache file "{file_path}"...')
     with open(file_path, 'wb') as f:
         pickle.dump(cache_dict, f)
 
@@ -93,7 +93,7 @@ class Cache(AbstractContextManager):
                 cache_dict = self.cache_dict
 
                 if access == 'e':
-                    # TODO log
+                    logger.info(f'Executing cache value, since no access to the cache is provided...')
                     return func(*args, **kwargs)
 
                 if key:
@@ -103,33 +103,30 @@ class Cache(AbstractContextManager):
 
                     if ismethod(func):
                         hash_objects.insert(0, func.__self__)
-                        # print(func.__self__)
 
                     hash_ = _get_hash(hash_objects)
                 was_read = False
                 if 'r' in access:
-                    # TODO log
-                    print(f'getting cache for {hash_}')
+                    logger.info(f'Getting cache for the key "{hash_}"...')
                     res = cache_dict[hash_]
                 else:
                     res = NoCache()
 
                 if not isinstance(res, NoCache):
+                    logger.info(f'Found the cache for the key "{hash_}": {res}...')
                     was_read = True
 
                 if isinstance(res, NoCache) and 'e' not in access:
                     raise ValueError(
-                        f'No cache found for {func.__name__}({args, kwargs}), '
-                        f'but computation is not allowed ({access}).')
+                        f'No cache found for {func.__name__}({args, kwargs}) in "{self.file_path}", '
+                        f'but computation is not allowed (access="{access}").')
 
                 if 'e' in access and not was_read:
-                    # TODO log
-                    print(f'executing cache for {hash_}...')
+                    logger.info(f'Executing cache value for the key "{hash_}"...')
                     res = func(*args, **kwargs)
 
                 if 'w' in access and not was_read and not isinstance(res, NoCache):
-                    # TODO log
-                    print(f'writing cache for {hash_}...')
+                    logger.info(f'Writing cache for the key "{hash_}": {res}...')
                     cache_dict[hash_] = res
 
                 return res
