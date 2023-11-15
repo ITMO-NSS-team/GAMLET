@@ -7,7 +7,6 @@ import torch.nn as nn
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.optimisers.fitness import SingleObjFitness
 from torch_geometric.data import Batch, Data
-from torch_geometric.loader import DataLoader
 
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
@@ -41,16 +40,14 @@ pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
             Surrogate model to be used.
         dataset_meta_features_extractor: MetaFeaturesExtractor, optional
             Extractor of a dataset meta-features (defaults: None).
-            One can not specify the argument if use `datasets_data` argument in `predict` method.
+            One can not specify the argument if use `datasets_features` argument in `predict` method.
         dataset_meta_features_preprocessor: FeaturesPreprocessor, optional
             Preprocessor of a dataset meta-features (defaults: None).
-            One can not specify the argument if use `datasets_data` argument in `predict` method.
+            One can not specify the argument if use `datasets_features` argument in `predict` method.
         pipeline_extractor: FEDOTPipelineFeaturesExtractor, optional
             Extractor of a pipeline features (defaults: None).
-            One can not specify the argument if use `pipelines_data` argument in `predict` method.
-
+            One can not specify the argument if use `pipelines_features` argument in `predict` method.
         """
-        # loading surrogate model
         self.surrogate_model = surrogate_model
         self.surrogate_model.eval()
         self.dataset_meta_features_extractor = dataset_meta_features_extractor
@@ -80,29 +77,38 @@ pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
 
     def _predict_single(
         self,
-        dataset: DatasetBase,
-        k: int,
+        dataset_features: Data,
         pipelines: List[Pipeline],
-        pipeline_dataloader: DataLoader,
+        pipelines_features: List[Data],
+        k: int,
         ) -> List[EvaluatedModel]:
         """Select optimal pipelines for given dataset.
+
         Parameters
         ----------
-        dataset: DatasetBase
-            dataset
+        dataset_features: Data
+            Dataset meta-features.
+        pipelines: List[Pipeline]
+            List of pipelines to select from.
+        pipelines_features: List[Data]
+            Extracted pipelines features to infer surrogate on.
         k: int, optional
-            number of pipelines to predict (default: 5)
+            Number of pipelines to predict (default: 5)
+
         Returns
         -------
         top_models : [Model]
             Top models for dataset.
+
         """
-        x_dset = self._preprocess_dataset_features(dataset)
+        dataset_features = Batch.from_data_list([dataset_features,]).to(self.device)
 
         scores = []
         with torch.no_grad():
-            for batch in pipeline_dataloader:
-                scores.append(torch.squeeze(self.surrogate_model(batch, x_dset)).numpy())
+            for pipeline_features in pipelines_features:
+                pipeline_features = Batch.from_data_list([pipeline_features,]).to(self.device)
+                score = self.surrogate_model(pipeline_features, dataset_features).cpu().item()
+                scores.append(score)
 
         scores = np.array(scores)
         indx = np.argsort(scores)
@@ -122,8 +128,8 @@ pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
         pipelines: List[Pipeline],
         datasets: List[DatasetBase],
         k: int = 5,
-        pipelines_data: Optional[List[Data]] = None,
-        datasets_data: Optional[List[Data]] = None,
+        pipelines_features: Optional[List[Data]] = None,
+        datasets_features: Optional[List[Data]] = None,
     ) -> List[List[EvaluatedModel]]:
         """Select optimal pipelines for given list of datasets.
 
@@ -135,30 +141,20 @@ pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
             List of pipelines to select from.
         k: int, optional
             Number of pipelines to predict per dataset (default: 5).
-        pipelines_as_data: List[Data], optional
-            Extracted pipelines data to infer surrogate on (default: None).
-        datasets_data: List[Data], optional
-            Extracted datasets data to infer surrogate on (default: None).
-
+        pipelines_features: List[Data], optional
+            Extracted pipelines features to infer surrogate on (default: None).
+        datasets_features: List[Data], optional
+            Extracted datasets features to infer surrogate on (default: None).
         Returns
         -------
         top_models : List[List[EvaluatedModel]]
             List of top models for each dataset.
 
         """
-        pipeline_dataloader: Batch
-        datasets_dataloader: Batch
+        if pipelines_features is None:
+            pipelines_features = [self.pipeline_extractor(pipeline.save()[0]) for pipeline in pipelines]
 
-        if pipelines_data is not None:
-            pipeline_dataloader = DataLoader(pipelines_data, batch_size=1)
-        else:
-            pipelines_data = [self.pipeline_extractor(pipeline.save()[0]) for pipeline in pipelines]
-            pipeline_dataloader = DataLoader(pipelines_data, batch_size=1)
+        if datasets_features is None:
+            datasets_features = [self._preprocess_dataset_features(dataset) for dataset in datasets]
 
-        if datasets_data is not None:
-            datasets_dataloader = DataLoader(datasets_data, batch_size=1)
-        else:
-            datasets_data = [self._preprocess_dataset_features(dataset) for dataset in datasets]
-            datasets_dataloader = DataLoader(datasets_data, batch_size=1)
-
-        return [self._predict_single(dset, k, pipelines, pipeline_dataloader) for dset in iter(datasets_dataloader)]
+        return [self._predict_single(dset_feats, pipelines, pipelines_features, k) for dset_feats in datasets_features]
