@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
-from typing import Any, Dict, TYPE_CHECKING, Type
+from typing import Any, TYPE_CHECKING, Type
 
 import openml
 
@@ -11,7 +10,6 @@ from meta_automl.data_preparation.file_system.file_system import ensure_dir_exis
 
 if TYPE_CHECKING:
     from meta_automl.data_preparation.dataset import DatasetBase
-    from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 
 
 class CacheOperator:
@@ -44,7 +42,7 @@ def _get_cache_path(object_class: Type[CacheOperator], object_id: str, _create_p
 
 def get_dataset_cache_path(dataset: DatasetBase) -> Path:
     class_ = dataset.__class__
-    id_ = dataset.id_
+    id_ = dataset.id
     return _get_cache_path(class_, str(id_))
 
 
@@ -52,47 +50,15 @@ def get_dataset_cache_path_by_id(class_: Type[DatasetBase], id_: Any) -> Path:
     return _get_cache_path(class_, str(id_))
 
 
-def get_meta_features_cache_path(extractor_class: Type[MetaFeaturesExtractor], dataset_class: Type[DatasetBase],
-                                 dataset_id: Any) -> Path:
-    return _get_cache_path(extractor_class, str(dataset_id), dataset_class=dataset_class.__name__)
-
-
-def get_local_meta_features(extractor_class: Type[MetaFeaturesExtractor], dataset_class: Type[DatasetBase],
-                            dataset_id: Any) -> Dict[str, Any]:
-    meta_features_file = get_meta_features_cache_path(extractor_class, dataset_class, dataset_id)
-    if not meta_features_file.exists():
-        return {}
-    with open(meta_features_file, 'rb') as f:
-        meta_features = pickle.load(f)
-    return meta_features
-
-
-def update_local_meta_features(extractor_class: Type[MetaFeaturesExtractor], dataset_class: Type[DatasetBase],
-                               dataset_id: Any, meta_features: Dict[str, Any]):
-    meta_features_file = get_meta_features_cache_path(extractor_class, dataset_class, dataset_id)
-    meta_features_old = get_local_meta_features(extractor_class, dataset_class, dataset_id)
-    with open(meta_features_file, 'wb') as f:
-        meta_features_old.update(meta_features)
-        pickle.dump(meta_features_old, f)
-
-
 def get_cache_properties(class_name: str) -> CacheProperties:
     cache_properties_by_class_name = {
         'OpenMLDataset': CacheProperties(
             type=CacheType.file,
-            dir=get_openml_cache_dir().joinpath('datasets'),
+            dir=get_openml_cache_dir() / 'datasets',
             path_template='{id}/dataset.arff'),
         'CustomDataset': CacheProperties(
             type=CacheType.file,
-            dir=get_cache_dir().joinpath('datasets/custom_dataset'),
-            path_template='{id}.pkl'),
-        'PymfeExtractor': CacheProperties(
-            type=CacheType.file,
-            dir=get_cache_dir().joinpath('metafeatures/pymfe'),
-            path_template='{dataset_class}_{id}.pkl'),
-        'TimeSeriesFeaturesExtractor': CacheProperties(
-            type=CacheType.file,
-            dir=get_cache_dir().joinpath('metafeatures/tsfe'),
+            dir=get_cache_dir() / 'datasets/custom_dataset',
             path_template='{id}.pkl')
     }
     try:

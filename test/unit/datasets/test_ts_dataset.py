@@ -8,7 +8,7 @@ def test_ts_dataset_creation(timeseries_dataset_ids):
     for dataset_id in timeseries_dataset_ids:
         dataset = TimeSeriesDataset(dataset_id)
 
-        assert dataset.id_ == dataset_id
+        assert dataset.id == dataset_id
 
 
 def test_ts_dataset_data_loading(timeseries_dataset_ids):
