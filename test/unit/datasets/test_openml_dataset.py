@@ -16,7 +16,7 @@ def test_openml_dataset_creation(openml_dataset_ids):
     for dataset_id in openml_dataset_ids:
         dataset = OpenMLDataset(dataset_id)
 
-        assert dataset.id_ == dataset_id
+        assert dataset.id == dataset_id
 
 
 def test_openml_dataset_data_loading(openml_dataset_ids):
