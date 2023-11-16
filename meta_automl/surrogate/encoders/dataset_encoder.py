@@ -5,6 +5,7 @@ import torch
 from torch import Tensor, nn
 from torch_geometric.nn import aggr
 from torch_geometric.nn.inits import reset
+from torch_geometric.data import Batch
 
 
 class CustormAggregation(aggr.Aggregation):
@@ -37,11 +38,11 @@ class CustormAggregation(aggr.Aggregation):
 class MLPDatasetEncoder(nn.Module):
     def __init__(
         self,
-        input_dim,
-        hidden_dim=128,
-        output_dim=64,
-        dropout_in=0.4,
-        dropout=0.2,
+        input_dim: int,
+        hidden_dim: int = 128,
+        output_dim: int = 64,
+        dropout_in: int = 0.4,
+        dropout: float = 0.2,
     ):
         super().__init__()
 
@@ -64,7 +65,7 @@ class MLPDatasetEncoder(nn.Module):
         )
         self.dim = output_dim
 
-    def forward(self, data):
+    def forward(self, data: Batch) -> torch.Tensor:
         z = self.inp_layer(data.x)
         z = self.block1(z)
         z = self.block2(z)
@@ -74,10 +75,10 @@ class MLPDatasetEncoder(nn.Module):
 class ColumnDatasetEncoder(nn.Module):
     def __init__(
         self,
-        input_dim,
-        hidden_dim=64,
-        output_dim=64,
-        dropout=0.2,
+        input_dim: int,
+        hidden_dim: int = 64,
+        output_dim: int = 64,
+        dropout: float = 0.2,
     ):
         super().__init__()
 
@@ -92,7 +93,7 @@ class ColumnDatasetEncoder(nn.Module):
             mode='cat')
         self.dim = input_dim + hidden_dim
 
-    def forward(self, data):
+    def forward(self, data: Batch) -> torch.Tensor:
         z = data.x
         z = self.multi_aggr(z, ptr=data.ptr, dim=0)
         return z

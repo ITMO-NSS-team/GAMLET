@@ -3,13 +3,13 @@ import torch
 import torch.nn.functional as F
 import torch_geometric.nn as gnn
 from torch import nn
-
+from torch_geometric.data import Batch
 from .gnn_layers import get_simple_gnn_layer
 
 
 class SimpleGNNEncoder(nn.Module):
-    def __init__(self, in_size, d_model, global_pool='mean', gnn_type="gcn", dropout=0.0, num_layers=4,
-                 batch_norm=False, in_embed=True, max_seq_len=None, use_global_pool=True, **kwargs):
+    def __init__(self, in_size: int, d_model: int, global_pool: str='mean', gnn_type:str="gcn", dropout: float=0.0, num_layers:int=4,
+                 batch_norm:bool=False, in_embed:bool=True, max_seq_len:int=None, use_global_pool:bool=True, **kwargs):
 
         super().__init__()
 
@@ -48,7 +48,7 @@ class SimpleGNNEncoder(nn.Module):
                                        bias=False)
         self.max_seq_len = max_seq_len
 
-    def forward(self, data):
+    def forward(self, data: Batch) -> torch.Tensor:
 
         x, edge_index, batch = data.x.to(dtype=torch.long), data.edge_index, data.batch
 
@@ -72,7 +72,7 @@ class SimpleGNNEncoder(nn.Module):
         if self.max_seq_len is not None:
             pred_list = []
             for i in range(self.max_seq_len):
-                pred_list.append(self.classifier[i](output))
+                pred_list.append(self.classifier[i](output))  # TODO: this attribute does not exists.
             return pred_list
 
         return output
