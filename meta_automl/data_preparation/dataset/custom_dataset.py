@@ -4,8 +4,7 @@ import pickle
 from pathlib import Path
 from typing import Optional
 
-from meta_automl.data_preparation.dataset import DatasetBase
-from meta_automl.data_preparation.dataset.dataset_base import DatasetData
+from meta_automl.data_preparation.dataset import DatasetBase, DatasetData
 
 
 class DataNotFoundError(FileNotFoundError):
