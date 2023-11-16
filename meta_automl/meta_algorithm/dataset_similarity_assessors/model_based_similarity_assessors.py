@@ -54,7 +54,7 @@ class KNeighborsSimilarityAssessor(ModelBasedSimilarityAssessor):
             dataset_ids: Sequence object of dataset ids.
         """
         meta_features = self.preprocess_meta_features(meta_features)
-        dataset_ids = [dataset_id.id_ if isinstance(dataset_id, DatasetBase) else dataset_id
+        dataset_ids = [dataset_id.id if isinstance(dataset_id, DatasetBase) else dataset_id
                        for dataset_id in dataset_ids]
         self._datasets = np.array(dataset_ids)
         self._inner_model.fit(meta_features)
