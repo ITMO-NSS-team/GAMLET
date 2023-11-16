@@ -6,13 +6,11 @@ from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, Optional, Sequence, Union
 
-import numpy as np
 import pandas as pd
 from pymfe.mfe import MFE
 from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset import DatasetBase, TabularData
-from meta_automl.data_preparation.file_system.persistent_cache import Cache
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 
 logger = logging.getLogger(__file__)
