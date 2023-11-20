@@ -8,16 +8,24 @@ from .gnn_layers import get_simple_gnn_layer
 
 
 class SimpleGNNEncoder(nn.Module):
-    def __init__(self, in_size, d_model, global_pool='mean', gnn_type="gcn", dropout=0.0, num_layers=4,
-                 batch_norm=False, in_embed=True, max_seq_len=None, use_global_pool=True, **kwargs):
-
+    def __init__(
+        self,
+        in_size,
+        d_model,
+        gnn_type="gcn",
+        dropout=0.0,
+        num_layers=4,
+        batch_norm=False,
+        in_embed=True,
+        max_seq_len=None,
+        **kwargs,
+    ):
         super().__init__()
 
         self.num_layers = num_layers
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.gnn_type = gnn_type
         self.dropout = dropout
         self.batch_norm = batch_norm
 
@@ -31,8 +39,6 @@ class SimpleGNNEncoder(nn.Module):
         self.gnn = nn.ModuleList(layers)
         self.batch_norms = nn.ModuleList(batch_layers)
 
-        self.global_pool = 'mean'
-        self.use_global_pool = True
         self.pooling = gnn.global_mean_pool
 
         if in_embed:
@@ -43,18 +49,17 @@ class SimpleGNNEncoder(nn.Module):
             else:
                 raise ValueError("Not implemented!")
         else:
-            self.embedding = nn.Linear(in_features=in_size,
-                                       out_features=d_model,
-                                       bias=False)
+            self.embedding = nn.Linear(in_features=in_size, out_features=d_model, bias=False)
         self.max_seq_len = max_seq_len
 
     def forward(self, data):
+        x, edge_index, batch = data.x, data.edge_index, data.batch
 
-        x, edge_index, batch = data.x.to(dtype=torch.long), data.edge_index, data.batch
-
-        node_depth = data.node_depth if hasattr(data, "node_depth") else None
-
-        output = self.embedding(x) if node_depth is None else self.embedding(x, node_depth.view(-1, ))
+        if hasattr(data, "node_depth"):
+            node_depth = data.node_depth 
+            output = self.embedding(x, node_depth.view(-1, ))
+        else:
+            output = self.embedding(x)
 
         for layer in range(self.num_layers):
             output = self.gnn[layer](output, edge_index)
