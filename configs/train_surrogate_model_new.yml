@@ -1,0 +1,59 @@
+training_method: "train_surrogate_model_new"
+batch_size: 8192
+
+num_dataloader_workers: 0
+model:
+  name: "RankingPipelineDatasetSurrogateModel"
+  model_parameters:
+    in_embed: false
+    in_size: null  # The parameter is inferred
+    num_class: 1
+    d_model: 64
+    d_model_dset: 64
+    dim_feedforward: null  # The parameter is inferred
+    dropout: 0.3
+    num_heads: 8
+    num_layers: 2
+    #    layer_norm: True
+    batch_norm: True  # not LAYER_NORM
+    gnn_type: "graphsage"
+    k_hop: 2
+    se: "gnn"
+    deg: null  # The parameter is inferred
+    global_pool: "mean"
+    use_edge_attr: False
+    pipe_encoder_type: "simple_graph_encoder"  # "graph_transformer" doesnt compatible with torch 2.1.0
+    dataset_encoder_type: "aggregated"  #"column" or "aggregated"
+  weight_decay: 0.0001
+  lr: 0.001
+  temperature: 5
+  
+# "column"
+dataset_params:
+  root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
+  # root_path: "./data/openml/"
+  # root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+
+
+trainer:
+  log_every_n_steps: 1
+  num_sanity_val_steps: 0
+  max_epochs: 15
+  accelerator: "mps"
+  devices: "auto"
+
+tensorboard_logger:
+  save_dir: "/Users/cherniak/itmo_job/GAMLET/experiment_logs/"
+  name: "no_meta_features_and_fedot_pipelines__no_type_with_hyperparams(4_with_learnables)/"
+
+model_checkpoint_callback:
+  save_top_k: 1
+  monitor: "val_ndcg"
+  mode: "max"
+  save_last: False
+  every_n_epochs: 1
+
+early_stopping_callback:
+  monitor: "val_ndcg"
+  mode: "max"
+  patience: 10
