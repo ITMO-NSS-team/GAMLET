@@ -42,10 +42,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
 
     def __init__(
             self,
-            model_parameters: Dict[str, Any],
-            lr: float = 1e-3,
-            weight_decay: float = 1e-4,
-            temperature: float = 10,
+            model_parameters: Dict[str, Any]
     ):
         super().__init__()
 
@@ -79,10 +76,10 @@ class PipelineDatasetSurrogateModel(LightningModule):
             nn.Linear(cat_dim, 1),
         )
 
-        self.lr = lr
-        self.weight_decay = weight_decay
-        self.temperature = temperature
-
+        self.lr = model_parameters['lr']
+        self.weight_decay =  model_parameters['weight_decay']
+        self.temperature =  model_parameters['temperature']
+ 
         # Migration to pytorch_lightning > 1.9.5
         self.validation_step_outputs = []
         self.test_step_outputs = []
@@ -266,23 +263,6 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         If the parameter is `None`, one should implement `self.loss` method in a subclass.
     lr: Learning rate.
     """
-
-    #     def loss(self, score1: Tensor, score2: Tensor, target: Tensor) -> Tensor:
-    #         """Ranknet loss.
-
-    #         Parameters:
-    #         -----------
-    #         score1: Predicted score of the first pipeline.
-    #         score2: Predicted score of the second pipeline.
-    #         target: Target value.
-
-    #         Returns:
-    #         Loss value.
-    #         """
-
-    #         o = torch.sigmoid(score1 - score2)
-    #         loss = (-target * o + F.softplus(o)).mean()
-    #         return loss
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
         """Training step.

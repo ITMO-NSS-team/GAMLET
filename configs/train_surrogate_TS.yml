@@ -7,30 +7,31 @@ model:
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
-    d_model: 64
-    d_model_dset: 64
+    d_model: 96
+    d_model_dset: 128
     dim_feedforward: null  # The parameter is inferred
     dropout: 0.3
-    num_heads: 8
-    num_layers: 2
+    num_heads: 4
+    num_layers: 3
     #    layer_norm: True
     batch_norm: True  # not LAYER_NORM
     gnn_type: "graphsage"
     k_hop: 2
     se: "gnn"
     deg: null  # The parameter is inferred
-    global_pool: "mean"
+    global_pool: "cls"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
     dataset_encoder_type: "column"
-  weight_decay: 0.0001
-  lr: 0.001
-  temperature: 5
+    weight_decay: 0.05
+    lr: 0.0005
+    temperature: 4
   
 
 dataset_params:
   root_path: "./data/timeseries/all"
-
+  is_folded: False
+  
 trainer:
   log_every_n_steps: 1
   num_sanity_val_steps: 0
@@ -53,3 +54,6 @@ early_stopping_callback:
   monitor: "val_ndcg"
   mode: "max"
   patience: 10
+
+model_data:
+  save_dir: "./model_checkpoints/timeseries/"
