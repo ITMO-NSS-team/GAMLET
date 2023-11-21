@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import json
 import logging
 import os
@@ -9,15 +8,16 @@ import shutil
 import timeit
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import partial, wraps
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple
 
 import numpy as np
 import openml
 import pandas as pd
 import yaml
 from fedot.api.main import Fedot
-from fedot.core.data.data import InputData
+from fedot.core.data.data import InputData, array_to_input_data
 from fedot.core.optimisers.objective import MetricsObjective, PipelineObjectiveEvaluate
 from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
@@ -25,7 +25,7 @@ from fedot.core.repository.quality_metrics_repository import MetricsRepository, 
 from fedot.core.validation.split import tabular_cv_generator
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from pecapiku import CacheDict
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
@@ -156,7 +156,7 @@ class KNNSimilarityAdvice(MetaLearningApproach):
                           ) -> DiverseModelAdvisor:
         return self.components.model_advisor.fit(dataset_ids, best_models)
 
-    def fit(self, dataset_ids: Sequence[DatasetIDType], histories: Sequence[Sequence[OptHistory]]):
+    def fit(self, dataset_ids: Sequence[DatasetData], histories: Sequence[Sequence[OptHistory]]):
         d = self.data
         d.dataset_ids = list(dataset_ids)
         d.meta_features = self.extract_train_meta_features(d.dataset_ids)
@@ -192,7 +192,7 @@ def setup_logging(save_dir: Path):
     )
 
 
-def get_current_formatted_date() -> (datetime, str, str):
+def get_current_formatted_date() -> Tuple[datetime, str, str]:
     """ Returns current date in the following formats:
 
         1. datetime
@@ -246,7 +246,7 @@ def split_datasets(dataset_ids, n_datasets: Optional[int] = None, update_train_t
 
 
 def evaluate_pipeline(pipeline: Pipeline,
-                      input_data: InputData,
+                      data: DatasetData,
                       metrics: Sequence[QualityMetricsEnum] = COLLECT_METRICS_ENUM,
                       metric_names: Sequence[str] = COLLECT_METRICS) -> Dict[str, float]:
     """Gets quality metrics for the fitted pipeline.
@@ -255,7 +255,8 @@ def evaluate_pipeline(pipeline: Pipeline,
     Returns:
         the values of quality metrics
     """
-    data_producer = functools.partial(tabular_cv_generator, input_data, 10, StratifiedKFold)
+    data = array_to_input_data(data.x, data.y)
+    data_producer = partial(tabular_cv_generator, data, 10, StratifiedKFold)
 
     objective = MetricsObjective(metrics)
     obj_eval = PipelineObjectiveEvaluate(objective=objective,
@@ -274,38 +275,34 @@ def transform_data_for_fedot(data: DatasetData) -> (np.array, np.array):
     return x, y
 
 
-def fit_fedot(dataset: OpenMLDataset, timeout: float, run_label: str, initial_assumption=None) \
-        -> (Fedot, Dict[str, Any]):
+def timed(func, resolution: Literal['sec', 'min'] = 'min'):
+    @wraps
+    def wrapper(*args, **kwargs):
+        time_start = timeit.default_timer()
+        result = func(*args, **kwargs)
+        time_delta = timeit.default_timer() - time_start
+        if resolution == 'min':
+            time_delta /= 60
+        return result, time_delta
+
+    return wrapper
+
+
+def fit_evaluate_automl(fit_func, evaluate_func) -> (Fedot, Dict[str, Any]):
     """ Runs Fedot evaluation on the dataset, the evaluates the final pipeline on the dataset.
      Returns Fedot instance & properties of the run along with the evaluated metrics. """
-    x, y = transform_data_for_fedot(dataset.get_data())
-
-    time_start = timeit.default_timer()
-    fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, logging_level=logging.DEBUG,
-                  **COMMON_FEDOT_PARAMS)
-    fedot.fit(x, y)
-    automl_time = timeit.default_timer() - time_start
-
-    metrics = evaluate_pipeline(fedot.current_pipeline, fedot.train_data)
-    pipeline = fedot.current_pipeline
-    run_results = get_result_data_row(dataset=dataset, run_label=run_label, pipeline=pipeline,
-                                      automl_time_sec=automl_time, automl_timeout_min=fedot.params.timeout,
-                                      history_obj=fedot.history, **metrics)
-    return fedot, run_results
+    result, fit_time = timed(fit_func)()
+    metrics = timed(evaluate_func)(result)
+    return result, metrics, fit_time
 
 
-def get_result_data_row(dataset: OpenMLDataset, run_label: str, pipeline, history_obj=None, automl_time_sec=0.,
-                        automl_timeout_min=0., **metrics) -> Dict[str, Any]:
-    run_results = dict(dataset_id=dataset.id_,
+def get_result_data_row(dataset, pipeline, **kwargs) -> Dict[str, Any]:
+    run_results = dict(dataset_id=dataset.id,
                        dataset_name=dataset.name,
-                       run_label=run_label,
                        model_obj=pipeline,
                        model_str=pipeline.descriptive_id,
-                       history_obj=history_obj,
-                       automl_time_sec=automl_time_sec,
-                       automl_timeout_min=automl_timeout_min,
                        task_type='classification',
-                       **metrics)
+                       **kwargs)
     return run_results
 
 
@@ -316,8 +313,14 @@ def save_experiment_params(params_dict: Dict[str, Any], save_dir: Path):
         json.dump(params_dict, params_file, indent=2)
 
 
-def save_evaluation(evaluation_properties: Dict[str, Any], run_date: datetime, experiment_date: datetime,
-                    save_dir: Path):
+def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
+    run_results = dict(dataset_id=dataset.id,
+                       dataset_name=dataset.name,
+                       model_obj=pipeline,
+                       model_str=pipeline.descriptive_id,
+                       task_type='classification',
+                       **kwargs)
+
     histories_dir = save_dir.joinpath('histories')
     models_dir = save_dir.joinpath('models')
     eval_results_path = save_dir.joinpath('evaluation_results.csv')
@@ -326,22 +329,20 @@ def save_evaluation(evaluation_properties: Dict[str, Any], run_date: datetime, e
     models_dir.mkdir(exist_ok=True)
 
     try:
-        evaluation_properties['experiment_date'] = experiment_date
-        evaluation_properties['run_date'] = run_date
-        dataset_id = evaluation_properties['dataset_id']
-        run_label = evaluation_properties['run_label']
+        dataset_id = run_results['dataset_id']
+        run_label = run_results['run_label']
         # define saving paths
         model_path = models_dir.joinpath(f'{dataset_id}_{run_label}')
         history_path = histories_dir.joinpath(f'{dataset_id}_{run_label}_history.json')
         # replace objects with export paths for csv
-        evaluation_properties['model_path'] = str(model_path)
-        evaluation_properties.pop('model_obj').save(model_path)
-        evaluation_properties['history_path'] = str(history_path)
-        history_obj = evaluation_properties.pop('history_obj')
+        run_results['model_path'] = str(model_path)
+        run_results.pop('model_obj').save(model_path)
+        run_results['history_path'] = str(history_path)
+        history_obj = run_results.pop('history_obj')
         if history_obj is not None:
-            history_obj.save(evaluation_properties['history_path'])
+            history_obj.save(run_results['history_path'])
 
-        df_evaluation_properties = pd.DataFrame([evaluation_properties])
+        df_evaluation_properties = pd.DataFrame([run_results])
 
         if eval_results_path.exists():
             df_results = pd.read_csv(eval_results_path)
@@ -351,7 +352,49 @@ def save_evaluation(evaluation_properties: Dict[str, Any], run_date: datetime, e
         df_results.to_csv(eval_results_path, index=False)
 
     except Exception:
-        logging.exception(f'Saving results "{evaluation_properties}"')
+        logging.exception(f'Saving results "{run_results}"')
+
+
+def run_fedot(train_data: DatasetData, test_data: DatasetData, timeout: float,
+              run_label: str, experiment_date: datetime, save_dir: Path, fedot_evaluations_cache: CacheDict):
+    fedot = Fedot(timeout=timeout, **FEDOT_PARAMS)
+    fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
+    evaluate_func = partial(evaluate_pipeline, data=test_data)
+    run_date = datetime.now()
+    cache_key = '_'.join((run_label, train_data.id))
+    fit_evaluate_automl_c = fedot_evaluations_cache(fit_evaluate_automl, outer_key=cache_key)
+    pipeline, metrics, fit_time = fit_evaluate_automl_c(fit_func=fit_func, evaluate_func=evaluate_func)
+    save_evaluation(dataset=train_data.dataset,
+                    run_label=run_label,
+                    pipeline=pipeline,
+                    automl_time_min=fit_time,
+                    automl_timeout_min=fedot.params.timeout,
+                    history_obj=fedot.history,
+                    run_data=run_date,
+                    experiment_date=experiment_date,
+                    save_dir=save_dir,
+                    **metrics)
+    return fedot
+
+
+def run_pipeline(train_data: DatasetData, test_data: DatasetData, pipeline: Pipeline,
+                 run_label: str, experiment_date: datetime, save_dir: Path):
+    train_data_for_fedot = array_to_input_data(train_data.x, train_data.y)
+    fit_func = partial(pipeline.fit, train_data_for_fedot)
+    evaluate_func = partial(evaluate_pipeline, data=test_data)
+    run_date = datetime.now()
+    pipeline, metrics, fit_time = fit_evaluate_automl(fit_func=fit_func, evaluate_func=evaluate_func)
+    save_evaluation(dataset=train_data.dataset,
+                    run_label=run_label,
+                    pipeline=pipeline,
+                    automl_time_min=0,
+                    pipeline_fit_time=fit_time,
+                    automl_timeout_min=0,
+                    run_data=run_date,
+                    experiment_date=experiment_date,
+                    save_dir=save_dir,
+                    **metrics)
+    return pipeline
 
 
 def main():
@@ -360,7 +403,6 @@ def main():
     setup_logging(save_dir)
     if TMPDIR:
         os.environ.putenv('TMPDIR', TMPDIR)
-    progress_file_path = save_dir.joinpath('progress.txt')
     meta_learner_path = save_dir.joinpath('meta_learner.pkl')
 
     dataset_ids = get_dataset_ids()
@@ -384,75 +426,69 @@ def main():
     )
     save_experiment_params(experiment_params_dict, save_dir)
     # Gathering knowledge base
-    train_histories = {}
-    fit_fedot_cached = CacheDict.decorate(fit_fedot, get_cache_dir() / 'fedot_runs.pkl', inner_key='dataset.id')
-    with open(progress_file_path, 'a') as progress_file:
-        description = 'FEDOT, all datasets'
-        for dataset_id in (pbar := tqdm(dataset_ids, description, file=progress_file)):
-            pbar.set_description(description + f' ({dataset_id})')
-            try:
-                timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
-                dataset = algorithm.components.datasets_loader.load_single(dataset_id)
-                run_date = datetime.now()
-                fedot, run_results = fit_fedot_cached(dataset=dataset, timeout=timeout, run_label='FEDOT')
-                save_evaluation(run_results, run_date, experiment_date, save_dir)
-                # TODO:
-                #   x Start FEDOT `N_BEST_DATASET_MODELS_TO_MEMORIZE` times, but not in one run
-                if dataset_id not in dataset_ids_test:
-                    history = fedot.history
-                train_histories[dataset_id] = [history]
-            except Exception:
-                logging.exception(f'Train dataset "{dataset_id}"')
+    # fit_fedot_cached = CacheDict.decorate(fit_evaluate_automl, get_cache_dir() / 'fedot_runs.pkl', inner_key='dataset.id')
+    dataset_splits = {}
+    for dataset_id in dataset_ids:
+        dataset = OpenMLDataset(dataset_id)
+        dataset_data = dataset.get_data()
+        train_data, test_data = train_test_split(dataset_data, test_size=DATA_TEST_SIZE, stratify=dataset_data.y,
+                                                 shuffle=True, random_state=DATA_SPLIT_SEED)
+        dataset_splits[dataset_id] = dict(train=train_data, test=test_data)
 
+    knowledge_base = {}
+    fedot_evaluations_cache = CacheDict(get_cache_dir() / 'fedot_runs.pkl')
+    description = 'FEDOT, all datasets'
+    for dataset_id in (pbar := tqdm(dataset_ids, description)):
+        pbar.set_description(description + f' ({dataset_id})')
+        try:
+            timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
+            train_data, test_data = dataset_splits[dataset_id]['train'], dataset_splits[dataset_id]['test']
+            run_label = 'FEDOT'
+            fedot = run_fedot(train_data, test_data, timeout, run_label, experiment_date, save_dir,
+                              fedot_evaluations_cache)
+            # TODO:
+            #   x Start FEDOT `N_BEST_DATASET_MODELS_TO_MEMORIZE` times, but not in one run
+            if dataset_id not in dataset_ids_test:
+                knowledge_base[dataset_id] = [fedot.history]
+        except Exception:
+            logging.exception(f'Train dataset "{dataset_id}"')
+    knowledge_base_data = [dataset_splits[did]['train'] for did in knowledge_base.keys()]
+    knowledge_base_histories = list(knowledge_base.values())
     # Learning
-    algorithm.fit(list(train_histories.keys()), list(train_histories.values()))
+    algorithm.fit(knowledge_base_data, knowledge_base_histories)
     with open(meta_learner_path, 'wb') as meta_learner_file:
         pickle.dump(algorithm, meta_learner_file)
 
-    fit_metafedot_cached = CacheDict.decorate(fit_fedot, fit_fedot, get_cache_dir() / 'metafedot_runs.pkl',
-                                              inner_key='dataset.id')
-    with open(progress_file_path, 'a') as progress_file:
-        description = 'MetaFEDOT, Test datasets'
-        for dataset_id in (pbar := tqdm(dataset_ids_test, description, file=progress_file)):
-            pbar.set_description(description + f' ({dataset_id})')
-            try:
-                # Run meta AutoML
-                # 1
-                time_start = timeit.default_timer()
-                initial_assumptions = algorithm.predict([dataset_id])[0]
-                meta_learning_time_sec = timeit.default_timer() - time_start
+    description = 'MetaFEDOT, Test datasets'
+    for dataset_id in (pbar := tqdm(dataset_ids_test, description)):
+        pbar.set_description(description + f' ({dataset_id})')
+        try:
+            # Run meta AutoML
+            # 1
+            time_start = timeit.default_timer()
+            initial_assumptions = algorithm.predict([dataset_id])[0]
+            meta_learning_time_sec = timeit.default_timer() - time_start
 
-                assumption_pipelines = [model.predictor for model in initial_assumptions]
-                # 2
-                dataset = algorithm.components.datasets_loader.load_single(dataset_id)
-                run_date = datetime.now()
-                fedot_meta, fedot_meta_results = fit_metafedot_cached(dataset=dataset,
-                                                                      timeout=TEST_TIMEOUT,
-                                                                      run_label='MetaFEDOT',
-                                                                      initial_assumption=assumption_pipelines)
-                fedot_meta_results['meta_learning_time_sec'] = meta_learning_time_sec
-                save_evaluation(fedot_meta_results, run_date, experiment_date, save_dir)
+            assumption_pipelines = [model.predictor for model in initial_assumptions]
+            # 2
+            dataset = OpenMLDataset(dataset_id)
+            timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
+            train_data, test_data = dataset_splits[dataset_id]['train'], dataset_splits[dataset_id]['test']
+            run_label = 'MetaFEDOT'
+            fedot_meta = run_fedot(train_data, test_data, timeout, run_label, experiment_date, save_dir,
+                                   fedot_evaluations_cache)
+            # Fit & evaluate simple baseline
+            baseline_pipeline = PipelineBuilder().add_node(BASELINE_MODEL).build()
+            run_label = 'simple baseline'
+            run_pipeline(train_data, test_data, baseline_pipeline, run_label, experiment_date, save_dir)
 
-                # Fit & evaluate simple baseline
-                baseline_pipeline = PipelineBuilder().add_node(BASELINE_MODEL).build()
-                run_date = datetime.now()
-                baseline_metrics = evaluate_pipeline(baseline_pipeline, fedot_meta.train_data)
-                baseline_res = get_result_data_row(dataset=dataset, run_label=f'simple baseline {BASELINE_MODEL}',
-                                                   pipeline=baseline_pipeline,
-                                                   **baseline_metrics)
-                save_evaluation(baseline_res, run_date, experiment_date, save_dir)
-
-                # Fit & evaluate initial assumptions
-                for i, assumption in enumerate(initial_assumptions):
-                    pipeline = assumption.predictor
-                    run_date = datetime.now()
-                    assumption_metrics = evaluate_pipeline(pipeline, fedot_meta.train_data)
-                    assumption_res = get_result_data_row(dataset=dataset,
-                                                         run_label=f'MetaFEDOT - initial assumption {i}',
-                                                         pipeline=pipeline, **assumption_metrics)
-                    save_evaluation(assumption_res, run_date, experiment_date, save_dir)
-            except Exception:
-                logging.exception(f'Test dataset "{dataset_id}"')
+            # Fit & evaluate initial assumptions
+            for i, assumption in enumerate(initial_assumptions):
+                pipeline = assumption.predictor
+                run_label = f'MetaFEDOT - initial assumption {i}'
+                run_pipeline(train_data, test_data, pipeline, run_label, experiment_date, save_dir)
+        except Exception:
+            logging.exception(f'Test dataset "{dataset_id}"')
 
 
 if __name__ == "__main__":
