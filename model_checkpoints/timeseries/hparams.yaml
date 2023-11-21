@@ -1,0 +1,22 @@
+model_parameters:
+  batch_norm: true
+  d_model: 96
+  d_model_dset: 128
+  dataset_encoder_type: column
+  deg: null
+  dim_dataset: 126
+  dim_feedforward: 192
+  dropout: 0.3
+  global_pool: cls
+  gnn_type: graphsage
+  in_size: 75
+  k_hop: 2
+  lr: 0.0005
+  num_class: 1
+  num_heads: 4
+  num_layers: 3
+  pipe_encoder_type: graph_transformer
+  se: gnn
+  temperature: 4
+  use_edge_attr: false
+  weight_decay: 0.05
