@@ -12,12 +12,11 @@ from functools import partial, wraps
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple
 
-import numpy as np
 import openml
 import pandas as pd
 import yaml
 from fedot.api.main import Fedot
-from fedot.core.data.data import InputData, array_to_input_data
+from fedot.core.data.data import array_to_input_data
 from fedot.core.optimisers.objective import MetricsObjective, PipelineObjectiveEvaluate
 from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
@@ -30,8 +29,7 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
 from meta_automl.approaches import MetaLearningApproach
-from meta_automl.data_preparation.dataset import DatasetBase, DatasetData, DatasetIDType, OpenMLDataset
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.dataset import DatasetIDType, OpenMLDataset, TabularData
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.file_system import get_cache_dir
@@ -91,16 +89,13 @@ class KNNSimilarityAdvice(MetaLearningApproach):
         )
         self.data = self.Data()
 
-        datasets_loader = OpenMLDatasetsLoader()
-        mf_extractor = PymfeExtractor(extractor_params=mf_extractor_params,
-                                      datasets_loader=datasets_loader)
+        mf_extractor = PymfeExtractor(extractor_params=mf_extractor_params)
         datasets_similarity_assessor = KNeighborsSimilarityAssessor(**assessor_params)
 
         models_loader = FedotHistoryLoader()
         model_advisor = DiverseModelAdvisor(**advisor_params)
 
         self.components = self.Components(
-            datasets_loader=datasets_loader,
             models_loader=models_loader,
             mf_extractor=mf_extractor,
             mf_scaler=MinMaxScaler(),
@@ -118,35 +113,51 @@ class KNNSimilarityAdvice(MetaLearningApproach):
     @dataclass
     class Data:
         meta_features: pd.DataFrame = None
-        datasets: List[DatasetBase] = None
+        datasets: List[OpenMLDataset] = None
+        datasets_data: List[OpenMLDataset] = None
         dataset_ids: List[DatasetIDType] = None
         best_models: List[List[EvaluatedModel]] = None
 
     @dataclass
     class Components:
-        datasets_loader: OpenMLDatasetsLoader
         models_loader: FedotHistoryLoader
         mf_extractor: PymfeExtractor
         mf_scaler: Any
         datasets_similarity_assessor: KNeighborsSimilarityAssessor
         model_advisor: DiverseModelAdvisor
 
-    def load_models(self, dataset_ids: Sequence[DatasetIDType],
-                    histories: Sequence[Sequence[OptHistory]]) -> List[List[EvaluatedModel]]:
-        return self.components.models_loader.load(
-            dataset_ids, histories,
-            self.parameters.n_best_dataset_models_to_memorize
-        )
+    def fit(self, datasets_data: Sequence[TabularData], histories: Sequence[Sequence[OptHistory]]):
+        data = self.data
+        params = self.parameters
 
-    def extract_train_meta_features(self, dataset_ids: List[DatasetIDType]) -> pd.DataFrame:
-        meta_features_train = self.components.mf_extractor.extract(
-            dataset_ids, fill_input_nans=True)
-        meta_features_train = meta_features_train.fillna(0)
-        meta_features_train = pd.DataFrame(
-            self.components.mf_scaler.fit_transform(meta_features_train),
-            columns=meta_features_train.columns
-        )
-        return meta_features_train
+        data.datasets_data = list(datasets_data)
+        data.datasets = [d.dataset for d in datasets_data]
+        data.dataset_ids = [d.id for d in datasets_data]
+
+        data.meta_features = self.extract_train_meta_features(data.datasets_data)
+        self.fit_datasets_similarity_assessor(data.meta_features, data.dataset_ids)
+
+        data.best_models = self.load_models(data.datasets, histories, params.n_best_dataset_models_to_memorize)
+        self.fit_model_advisor(data.dataset_ids, data.best_models)
+
+        return self
+
+    def load_models(self, datasets: Sequence[OpenMLDataset],
+                    histories: Sequence[Sequence[OptHistory]],
+                    n_best_dataset_models_to_load: int) -> List[List[EvaluatedModel]]:
+        return self.components.models_loader.load(datasets, histories, n_best_dataset_models_to_load)
+
+    def extract_train_meta_features(self, datasets_data: List[TabularData]) -> pd.DataFrame:
+        components = self.components
+
+        meta_features = components.mf_extractor.extract(
+            datasets_data, fill_input_nans=True)
+
+        meta_features.fillna(0, inplace=True)
+
+        meta_features = pd.DataFrame(components.mf_scaler.fit_transform(meta_features), columns=meta_features.columns)
+
+        return meta_features
 
     def fit_datasets_similarity_assessor(self, meta_features: pd.DataFrame, dataset_ids: List[DatasetIDType]
                                          ) -> KNeighborsSimilarityAssessor:
@@ -156,26 +167,20 @@ class KNNSimilarityAdvice(MetaLearningApproach):
                           ) -> DiverseModelAdvisor:
         return self.components.model_advisor.fit(dataset_ids, best_models)
 
-    def fit(self, dataset_ids: Sequence[DatasetData], histories: Sequence[Sequence[OptHistory]]):
-        d = self.data
-        d.dataset_ids = list(dataset_ids)
-        d.meta_features = self.extract_train_meta_features(d.dataset_ids)
-        self.fit_datasets_similarity_assessor(d.meta_features, d.dataset_ids)
-        d.best_models = self.load_models(dataset_ids, histories)
-        self.fit_model_advisor(d.dataset_ids, d.best_models)
-        return self
-
-    def predict(self, datasets_ids: Sequence[DatasetIDType]) -> List[List[EvaluatedModel]]:
-        extraction_params = dict(
-            fill_input_nans=True, use_cached=False, update_cached=True
-        )
+    def predict(self, datasets_data: Sequence[TabularData]) -> List[List[EvaluatedModel]]:
         mf_extractor = self.components.mf_extractor
         mf_scaler = self.components.mf_scaler
         assessor = self.components.datasets_similarity_assessor
         advisor = self.components.model_advisor
-        meta_features = mf_extractor.extract(datasets_ids, **extraction_params).fillna(0)
+
+        meta_features = mf_extractor.extract(datasets_data, fill_input_nans=True)
+
+        meta_features.fillna(0, inplace=True)
+
         meta_features = pd.DataFrame(mf_scaler.transform(meta_features), columns=meta_features.columns)
+
         similar_dataset_ids = assessor.predict(meta_features)
+
         return advisor.predict(similar_dataset_ids)
 
 
@@ -246,7 +251,7 @@ def split_datasets(dataset_ids, n_datasets: Optional[int] = None, update_train_t
 
 
 def evaluate_pipeline(pipeline: Pipeline,
-                      data: DatasetData,
+                      data: TabularData,
                       metrics: Sequence[QualityMetricsEnum] = COLLECT_METRICS_ENUM,
                       metric_names: Sequence[str] = COLLECT_METRICS) -> Dict[str, float]:
     """Gets quality metrics for the fitted pipeline.
@@ -269,14 +274,8 @@ def evaluate_pipeline(pipeline: Pipeline,
     return metric_values
 
 
-def transform_data_for_fedot(data: DatasetData) -> (np.array, np.array):
-    x = data.x.to_numpy()
-    y = data.y.to_numpy()
-    return x, y
-
-
 def timed(func, resolution: Literal['sec', 'min'] = 'min'):
-    @wraps
+    @wraps(func)
     def wrapper(*args, **kwargs):
         time_start = timeit.default_timer()
         result = func(*args, **kwargs)
@@ -289,21 +288,17 @@ def timed(func, resolution: Literal['sec', 'min'] = 'min'):
 
 
 def fit_evaluate_automl(fit_func, evaluate_func) -> (Fedot, Dict[str, Any]):
-    """ Runs Fedot evaluation on the dataset, the evaluates the final pipeline on the dataset.
-     Returns Fedot instance & properties of the run along with the evaluated metrics. """
+    """ Runs Fedot evaluation on the dataset, the evaluates the final pipeline on the dataset.. """
     result, fit_time = timed(fit_func)()
-    metrics = timed(evaluate_func)(result)
+    metrics = evaluate_func(result)
     return result, metrics, fit_time
 
 
-def get_result_data_row(dataset, pipeline, **kwargs) -> Dict[str, Any]:
-    run_results = dict(dataset_id=dataset.id,
-                       dataset_name=dataset.name,
-                       model_obj=pipeline,
-                       model_str=pipeline.descriptive_id,
-                       task_type='classification',
-                       **kwargs)
-    return run_results
+def fit_evaluate_pipeline(pipeline, fit_func, evaluate_func) -> (Fedot, Dict[str, Any]):
+    """ Runs Fedot evaluation on the dataset, the evaluates the final pipeline on the dataset.. """
+    _, fit_time = timed(fit_func)()
+    metrics = evaluate_func(pipeline)
+    return pipeline, metrics, fit_time
 
 
 def save_experiment_params(params_dict: Dict[str, Any], save_dir: Path):
@@ -314,21 +309,20 @@ def save_experiment_params(params_dict: Dict[str, Any], save_dir: Path):
 
 
 def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
-    run_results = dict(dataset_id=dataset.id,
-                       dataset_name=dataset.name,
-                       model_obj=pipeline,
-                       model_str=pipeline.descriptive_id,
-                       task_type='classification',
-                       **kwargs)
-
-    histories_dir = save_dir.joinpath('histories')
-    models_dir = save_dir.joinpath('models')
-    eval_results_path = save_dir.joinpath('evaluation_results.csv')
-
-    histories_dir.mkdir(exist_ok=True)
-    models_dir.mkdir(exist_ok=True)
-
+    run_results: Dict[str, Any] = dict(dataset_id=dataset.id,
+                                       dataset_name=dataset.name,
+                                       model_obj=pipeline,
+                                       model_str=pipeline.descriptive_id,
+                                       task_type='classification',
+                                       **kwargs)
     try:
+        histories_dir = save_dir.joinpath('histories')
+        models_dir = save_dir.joinpath('models')
+        eval_results_path = save_dir.joinpath('evaluation_results.csv')
+
+        histories_dir.mkdir(exist_ok=True)
+        models_dir.mkdir(exist_ok=True)
+
         dataset_id = run_results['dataset_id']
         run_label = run_results['run_label']
         # define saving paths
@@ -338,9 +332,10 @@ def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
         run_results['model_path'] = str(model_path)
         run_results.pop('model_obj').save(model_path)
         run_results['history_path'] = str(history_path)
-        history_obj = run_results.pop('history_obj')
-        if history_obj is not None:
-            history_obj.save(run_results['history_path'])
+        if 'history_obj' in run_results:
+            history_obj = run_results.pop('history_obj')
+            if history_obj is not None:
+                history_obj.save(run_results['history_path'])
 
         df_evaluation_properties = pd.DataFrame([run_results])
 
@@ -351,22 +346,40 @@ def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
             df_results = df_evaluation_properties
         df_results.to_csv(eval_results_path, index=False)
 
-    except Exception:
+    except Exception as e:
         logging.exception(f'Saving results "{run_results}"')
+        if __debug__:
+            raise e
 
 
-def run_fedot(train_data: DatasetData, test_data: DatasetData, timeout: float,
-              run_label: str, experiment_date: datetime, save_dir: Path, fedot_evaluations_cache: CacheDict):
-    fedot = Fedot(timeout=timeout, **FEDOT_PARAMS)
+def run_fedot(train_data: TabularData, test_data: TabularData, timeout: float,
+              run_label: str, experiment_date: datetime, save_dir: Path, fedot_evaluations_cache: CacheDict,
+              initial_assumption: Optional[Sequence[Pipeline]] = None, meta_learning_time_sec: float = 0.):
+    fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **FEDOT_PARAMS)
     fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
     evaluate_func = partial(evaluate_pipeline, data=test_data)
     run_date = datetime.now()
-    cache_key = '_'.join((run_label, train_data.id))
-    fit_evaluate_automl_c = fedot_evaluations_cache(fit_evaluate_automl, outer_key=cache_key)
-    pipeline, metrics, fit_time = fit_evaluate_automl_c(fit_func=fit_func, evaluate_func=evaluate_func)
+    cache_key = f'{run_label}_{train_data.id}'
+    with fedot_evaluations_cache as cache_dict:
+        cached_run = cache_dict[cache_key]
+        if cached_run:
+            fedot = cached_run['fedot']
+            pipeline = cached_run['pipeline']
+            metrics = cached_run['metrics']
+            fit_time = cached_run['fit_time']
+        else:
+            pipeline, metrics, fit_time = fit_evaluate_automl(fit_func=fit_func, evaluate_func=evaluate_func)
+            cached_run = dict(
+                fedot=fedot,
+                pipeline=pipeline,
+                metrics=metrics,
+                fit_time=fit_time,
+            )
+            cache_dict[cache_key] = cached_run
     save_evaluation(dataset=train_data.dataset,
                     run_label=run_label,
                     pipeline=pipeline,
+                    meta_learning_time_min=meta_learning_time_sec,
                     automl_time_min=fit_time,
                     automl_timeout_min=fedot.params.timeout,
                     history_obj=fedot.history,
@@ -377,13 +390,14 @@ def run_fedot(train_data: DatasetData, test_data: DatasetData, timeout: float,
     return fedot
 
 
-def run_pipeline(train_data: DatasetData, test_data: DatasetData, pipeline: Pipeline,
+def run_pipeline(train_data: TabularData, test_data: TabularData, pipeline: Pipeline,
                  run_label: str, experiment_date: datetime, save_dir: Path):
     train_data_for_fedot = array_to_input_data(train_data.x, train_data.y)
     fit_func = partial(pipeline.fit, train_data_for_fedot)
     evaluate_func = partial(evaluate_pipeline, data=test_data)
     run_date = datetime.now()
-    pipeline, metrics, fit_time = fit_evaluate_automl(fit_func=fit_func, evaluate_func=evaluate_func)
+    pipeline, metrics, fit_time = fit_evaluate_pipeline(pipeline=pipeline, fit_func=fit_func,
+                                                        evaluate_func=evaluate_func)
     save_evaluation(dataset=train_data.dataset,
                     run_label=run_label,
                     pipeline=pipeline,
@@ -431,12 +445,16 @@ def main():
     for dataset_id in dataset_ids:
         dataset = OpenMLDataset(dataset_id)
         dataset_data = dataset.get_data()
-        train_data, test_data = train_test_split(dataset_data, test_size=DATA_TEST_SIZE, stratify=dataset_data.y,
-                                                 shuffle=True, random_state=DATA_SPLIT_SEED)
+        idx_train, idx_test = train_test_split(range(len(dataset_data.y)),
+                                               test_size=DATA_TEST_SIZE,
+                                               stratify=dataset_data.y,
+                                               shuffle=True,
+                                               random_state=DATA_SPLIT_SEED)
+        train_data, test_data = dataset_data[idx_train], dataset_data[idx_test]
         dataset_splits[dataset_id] = dict(train=train_data, test=test_data)
 
     knowledge_base = {}
-    fedot_evaluations_cache = CacheDict(get_cache_dir() / 'fedot_runs.pkl')
+    fedot_evaluations_cache = CacheDict(get_cache_dir() / 'fedot_runs.pkl', access='rew')
     description = 'FEDOT, all datasets'
     for dataset_id in (pbar := tqdm(dataset_ids, description)):
         pbar.set_description(description + f' ({dataset_id})')
@@ -449,10 +467,13 @@ def main():
             # TODO:
             #   x Start FEDOT `N_BEST_DATASET_MODELS_TO_MEMORIZE` times, but not in one run
             if dataset_id not in dataset_ids_test:
-                knowledge_base[dataset_id] = [fedot.history]
-        except Exception:
+                if fedot.history:
+                    knowledge_base[dataset_id] = [fedot.history]
+        except Exception as e:
             logging.exception(f'Train dataset "{dataset_id}"')
-    knowledge_base_data = [dataset_splits[did]['train'] for did in knowledge_base.keys()]
+            if __debug__:
+                raise e
+    knowledge_base_data = [OpenMLDataset(dataset).get_data() for dataset in knowledge_base.keys()]
     knowledge_base_histories = list(knowledge_base.values())
     # Learning
     algorithm.fit(knowledge_base_data, knowledge_base_histories)
@@ -463,20 +484,18 @@ def main():
     for dataset_id in (pbar := tqdm(dataset_ids_test, description)):
         pbar.set_description(description + f' ({dataset_id})')
         try:
+            train_data, test_data = dataset_splits[dataset_id]['train'], dataset_splits[dataset_id]['test']
             # Run meta AutoML
             # 1
-            time_start = timeit.default_timer()
-            initial_assumptions = algorithm.predict([dataset_id])[0]
-            meta_learning_time_sec = timeit.default_timer() - time_start
-
+            initial_assumptions, meta_learning_time_sec = timed(algorithm.predict, resolution='sec')([train_data])
+            initial_assumptions = initial_assumptions[0]
             assumption_pipelines = [model.predictor for model in initial_assumptions]
             # 2
-            dataset = OpenMLDataset(dataset_id)
             timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
-            train_data, test_data = dataset_splits[dataset_id]['train'], dataset_splits[dataset_id]['test']
             run_label = 'MetaFEDOT'
-            fedot_meta = run_fedot(train_data, test_data, timeout, run_label, experiment_date, save_dir,
-                                   fedot_evaluations_cache)
+            run_fedot(train_data, test_data, timeout, run_label, experiment_date, save_dir,
+                      fedot_evaluations_cache, initial_assumption=assumption_pipelines,
+                      meta_learning_time_sec=meta_learning_time_sec)
             # Fit & evaluate simple baseline
             baseline_pipeline = PipelineBuilder().add_node(BASELINE_MODEL).build()
             run_label = 'simple baseline'
@@ -487,13 +506,15 @@ def main():
                 pipeline = assumption.predictor
                 run_label = f'MetaFEDOT - initial assumption {i}'
                 run_pipeline(train_data, test_data, pipeline, run_label, experiment_date, save_dir)
-        except Exception:
+        except Exception as e:
             logging.exception(f'Test dataset "{dataset_id}"')
+            if __debug__:
+                raise e
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        logging.exception('Main level caught an error.')
-        raise
+        logging.exception('Exception at main().')
+        raise e
