@@ -36,4 +36,6 @@ class OpenMLDataset(DatasetBase):
         X, y, categorical_indicator, attribute_names = self._openml_dataset.get_data(
             target=self._openml_dataset.default_target_attribute
         )
+        X = X.to_numpy()
+        y = y.to_numpy()
         return TabularData(self, X, y, categorical_indicator, attribute_names)

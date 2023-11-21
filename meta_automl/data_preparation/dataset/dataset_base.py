@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,12 +11,15 @@ import numpy as np
 
 from meta_automl.data_preparation.file_system import CacheOperator, get_dataset_cache_path
 
+DatasetType_co = TypeVar('DatasetType_co', bound='DatasetBase', covariant=True)
+
 
 @dataclass
-class DatasetData:
-    dataset: DatasetBase
-    x: np.array
-    y: Optional[np.array] = None
+class DatasetData(Generic[DatasetType_co], Sequence):
+    dataset: DatasetType_co
+
+    x: np.ndarray
+    y: Optional[np.ndarray] = None
 
     @property
     def id(self):
@@ -27,6 +31,9 @@ class DatasetData:
             other.y = self.y[item]
         other.x = self.x[item]
         return other
+
+    def __len__(self):
+        return len(self.x)
 
 
 @dataclass
