@@ -22,7 +22,7 @@ from gamlet.data_preparation.surrogate_dataset import (GraphDataset,
 from gamlet.surrogate import surrogate_model
 
 
-def get_datasets(path, is_pair=False, is_folded = False index_col=0):
+def get_datasets(path, is_pair=False, is_folded = False, index_col=0):
     """Loading preprocessed data and creating Dataset objects for model training
     Parameters:
     -----------
@@ -34,8 +34,6 @@ def get_datasets(path, is_pair=False, is_folded = False index_col=0):
     datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=index_col).fillna(0)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'))
     task_pipe_comb = task_pipe_comb[task_pipe_comb.y < 10]
-
-    print('len(task_pipe_comb)', len(task_pipe_comb))
     
     VAL_R = 0.15
     TEST_R = 0.15
@@ -52,20 +50,19 @@ def get_datasets(path, is_pair=False, is_folded = False index_col=0):
             list(tasks_in_file),
             (VAL_R, TEST_R),
         )
-
-    print('len0        ', len(train_task_set), len(val_task_set), len(test_task_set))
     
+    #if validation is missing, sample it from train
     if len(val_task_set) == 0:
-        dataset_types = defaultdict(list)
-        for t in train_task_set:
-            dataset_types[t.split('_')[0]].append(t)
-            
-            
-        train_task_types, val_task_types = random_train_val_test_split(list(dataset_types.keys()), (VAL_R,))
-        train_task_set = set([item for d_type in train_task_types for item in dataset_types[d_type]])
-        val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
+        if is_folded:
+            dataset_types = defaultdict(list)
+            for t in train_task_set:
+                dataset_types[t.split('_')[0]].append(t)
+            train_task_types, val_task_types = random_train_val_test_split(list(dataset_types.keys()), (VAL_R,))
+            train_task_set = set([item for d_type in train_task_types for item in dataset_types[d_type]])
+            val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
+        else:
+            train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), (VAL_R,))
         
-    print('len1        ', len(train_task_set), len(val_task_set), len(test_task_set))
     if is_pair:
         train_dataset = PairDataset(
             task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -96,9 +93,7 @@ def get_datasets(path, is_pair=False, is_folded = False index_col=0):
         meta_data["in_size"] = pipelines[0].in_size
     else:
         meta_data["in_size"] = len(pipelines[0].in_size)
-    meta_data["dim_dataset"] = datasets.shape[1]
-    
-    print('len', len(train_task_set), len(val_task_set), len(test_task_set))
+    meta_data["dim_dataset"] = datasets.shape[1]  
     return train_dataset, val_dataset, test_dataset, meta_data
 
 
@@ -138,47 +133,79 @@ def random_train_val_test_split(tasks: List[int], splits: List[float]) -> Tuple[
     return task_sets
 
 
-def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
-    """Create surrogate model and do training according to config parameters."""
-    is_pair = False
-    model_class = getattr(surrogate_model, config["model"].pop("name"))
-    if model_class.__name__ == 'RankingPipelineDatasetSurrogateModel':
-        is_pair = True
+
+def _create_data_loaders(train_dataset, val_dataset, test_dataset, config):
+    train_loader, val_loader, test_loader = None, None, None
+    if train_dataset is not None:
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=config["batch_size"],
+            shuffle=True,
+            num_workers=config["num_dataloader_workers"],
+        )
+    if val_dataset is not None:
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=config["batch_size"],
+            num_workers=config["num_dataloader_workers"],
+        )
+    if test_dataset is not None:
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=config["batch_size"],
+            num_workers=config["num_dataloader_workers"],
+        )
+    return train_loader, val_loader, test_loader
+
+
+def _parse_dataset_config(config):
+    dataset_configs = {}
+    dataset_configs['is_pair'] = False
+    
+    if config["model"]["name"] == 'RankingPipelineDatasetSurrogateModel':
+        dataset_configs['is_pair'] = True
 
     if config["model"]["model_parameters"]["dataset_encoder_type"] == "l":
-        index_col = [0, 1]
+        dataset_configs['index_col'] = [0, 1]
     else:
-        index_col = 0
+        dataset_configs['index_col'] = 0
+    return dataset_configs
 
-    train_dataset, val_dataset, test_dataset, meta_data = get_datasets(config["dataset_params"]["root_path"], is_pair,
-                                                                       index_col=index_col)
+
+def _create_model(config, meta_data):
+    model_class = getattr(surrogate_model, config["model"]["name"])
+    config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
+    config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
+    
+    dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
+    config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
+    model = model_class(config["model"]["model_parameters"])
+    return model
+
+
+def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
+    """Create surrogate model and do training according to config parameters."""
+    dataset_configs = _parse_dataset_config(config)
+
+    train_dataset, val_dataset, test_dataset, meta_data = get_datasets(config["dataset_params"]["root_path"], 
+                                                                       dataset_configs['is_pair'],
+                                                                       config["dataset_params"]["is_folded"],
+                                                                       index_col=dataset_configs['index_col'])
     assert len(train_dataset) != 0
     assert len(val_dataset) != 0
     assert len(test_dataset) != 0
+    train_loader, val_loader, test_loader = _create_data_loaders(train_dataset, 
+                                                                 val_dataset, 
+                                                                 test_dataset, 
+                                                                 config)
+    do_training(train_loader, val_loader, test_loader, config, meta_data)
 
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=config["batch_size"],
-        shuffle=True,
-        num_workers=config["num_dataloader_workers"],
-    )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=config["batch_size"],
-        num_workers=config["num_dataloader_workers"],
-    )
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=config["batch_size"],
-        num_workers=config["num_dataloader_workers"],
-    )
+    
+def do_training(train_loader, val_loader, test_loader, config, meta_data):
+    # creating surrogate model
+    model = _create_model(config, meta_data)
 
-    config["model"]["model_parameters"]["in_size"] = meta_data["in_size"]
-    config["model"]["model_parameters"]["dim_dataset"] = meta_data["dim_dataset"]
-    dim_feedforward = 2 * config["model"]["model_parameters"]["d_model"]
-    config["model"]["model_parameters"]["dim_feedforward"] = dim_feedforward
-    model = model_class(**config["model"])
-
+    # setting up training params
     if config["tensorboard_logger"] is not None:
         logger = TensorBoardLogger(**config["tensorboard_logger"])
     else:
@@ -199,28 +226,22 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
+    model_class = getattr(surrogate_model, config["model"]["name"])
     model = model_class.load_from_checkpoint(model_checkpoint_callback.best_model_path)
-    print(model_checkpoint_callback.best_model_path)
-
+    model.eval()
     test_results = trainer.test(model, dataloaders=test_loader)
     return test_results
 
 
-def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
+def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate surrogate???
     """Test surrogate model"""
-    if config["model"]["model_parameters"]["dataset_encoder_type"] == "column":
-        index_col = [0, 1]
-    else:
-        index_col = 0
+    dataset_configs = _parse_dataset_config(config)
+    _, _, test_dataset, _ = get_datasets(config["dataset_params"]["root_path"], 
+                                         False, 
+                                         index_col=dataset_configs['index_col'])
+    _, _, test_loader = _create_data_loaders(None, None, test_dataset, config)
 
-    _, _, test_dataset, _ = get_datasets(config["dataset_params"]["root_path"], False, index_col=index_col)
-
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=256,
-        num_workers=config["num_dataloader_workers"],
-    )
-    model_class = getattr(surrogate_model, config["model"].pop("name"))
+    model_class = getattr(surrogate_model, config["model"]["name"])
     chpoint_dir = config["model_data"]["save_dir"] + "checkpoints/"
     model = model_class.load_from_checkpoint(
         checkpoint_path=chpoint_dir + os.listdir(chpoint_dir)[0],
@@ -231,8 +252,8 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
     with torch.no_grad():
         for batch in test_loader:
-            surrogate_model.test_step(batch)
-            res = surrogate_model.test_step_outputs.pop()
+            model.test_step(batch)
+            res = model.test_step_outputs.pop()
             task_ids.append(res['task_id'])
             pipe_ids.append(res['pipe_id'])
             y_preds.append(res['y_pred'])
@@ -253,3 +274,6 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     res.columns = ['dataset', 'fitness', 'model_str']
 
     res.to_csv('surrogate_test_set_prediction.csv', index=False)
+
+    
+
