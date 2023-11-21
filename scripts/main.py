@@ -19,8 +19,7 @@ if __name__ == '__main__':
         training_method = getattr(training, config["training_method"])
         training_method(config)
     elif args.test:
-        training_method = getattr(training, config["training_method"])
-        training_method(config)
+        training.test_ranking(config)
     elif args.tune:
         tuning_method = getattr(training, config["tuning_method"])
         n_trials = config.pop("n_trials")
