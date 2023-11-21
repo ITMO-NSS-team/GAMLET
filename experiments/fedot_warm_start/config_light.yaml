@@ -15,15 +15,3 @@ assessor_params:
 advisor_params:
   minimal_distance: 1
   n_best_to_advise: 5
-#evaluation_params:
-collect_metrics:
-  - f1
-  - roc_auc
-  - accuracy
-  - neg_log_loss
-  - precision
-common_fedot_params:
-  problem: classification
-  n_jobs: -1
-  show_progress: false
-baseline_model: 'xgboost'

@@ -40,10 +40,19 @@ from meta_automl.data_preparation.models_loaders import FedotHistoryLoader
 from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
 from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
 
-CONFIG_PATH = Path(__file__).parent.joinpath('config_light.yaml')
+CONFIGS_DIR = Path(__file__).parent
 
-with open(CONFIG_PATH, 'r') as config_file:
-    config = yaml.load(config_file, yaml.Loader)
+with open(CONFIGS_DIR / 'configs_list.yaml', 'r') as config_file:
+    configs_list = yaml.load(config_file, yaml.Loader)
+
+config = {}
+for conf_name in configs_list:
+    with open(CONFIGS_DIR / conf_name, 'r') as config_file:
+        conf = yaml.load(config_file, yaml.Loader)
+    intersection = set(config).intersection(set(conf))
+    if intersection:
+        raise ValueError(f'Parameter values given twice: {conf_name}, {intersection}.')
+    config.update(conf)
 
 # Load constants
 SEED = config['seed']
@@ -56,16 +65,19 @@ ASSESSOR_PARAMS = config['assessor_params']
 ADVISOR_PARAMS = config['advisor_params']
 MF_EXTRACTOR_PARAMS = config['mf_extractor_params']
 COLLECT_METRICS = config['collect_metrics']
-COMMON_FEDOT_PARAMS = config['common_fedot_params']
+FEDOT_PARAMS = config['fedot_params']
+DATA_TEST_SIZE = config['data_test_size']
+DATA_SPLIT_SEED = config['data_split_seed']
 BASELINE_MODEL = config['baseline_model']
+# Optional values
 TMPDIR = config.get('tmpdir')
+SAVE_DIR_PREFIX = config.get('save_dir_prefix')
 
 UPDATE_TRAIN_TEST_DATASETS_SPLIT = config.get('update_train_test_datasets_split')
 
 # Postprocess constants
 COLLECT_METRICS_ENUM = tuple(map(MetricsRepository.metric_by_id, COLLECT_METRICS))
 COLLECT_METRICS[COLLECT_METRICS.index('neg_log_loss')] = 'logloss'
-COMMON_FEDOT_PARAMS['seed'] = SEED
 
 
 class KNNSimilarityAdvice(MetaLearningApproach):
@@ -195,8 +207,8 @@ def get_current_formatted_date() -> (datetime, str, str):
 def get_save_dir(time_now_for_path) -> Path:
     save_dir = get_cache_dir(). \
         joinpath('experiments').joinpath('fedot_warm_start').joinpath(f'run_{time_now_for_path}')
-    if 'debug' in CONFIG_PATH.name:
-        save_dir = save_dir.with_name('debug_' + save_dir.name)
+    if SAVE_DIR_PREFIX:
+        save_dir = save_dir.with_name(SAVE_DIR_PREFIX + save_dir.name)
     if save_dir.exists():
         shutil.rmtree(save_dir)
     save_dir.mkdir(parents=True)
