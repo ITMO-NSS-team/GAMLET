@@ -41,7 +41,7 @@ trainer:
 
 tensorboard_logger:
   save_dir: "./logs/TS"
-  name: "model_training"
+  name: "timeseries_train"
 
 model_checkpoint_callback:
   save_top_k: 1
@@ -56,4 +56,5 @@ early_stopping_callback:
   patience: 10
 
 model_data:
+  save_name: "timeseries"
   save_dir: "./model_checkpoints/timeseries/"

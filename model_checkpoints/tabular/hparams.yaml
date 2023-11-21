@@ -1,5 +1,4 @@
 loss_name: null
-lr: 0.0001
 model_parameters:
   batch_norm: true
   d_model: 64
@@ -19,5 +18,6 @@ model_parameters:
   pipe_encoder_type: graph_transformer
   se: gnn
   use_edge_attr: false
-temperature: 5
-weight_decay: 0.0001
+  temperature: 5
+  weight_decay: 0.0001
+  lr: 0.0001
