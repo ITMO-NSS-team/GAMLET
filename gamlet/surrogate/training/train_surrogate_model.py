@@ -62,7 +62,6 @@ def get_datasets(path, is_pair=False, is_folded = False, index_col=0):
             val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
         else:
             train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), (VAL_R,))
-        
     if is_pair:
         train_dataset = PairDataset(
             task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -269,11 +268,14 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate
 
     res = df.loc[df.groupby(['task_id'])['y_pred'].idxmax()]
     res['model_str'] = [str(pipelines_fedot[i]) for i in res.pipe_id.values]
-    res = res[['task_id', 'y_true', 'model_str']]
+    res = res[['task_id', 'y_true', 'pipe_id', 'model_str']]
     res['y_true'] = -res['y_true']
-    res.columns = ['dataset', 'fitness', 'model_str']
+    res.columns = ['dataset', 'fitness', 'pipe_id', 'model_str']
 
-    res.to_csv('surrogate_test_set_prediction.csv', index=False)
+    res.to_csv('./experiments/surrogate_test_set_prediction.csv', index=False)
+    pipelines_top = {i:pipelines_fedot[i] for i in res.pipe_id}
+    with open("./experiments/top_pipelines.pickle", "wb") as file:
+        pickle.dump(pipelines_top, file)
 
     
 

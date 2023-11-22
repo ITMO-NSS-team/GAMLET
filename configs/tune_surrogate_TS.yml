@@ -43,8 +43,8 @@ trainer:
   devices: "auto"
 
 tensorboard_logger:
-  save_dir: "./logs/tune_surrogate_model"
-  name: "hyperparameter_tuning"
+  save_dir: "./logs"
+  name: "tune_ts"
   
 model_checkpoint_callback:
   save_top_k: 1

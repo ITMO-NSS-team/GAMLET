@@ -36,12 +36,12 @@ dataset_params:
 trainer:
   log_every_n_steps: 1
   num_sanity_val_steps: 0
-  max_epochs: 4
+  max_epochs: 100
   accelerator: "cpu"
   devices: "auto"
 
 tensorboard_logger:
-  save_dir: "./logs/openml_meta_features_and_fedot_pipelines/train_surrogate_model_best"
+  save_dir: "./logs"
   name: "tabular_train"
 
 model_checkpoint_callback:

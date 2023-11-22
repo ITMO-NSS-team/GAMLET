@@ -7,11 +7,11 @@ model_parameters:
   dim_dataset: 30
   dim_feedforward: 128
   dropout: 0.3
-  global_pool: mean
+  global_pool: cls
   gnn_type: graphsage
   in_size: 75
   k_hop: 2
-  lr: 0.001
+  lr: 0.0001
   num_class: 1
   num_heads: 8
   num_layers: 2
@@ -19,4 +19,4 @@ model_parameters:
   se: gnn
   temperature: 5
   use_edge_attr: false
-  weight_decay: 0.0001
+  weight_decay: 0.01

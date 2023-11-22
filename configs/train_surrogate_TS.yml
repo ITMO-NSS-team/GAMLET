@@ -40,7 +40,7 @@ trainer:
   devices: "auto"
 
 tensorboard_logger:
-  save_dir: "./logs/TS"
+  save_dir: "./logs"
   name: "timeseries_train"
 
 model_checkpoint_callback:
