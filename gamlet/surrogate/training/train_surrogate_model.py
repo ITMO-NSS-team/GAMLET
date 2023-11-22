@@ -226,7 +226,7 @@ def do_training(train_loader, val_loader, test_loader, config, meta_data):
     )
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
-    model_class = getattr(surrogate_model, config["model"]["name"])
+    model_class = getattr(surrogate_model, config["model"]["name"])    
     model = model_class.load_from_checkpoint(model_checkpoint_callback.best_model_path)
     model.eval()
     test_results = trainer.test(model, dataloaders=test_loader)

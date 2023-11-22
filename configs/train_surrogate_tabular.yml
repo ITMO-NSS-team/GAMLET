@@ -19,11 +19,11 @@ model:
     k_hop: 2
     se: "gnn"
     deg: null  # The parameter is inferred
-    global_pool: "mean"
+    global_pool: "cls"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
     dataset_encoder_type: "column"  #"column" or "aggregated"
-    weight_decay: 0.0001
+    weight_decay: 0.01
     lr: 0.001
     temperature: 5
   
@@ -36,7 +36,7 @@ dataset_params:
 trainer:
   log_every_n_steps: 1
   num_sanity_val_steps: 0
-  max_epochs: 100
+  max_epochs: 4
   accelerator: "cpu"
   devices: "auto"
 
