@@ -1,7 +1,8 @@
 from itertools import chain
-from typing import List
+from typing import Callable, List, Optional, Sequence
 
 from fedot.core.pipelines.adapters import PipelineAdapter
+from fedot.core.repository.default_params_repository import DefaultOperationParamsRepository
 from golem.core.optimisers.fitness import SingleObjFitness
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 
@@ -10,11 +11,16 @@ from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 from meta_automl.data_preparation.models_loaders import ModelsLoader
 
 
-def extract_best_models_from_history(dataset: DatasetBase, history: OptHistory,
-                                     n_best_models_to_load: int) -> List[EvaluatedModel]:
-    best_models = []
-    if history.individuals:
-        best_individuals = sorted(chain(*history.individuals),
+def extract_best_models_from_history(
+        dataset: DatasetBase,
+        history: OptHistory,
+        n_best_models_to_load: int,
+        evaluate_model_func: Optional[Callable] = None,
+) -> List[EvaluatedModel]:
+    best_individuals_accum = []
+    generations = history.generations
+    if generations:
+        best_individuals = sorted(chain(*generations),
                                   key=lambda ind: ind.fitness,
                                   reverse=True)
         for individual in history.final_choices or []:
@@ -24,25 +30,33 @@ def extract_best_models_from_history(dataset: DatasetBase, history: OptHistory,
         best_individuals = list({ind.graph.descriptive_id: ind for ind in best_individuals}.values())
         best_individuals = best_individuals[:n_best_models_to_load - 1]
 
+        node_params_repo = DefaultOperationParamsRepository()
         for individual in best_individuals:
             pipeline = PipelineAdapter().restore(individual.graph)
-            fitness = individual.fitness or SingleObjFitness()
-            model = EvaluatedModel(pipeline, fitness, history.objective.metric_names[0], dataset)
-            best_models.append(model)
+            for node in pipeline.nodes:
+                node.parameters = node_params_repo.get_default_params_for_operation(node.name)
+            if evaluate_model_func:
+                fitness, metric_names = evaluate_model_func(pipeline)
+            else:
+                fitness = individual.fitness or SingleObjFitness()
+                metric_names = history.objective.metric_names
+            model = EvaluatedModel(pipeline, fitness, metric_names, dataset)
+            best_individuals_accum.append(model)
 
-    if history.tuning_result:
-        final_pipeline = PipelineAdapter().restore(history.tuning_result)
-        final_model = EvaluatedModel(final_pipeline, SingleObjFitness(), history.objective.metric_names[0], dataset)
-        best_models.insert(0, final_model)
-
-    return best_models
+    return best_individuals_accum
 
 
 class FedotHistoryLoader(ModelsLoader):
 
-    def load(self, datasets, histories, n_best_dataset_models_to_load: int) -> List[List[EvaluatedModel]]:
+    def load(self,
+             datasets: Sequence[DatasetBase],
+             histories: Sequence[Sequence[OptHistory]],
+             n_best_dataset_models_to_load: int,
+             evaluate_model_func: Optional[Sequence[Callable]] = None,
+             ) -> List[List[EvaluatedModel]]:
         result = []
-        for dataset, histories in zip(datasets, histories):
-            result += [extract_best_models_from_history(dataset, history, n_best_dataset_models_to_load)
-                       for history in histories]
+        for dataset, histories, eval_func in zip(datasets, histories, evaluate_model_func):
+            result += [
+                extract_best_models_from_history(dataset, history, n_best_dataset_models_to_load, eval_func)
+                for history in histories]
         return result

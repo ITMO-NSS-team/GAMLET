@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from functools import partial, wraps
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
 
 import openml
 import pandas as pd
@@ -21,10 +21,10 @@ from fedot.core.optimisers.objective import MetricsObjective, PipelineObjectiveE
 from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from fedot.core.repository.quality_metrics_repository import MetricsRepository, QualityMetricsEnum
-from fedot.core.validation.split import tabular_cv_generator
+from golem.core.optimisers.fitness import Fitness
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from pecapiku import CacheDict
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
@@ -126,7 +126,10 @@ class KNNSimilarityAdvice(MetaLearningApproach):
         datasets_similarity_assessor: KNeighborsSimilarityAssessor
         model_advisor: DiverseModelAdvisor
 
-    def fit(self, datasets_data: Sequence[TabularData], histories: Sequence[Sequence[OptHistory]]):
+    def fit(self,
+            datasets_data: Sequence[TabularData],
+            histories: Sequence[Sequence[OptHistory]],
+            evaluate_model_func: Optional[Sequence[Callable]] = None):
         data = self.data
         params = self.parameters
 
@@ -137,15 +140,19 @@ class KNNSimilarityAdvice(MetaLearningApproach):
         data.meta_features = self.extract_train_meta_features(data.datasets_data)
         self.fit_datasets_similarity_assessor(data.meta_features, data.dataset_ids)
 
-        data.best_models = self.load_models(data.datasets, histories, params.n_best_dataset_models_to_memorize)
+        data.best_models = self.load_models(data.datasets, histories, params.n_best_dataset_models_to_memorize,
+                                            evaluate_model_func)
         self.fit_model_advisor(data.dataset_ids, data.best_models)
 
         return self
 
-    def load_models(self, datasets: Sequence[OpenMLDataset],
-                    histories: Sequence[Sequence[OptHistory]],
-                    n_best_dataset_models_to_load: int) -> List[List[EvaluatedModel]]:
-        return self.components.models_loader.load(datasets, histories, n_best_dataset_models_to_load)
+    def load_models(
+            self, datasets: Sequence[OpenMLDataset],
+            histories: Sequence[Sequence[OptHistory]],
+            n_best_dataset_models_to_load: int,
+            evaluate_model_func: Optional[Sequence[Callable]] = None) -> List[List[EvaluatedModel]]:
+        return self.components.models_loader.load(datasets, histories, n_best_dataset_models_to_load,
+                                                  evaluate_model_func)
 
     def extract_train_meta_features(self, datasets_data: List[TabularData]) -> pd.DataFrame:
         components = self.components
@@ -251,27 +258,36 @@ def split_datasets(dataset_ids, n_datasets: Optional[int] = None, update_train_t
 
 
 def evaluate_pipeline(pipeline: Pipeline,
-                      data: TabularData,
+                      train_data: TabularData,
+                      test_data: TabularData,
                       metrics: Sequence[QualityMetricsEnum] = COLLECT_METRICS_ENUM,
-                      metric_names: Sequence[str] = COLLECT_METRICS) -> Dict[str, float]:
+                      metric_names: Sequence[str] = COLLECT_METRICS,
+                      mode: Literal['fitness', 'float'] = 'float'
+                      ) -> Union[Dict[str, float], Tuple[Fitness, Sequence[str]]]:
     """Gets quality metrics for the fitted pipeline.
     The function is based on `Fedot.get_metrics()`
 
     Returns:
         the values of quality metrics
     """
-    data = array_to_input_data(data.x, data.y)
-    data_producer = partial(tabular_cv_generator, data, 10, StratifiedKFold)
+    train_data = array_to_input_data(train_data.x, train_data.y)
+    test_data = array_to_input_data(test_data.x, test_data.y)
+
+    def data_producer():
+        yield train_data, test_data
 
     objective = MetricsObjective(metrics)
     obj_eval = PipelineObjectiveEvaluate(objective=objective,
                                          data_producer=data_producer,
                                          eval_n_jobs=-1)
 
-    metric_values = obj_eval.evaluate(pipeline).values
-    metric_values = {metric_name: round(value, 3) for (metric_name, value) in zip(metric_names, metric_values)}
-
-    return metric_values
+    fitness = obj_eval.evaluate(pipeline)
+    if mode == 'float':
+        metric_values = fitness.values
+        metric_values = {metric_name: round(value, 3) for (metric_name, value) in zip(metric_names, metric_values)}
+        return metric_values
+    if mode == 'fitness':
+        return fitness, metric_names
 
 
 def timed(func, resolution: Literal['sec', 'min'] = 'min'):
@@ -357,7 +373,7 @@ def run_fedot(train_data: TabularData, test_data: TabularData, timeout: float,
               initial_assumption: Optional[Sequence[Pipeline]] = None, meta_learning_time_sec: float = 0.):
     fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **FEDOT_PARAMS)
     fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
-    evaluate_func = partial(evaluate_pipeline, data=test_data)
+    evaluate_func = partial(evaluate_pipeline, train_data=train_data, test_data=test_data)
     run_date = datetime.now()
     cache_key = f'{run_label}_{train_data.id}'
     with fedot_evaluations_cache as cache_dict:
@@ -379,7 +395,7 @@ def run_fedot(train_data: TabularData, test_data: TabularData, timeout: float,
     save_evaluation(dataset=train_data.dataset,
                     run_label=run_label,
                     pipeline=pipeline,
-                    meta_learning_time_min=meta_learning_time_sec,
+                    meta_learning_time_sec=meta_learning_time_sec,
                     automl_time_min=fit_time,
                     automl_timeout_min=fedot.params.timeout,
                     history_obj=fedot.history,
@@ -394,7 +410,7 @@ def run_pipeline(train_data: TabularData, test_data: TabularData, pipeline: Pipe
                  run_label: str, experiment_date: datetime, save_dir: Path):
     train_data_for_fedot = array_to_input_data(train_data.x, train_data.y)
     fit_func = partial(pipeline.fit, train_data_for_fedot)
-    evaluate_func = partial(evaluate_pipeline, data=test_data)
+    evaluate_func = partial(evaluate_pipeline, train_data=train_data, test_data=test_data)
     run_date = datetime.now()
     pipeline, metrics, fit_time = fit_evaluate_pipeline(pipeline=pipeline, fit_func=fit_func,
                                                         evaluate_func=evaluate_func)
@@ -404,6 +420,7 @@ def run_pipeline(train_data: TabularData, test_data: TabularData, pipeline: Pipe
                     automl_time_min=0,
                     pipeline_fit_time=fit_time,
                     automl_timeout_min=0,
+                    meta_learning_time_sec=0,
                     run_data=run_date,
                     experiment_date=experiment_date,
                     save_dir=save_dir,
@@ -476,7 +493,13 @@ def main():
     knowledge_base_data = [OpenMLDataset(dataset).get_data() for dataset in knowledge_base.keys()]
     knowledge_base_histories = list(knowledge_base.values())
     # Learning
-    algorithm.fit(knowledge_base_data, knowledge_base_histories)
+    dataset_eval_funcs = []
+    for dataset_id in dataset_ids_train:
+        split = dataset_splits[dataset_id]
+        train_data, test_data = split['train'], split['test']
+        model_eval_func = partial(evaluate_pipeline, train_data=train_data, test_data=test_data, mode='fitness')
+        dataset_eval_funcs.append(model_eval_func)
+    algorithm.fit(knowledge_base_data, knowledge_base_histories, dataset_eval_funcs)
     with open(meta_learner_path, 'wb') as meta_learner_file:
         pickle.dump(algorithm, meta_learner_file)
 
