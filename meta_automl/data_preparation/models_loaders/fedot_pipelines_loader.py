@@ -1,18 +1,18 @@
 import logging
 from functools import partial
 from pathlib import Path
-from typing import List, Optional, Union
 
 import numpy as np
 from fedot.core.data.data import InputData
+from fedot.core.data.data_split import train_test_data_setup
 from fedot.core.optimisers.objective import PipelineObjectiveEvaluate
 from fedot.core.optimisers.objective.metrics_objective import MetricsObjective
 from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.repository.dataset_types import DataTypesEnum
 from fedot.core.repository.quality_metrics_repository import ClassificationMetricsEnum
 from fedot.core.repository.tasks import Task, TaskTypesEnum
-from fedot.core.validation.split import tabular_cv_generator
 from tqdm import tqdm
+from typing import List, Optional, Union
 from typing_extensions import Literal
 
 from meta_automl.data_preparation.dataset import DatasetBase
@@ -25,7 +25,7 @@ logger = logging.getLogger(__file__)
 
 
 def evaluate_classification_fedot_pipeline(pipeline, input_data):
-    cv_folds = partial(tabular_cv_generator, input_data, folds=5)
+    cv_folds = partial(train_test_data_setup, input_data)
     objective_eval = PipelineObjectiveEvaluate(MetricsObjective(ClassificationMetricsEnum.ROCAUC), cv_folds,
                                                eval_n_jobs=-1)
     fitness = objective_eval(pipeline)
