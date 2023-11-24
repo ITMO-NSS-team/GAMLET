@@ -28,7 +28,7 @@ def parallelize(data, func, num_workers):
     return data
 
 
-def process_record(df, knowledge_base_path):
+def process_record(df, knowledge_base_path, fitness_metric: str):
     models = []
     for _, row in df.iterrows():
         json_path = knowledge_base_path.joinpath(PureWindowsPath(row['model_path']))
@@ -36,7 +36,7 @@ def process_record(df, knowledge_base_path):
         pipeline.log.setLevel(logging.CRITICAL)
         predictor = pipeline.load(json_path)
 
-        metric_value = row['fitness']
+        metric_value = row[fitness_metric]
         # fitness = SingleObjFitness(metric_value)
         metadata = dict(row)
         models.append(EvaluatedModel(predictor, metric_value, 'fitness', row['dataset_cache'], metadata))
@@ -47,7 +47,7 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
     def __init__(
             self,
             knowledge_base_path: Union[str, PathLike] = DEFAULT_KNOWLEDGE_BASE_PATH,
-            datasets_loader: DatasetsLoader = OpenMLDatasetsLoader,
+            datasets_loader: DatasetsLoader = OpenMLDatasetsLoader(),
     ):
         self.knowledge_base_path: Path = Path(knowledge_base_path)
         self.df_knowledge_base: Optional[pd.DataFrame] = None
@@ -67,7 +67,7 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
             dataset_ids = self.parse_datasets()['dataset_id']
 
         self.df_knowledge_base['fitness_coef'] = -1
-        self.df_knowledge_base['fitness'] *= self.df_knowledge_base['fitness_coef']
+        self.df_knowledge_base[fitness_metric] *= self.df_knowledge_base['fitness_coef']
 
         df_knowledge_base = self.df_knowledge_base
         df_knowledge_base = df_knowledge_base[df_knowledge_base['dataset_id'].isin(dataset_ids)]
@@ -79,7 +79,8 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
 
         partitions = max(cpu_count() - 2, 1)
         models = parallelize(df_knowledge_base,
-                             partial(process_record, knowledge_base_path=self.knowledge_base_path),
+                             partial(process_record, knowledge_base_path=self.knowledge_base_path,
+                                     fitness_metric=fitness_metric),
                              num_workers=partitions)
         return models
 
