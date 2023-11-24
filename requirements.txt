@@ -1,6 +1,6 @@
 # constant versions (for direct, unstable & important dependencies)
-fedot==0.7.2
-thegolem==0.3.2
+fedot @ https://github.com/nccr-itmo/FEDOT/archive/master.zip
+thegolem==0.4.0
 openml==0.14.1
 pymfe==0.4.2
 pyyaml==6.0.1
