@@ -7,17 +7,19 @@ import pickle
 
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
+from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir, get_data_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from meta_automl.meta_algorithm.model_advisors import SurrogateGNNModelAdvisor
 from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
-SURROGATE_MODEL_CHECKPOINT_FILE = "./experiments/base/checkpoints/best.ckpt"
-SURROGATE_MODEL_HYPERPARAMETERS_FILE = "./experiments/base/hparams.yaml"
-META_FEATURES_EXTRACTOR_CONFIG_FILE = "./configs/use_features.json"
-META_FEATURES_PREPROCESSOR_FILE = "./data/pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle"
-PIPELINES_FILE = "./data/pymfe_meta_features_and_fedot_pipelines/all/pipelines_fedot.pickle"
+SURROGATE_MODEL_CHECKPOINT_FILE = get_checkpoints_dir() / "tabular" / "checkpoints" / "best.ckpt"
+SURROGATE_MODEL_HYPERPARAMETERS_FILE = get_checkpoints_dir() / "tabular" / "hparams.yaml"
+META_FEATURES_EXTRACTOR_CONFIG_FILE = get_configs_dir() / "use_features.json"
+META_FEATURES_PREPROCESSOR_FILE = (get_data_dir() /
+                                   "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle")
+PIPELINES_FILE = get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/pipelines_fedot.pickle"
 
 
 def main():
