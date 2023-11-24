@@ -5,7 +5,7 @@ Run this model from the repo root.
 
 import pickle
 
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir, get_data_dir
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
@@ -51,7 +51,7 @@ def main():
     datasets_names = [
         "apsfailure",
     ]
-    datasets = [OpenMLDatasetsLoader().load([dset_name], allow_names=True) for dset_name in datasets_names]
+    datasets = [OpenMLDataset.from_search(dset_name) for dset_name in datasets_names]
     # Load pipelines.
     with open(PIPELINES_FILE, "rb") as input_file:
         pipelines = pickle.load(input_file)
