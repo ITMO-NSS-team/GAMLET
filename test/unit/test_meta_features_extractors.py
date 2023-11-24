@@ -7,14 +7,13 @@ from meta_automl.data_preparation.dataset import OpenMLDataset
 from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
 from meta_automl.data_preparation.file_system import get_dataset_cache_path_by_id, get_project_root
 from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor, TimeSeriesFeaturesExtractor
-from test.constants import (DATASETS_WITH_CACHED_META_FEATURES, OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD,
-                            TS_DATASETS_IDS_TO_LOAD)
+from test.constants import OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD, TS_DATASETS_IDS_TO_LOAD
 from test.unit.datasets.general_checks import assert_cache_file_exists
 
 
 @pytest.fixture
 def dataset_ids():
-    dataset_ids = list(set(OPENML_CACHED_DATASETS + DATASETS_WITH_CACHED_META_FEATURES + OPENML_DATASET_IDS_TO_LOAD))
+    dataset_ids = list(set(OPENML_CACHED_DATASETS + OPENML_DATASET_IDS_TO_LOAD))
     yield dataset_ids
     for dataset_id in dataset_ids:
         if dataset_id not in OPENML_CACHED_DATASETS:
