@@ -1,0 +1,20 @@
+timeout: 1
+launch_num: 1
+datasets:
+  train:
+    - sylvine
+  test:
+    - car
+
+setups:
+  FEDOT_MAB:
+    problem: classification
+    n_jobs: 1
+    show_progress: false
+    context_agent_type: surrogate
+    adaptive_mutation_type: contextual_bandit
+
+  FEDOT_Classic:
+    problem: classification
+    n_jobs: -1
+    show_progress: false
