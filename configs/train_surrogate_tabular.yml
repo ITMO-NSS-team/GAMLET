@@ -24,7 +24,7 @@ model:
     pipe_encoder_type: "graph_transformer"
     dataset_encoder_type: "column"  #"column" or "aggregated"
     weight_decay: 0.01
-    lr: 0.001
+    lr: 0.0001
     temperature: 5
   
 dataset_params:
