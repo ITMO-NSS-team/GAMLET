@@ -138,7 +138,7 @@ def random_train_val_test_split(tasks: List[int], splits: List[float]) -> Tuple[
 
 def _create_data_loaders(train_dataset, val_dataset, test_dataset, config):
     train_loader, val_loader, test_loader = None, None, None
-    sampler = RandomSampler(train_dataset, replacement=True, num_samples=config["batch_size"]*100)
+    sampler = RandomSampler(train_dataset, replacement=True, num_samples=config["batch_size"]*50)
 
     if train_dataset is not None:
         train_loader = DataLoader(
