@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import torch
+from torch.utils.data import RandomSampler
+
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -57,7 +59,8 @@ def get_datasets(path, is_pair=False, is_folded = False, index_col=0):
             dataset_types = defaultdict(list)
             for t in train_task_set:
                 dataset_types[t.split('_')[0]].append(t)
-            train_task_types, val_task_types = random_train_val_test_split(list(dataset_types.keys()), (VAL_R,))
+            types_list = sorted(list(dataset_types.keys()))
+            train_task_types, val_task_types = random_train_val_test_split(types_list, (VAL_R,))
             train_task_set = set([item for d_type in train_task_types for item in dataset_types[d_type]])
             val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
         else:
@@ -135,11 +138,12 @@ def random_train_val_test_split(tasks: List[int], splits: List[float]) -> Tuple[
 
 def _create_data_loaders(train_dataset, val_dataset, test_dataset, config):
     train_loader, val_loader, test_loader = None, None, None
+    sampler = RandomSampler(train_dataset, replacement=True, num_samples=config["batch_size"]*100)
+
     if train_dataset is not None:
         train_loader = DataLoader(
-            train_dataset,
+            train_dataset, sampler=sampler,
             batch_size=config["batch_size"],
-            shuffle=True,
             num_workers=config["num_dataloader_workers"],
         )
     if val_dataset is not None:

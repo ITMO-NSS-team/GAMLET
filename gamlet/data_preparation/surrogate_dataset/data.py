@@ -1,5 +1,5 @@
 import os
-from random import choice
+from random import choice, sample
 
 import torch
 import torch_geometric.utils as utils
@@ -171,16 +171,16 @@ class SingleDataset(Dataset):
     """Dataset for surrogate model. Stores dataset-pipeline experiments data.
 
     """
-
     def __init__(self, indxs, data_pipe, data_dset):
         self.data_pipe = data_pipe
         self.data_dset = data_dset
 
         self.indxs = indxs
-        # remove records with only 1 pipeline per dataset
-        cnts = self.indxs.groupby('task_id').size().reset_index(name='counts')  # ??
-        valid_tasks = set(cnts.task_id[cnts.counts > 1].values)
-        self.indxs = self.indxs[self.indxs.task_id.isin(valid_tasks)]
+        
+        cnts = self.indxs.groupby('task_id').size()     
+        cnts = cnts[cnts> 1]  # remove records with only 1 pipeline per dataset
+        self.indxs = self.indxs[self.indxs.task_id.isin(set(cnts.index))]
+        # self.weights = 1./cnts  # dataset weight
 
     def __len__(self):
         return len(self.indxs)
@@ -207,6 +207,7 @@ class SingleDataset(Dataset):
         if dset_data.x.dim() < 2:
             dset_data.x = dset_data.x.view(1, -1)
 
+        # w = torch.tensor(self.weights[task_id], dtype=torch.float32)
         return task_id, pipe_id, gr_data, dset_data, y
 
 
@@ -219,9 +220,13 @@ class PairDataset(SingleDataset):
     def __init__(self, indxs, data_pipe, data_dset):
         super().__init__(indxs, data_pipe, data_dset)
         self.indxs['ind'] = list(range(len(self.indxs)))
-        self.task_pipe_dict = self.indxs.groupby('task_id')['ind'].apply(set).to_dict()
-
-    def __getitem__(self, idx):
+        self.task_pipe_dict = self.indxs.groupby('task_id')['ind'].apply(list).to_dict()
+        self.dateset_id_list = list(self.task_pipe_dict.keys())    
+    
+    def __len__(self):
+        return len(self.dateset_id_list)   
+    
+    def __getitem__(self, itask):
         """
         Args:
             idx: index of data.
@@ -231,8 +236,10 @@ class PairDataset(SingleDataset):
             x_pipe2: Data object of pipeline 2.
             y: 1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5.
         """
-        t1, _, gr_data1, _, y1 = super().__getitem__(idx)
-        other_indexes = list(self.task_pipe_dict[t1] - {idx})
-        idx2 = choice(other_indexes)
+        task_id = self.dateset_id_list[itask]
+        comb_ids = self.task_pipe_dict[task_id]
+        idx1, idx2 = sample(comb_ids, 2)
+        
+        _, _, gr_data1, _, y1 = super().__getitem__(idx1)
         _, _, gr_data2, dset_data2, y2 = super().__getitem__(idx2)
         return gr_data1, gr_data2, dset_data2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
