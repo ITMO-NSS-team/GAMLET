@@ -205,7 +205,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
             rank_max = idx_y_pred_sorted[mask][0]
             res['mrr'] = 1. / (rank_max + 1)
             # NDCG
-            res['ndcg'] = ndcg_score(y_true, y_pred, k=10)
+            res['ndcg'] = ndcg_score(y_true, y_pred)     #, k=10)
             # HITS
 
             res['hits'] = mask[:kk].sum() / kk
@@ -280,8 +280,8 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         --------
         Loss value.
         """
+        
         x_pipe1, x_pipe2, dset_data, y = batch
-
         pred1 = torch.squeeze(self.forward(x_pipe1, dset_data))
         pred2 = torch.squeeze(self.forward(x_pipe2, dset_data))
         loss = F.binary_cross_entropy_with_logits((pred1 - pred2) * self.temperature, y)
