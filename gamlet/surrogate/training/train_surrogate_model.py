@@ -2,6 +2,7 @@
 
 import json
 import os
+from pathlib import Path
 import pickle
 import random
 import warnings
@@ -24,11 +25,10 @@ from gamlet.data_preparation.surrogate_dataset import (GraphDataset,
 from gamlet.surrogate import surrogate_model
 
 
-def get_datasets(path, is_pair=False, is_folded = False, index_col=0):
+def get_files(path, index_col=0):
     """Loading preprocessed data and creating Dataset objects for model training
     Parameters:
     -----------
-    is_pair: create dataset with or without pipeline pairs.
 
     """
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
@@ -36,35 +36,26 @@ def get_datasets(path, is_pair=False, is_folded = False, index_col=0):
     datasets = pd.read_csv(os.path.join(path, 'datasets.csv'), index_col=index_col).fillna(0)
     task_pipe_comb = pd.read_csv(os.path.join(path, 'task_pipe_comb.csv'))
     task_pipe_comb = task_pipe_comb[task_pipe_comb.y < 10]
-    
-    VAL_R = 0.15
-    TEST_R = 0.15
-    tasks_in_file = set(datasets.index.get_level_values(0))
-    try:
-        with open(os.path.join(path, "split.json")) as f:
+    spl_file =  Path(path, "split.json")
+    splits = None
+    if spl_file.is_file():
+        with open(spl_file) as f:
             splits = json.load(f)
-        train_task_set, val_task_set, test_task_set = train_val_test_split(splits)
-        train_task_set = train_task_set & tasks_in_file
-        val_task_set = val_task_set & tasks_in_file
-        test_task_set = test_task_set & tasks_in_file
-    except FileNotFoundError:
-        train_task_set, val_task_set, test_task_set = random_train_val_test_split(
-            list(tasks_in_file),
-            (VAL_R, TEST_R),
-        )
+    return datasets, task_pipe_comb, pipelines, splits
+
+def create_torch_dsets(datasets, 
+                    task_pipe_comb, 
+                    pipelines, 
+                    task_sets,
+                    splits = None, 
+                    is_pair=False):
+    """Loading preprocessed data and creating Dataset objects for model training
+    Parameters:
+    -----------
+    is_pair: create dataset with or without pipeline pairs.
+    """
     
-    #if validation is missing, sample it from train
-    if len(val_task_set) == 0:
-        if is_folded:
-            dataset_types = defaultdict(list)
-            for t in train_task_set:
-                dataset_types[t.split('_')[0]].append(t)
-            types_list = sorted(list(dataset_types.keys()))
-            train_task_types, val_task_types = random_train_val_test_split(types_list, (VAL_R,))
-            train_task_set = set([item for d_type in train_task_types for item in dataset_types[d_type]])
-            val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
-        else:
-            train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), (VAL_R,))
+    train_task_set, val_task_set, test_task_set = task_sets
     if is_pair:
         train_dataset = PairDataset(
             task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
@@ -99,22 +90,50 @@ def get_datasets(path, is_pair=False, is_folded = False, index_col=0):
     return train_dataset, val_dataset, test_dataset, meta_data
 
 
-def train_val_test_split(splits: Dict[str, List[int]]) -> Tuple[List[int], List[int], List[int]]:
+def train_val_test_split(splits: Dict[str, List[int]], 
+                         tasks_in_file,
+                         is_folded = False) -> Tuple[List[int], List[int], List[int]]:
+    VAL_R = 0.15
+    TEST_R = 0.15
     try:
-        train_task_set = splits["train"]
+        train_task_set = set(splits["train"])
     except KeyError:
-        raise KeyError("The key `train` is not found in the json file.")
+        warnings.warn("The key `train` is not found in the json file.")
+        train_task_set = set()
     try:
-        val_task_set = splits["val"]
+        val_task_set = set(splits["val"])
     except KeyError:
         warnings.warn("The key `val` is not found in the json file.")
-        val_task_set = []
+        val_task_set = set()
     try:
-        test_task_set = splits["test"]
+        test_task_set = set(splits["test"])
     except KeyError:
         warnings.warn("The key `test` is not found in the json file.")
-        test_task_set = []
-    return set(train_task_set), set(val_task_set), set(test_task_set)
+        test_task_set = set()
+                                                          
+    if splits is not None:
+        train_task_set = train_task_set & tasks_in_file
+        val_task_set = val_task_set & tasks_in_file
+        test_task_set = test_task_set & tasks_in_file
+    else:
+        train_task_set, val_task_set, test_task_set = random_train_val_test_split(
+            list(tasks_in_file),
+            (VAL_R, TEST_R),
+        )
+    
+    if "val" not in splits: #if validation is missing, sample it from train
+        if is_folded:
+            dataset_types = defaultdict(list)
+            for t in train_task_set:
+                dataset_types[t.split('_')[0]].append(t)
+            types_list = sorted(list(dataset_types.keys()))
+            train_task_types, val_task_types = random_train_val_test_split(types_list, (VAL_R,))
+            train_task_set = set([item for d_type in train_task_types for item in dataset_types[d_type]])
+            val_task_set = set([item for d_type in val_task_types for item in dataset_types[d_type]])
+        else:
+            train_task_set, val_task_set = random_train_val_test_split(list(train_task_set), (VAL_R,))                  
+    
+    return train_task_set, val_task_set, test_task_set
 
 
 def random_train_val_test_split(tasks: List[int], splits: List[float]) -> Tuple[List[int], List[int], List[int]]:
@@ -190,10 +209,18 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     """Create surrogate model and do training according to config parameters."""
     dataset_configs = _parse_dataset_config(config)
 
-    train_dataset, val_dataset, test_dataset, meta_data = get_datasets(config["dataset_params"]["root_path"], 
-                                                                       dataset_configs['is_pair'],
-                                                                       config["dataset_params"]["is_folded"],
-                                                                       index_col=dataset_configs['index_col'])
+    
+    datasets, task_pipe_comb, pipelines, splits = get_files(config["dataset_params"]["root_path"], 
+                                                            index_col=dataset_configs['index_col'])
+
+    tasks_in_file = set(datasets.index.get_level_values(0))
+    task_sets = train_val_test_split(splits, tasks_in_file, is_folded = config["dataset_params"]["is_folded"])
+    train_dataset, val_dataset, test_dataset, meta_data = create_torch_dsets(datasets, 
+                                                                             task_pipe_comb, 
+                                                                             pipelines, 
+                                                                             task_sets,
+                                                                             splits = splits, 
+                                                                             is_pair=dataset_configs['is_pair'])
     assert len(train_dataset) != 0
     assert len(val_dataset) != 0
     assert len(test_dataset) != 0
@@ -236,12 +263,30 @@ def do_training(train_loader, val_loader, test_loader, config, meta_data):
     return test_results
 
 
-def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate surrogate???
+def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate surrogate
     """Test surrogate model"""
     dataset_configs = _parse_dataset_config(config)
-    _, _, test_dataset, _ = get_datasets(config["dataset_params"]["root_path"], 
-                                         False, 
-                                         index_col=dataset_configs['index_col'])
+    
+    
+    datasets, task_pipe_comb, pipelines, splits = get_files(config["dataset_params"]["root_path"], 
+                                                            index_col=dataset_configs['index_col'])
+    task_set_train = set(splits['train'] )
+    pipe_list_train = task_pipe_comb[task_pipe_comb.task_id.isin(task_set_train)].pipeline_id.unique()
+    splits['train'] = []
+    splits['val'] = []
+    tasks_in_file = set(datasets.index.get_level_values(0))
+    task_sets = train_val_test_split(splits, tasks_in_file)
+    
+    d_cand = pd.DataFrame()
+    d_cand['pipeline_id'] = np.concatenate([pipe_list_train for d in splits['test']])
+    d_cand['task_id'] = np.concatenate([np.full((len(pipe_list_train),1), d) for d in splits['test']])
+    d_cand['y'] = 0
+    
+    _, _, test_dataset, _  = create_torch_dsets(datasets, 
+                                                d_cand, 
+                                                pipelines, 
+                                                task_sets,
+                                                splits = splits)
     _, _, test_loader = _create_data_loaders(None, None, test_dataset, config)
 
     model_class = getattr(surrogate_model, config["model"]["name"])

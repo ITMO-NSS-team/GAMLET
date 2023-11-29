@@ -16,7 +16,11 @@ from torch_geometric.loader import DataLoader
 
 from gamlet.surrogate import surrogate_model
 
-from .train_surrogate_model import get_datasets, _create_data_loaders, _parse_dataset_config, _create_model,do_training
+from .train_surrogate_model import (get_files, 
+                                    create_torch_dsets, 
+                                    _create_data_loaders, 
+                                    _parse_dataset_config, 
+                                    _create_model,do_training)
 
 
 def _generate_config(config,  trial):
@@ -104,11 +108,15 @@ def tune_surrogate_model(config: dict, n_trials: int):
         load_if_exists=True,
     )
 
-    dataset_configs = _parse_dataset_config(config)
-    train_dataset, val_dataset, test_dataset, meta_data = get_datasets(config["dataset_params"]["root_path"], 
-                                                                       dataset_configs['is_pair'],
-                                                                       config["dataset_params"]["is_folded"],
-                                                                       index_col=dataset_configs['index_col'])
+    dataset_configs = _parse_dataset_config(config) 
+    datasets, task_pipe_comb, pipelines, splits = get_files(config["dataset_params"]["root_path"], 
+                                                            index_col=dataset_configs['index_col'])
+    train_dataset, val_dataset, test_dataset, meta_data = create_torch_dsets(datasets, 
+                                                                             task_pipe_comb, 
+                                                                             pipelines, 
+                                                                             splits = splits, 
+                                                                             is_pair=dataset_configs['is_pair'], 
+                                                                             is_folded = config["dataset_params"]["is_folded"])
     assert len(train_dataset) != 0
     assert len(val_dataset) != 0
     assert len(test_dataset) != 0
