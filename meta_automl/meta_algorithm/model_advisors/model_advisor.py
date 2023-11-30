@@ -60,7 +60,7 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
     def _predict_single(self, dataset_ids: Sequence[DatasetIDType],
                         n_best_to_advise: Optional[int] = None) -> List[EvaluatedModel]:
         """ Advises pipelines based on identifiers of datasets,
-            looking for similar datasets and corresponding models in its knowledge base.
+            looking for similar datasets and corresponding models in its knowledge base2.
 
         Args:
             dataset_ids: Iterable object of dataset ids.

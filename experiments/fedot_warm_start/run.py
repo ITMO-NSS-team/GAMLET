@@ -371,7 +371,7 @@ def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
 def run_fedot(train_data: TabularData, test_data: TabularData, timeout: float,
               run_label: str, experiment_date: datetime, save_dir: Path, fedot_evaluations_cache: CacheDict,
               initial_assumption: Optional[Sequence[Pipeline]] = None, meta_learning_time_sec: float = 0.):
-    fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **FEDOT_PARAMS)
+    fedot = Fedot(timeout=1, initial_assumption=initial_assumption, **FEDOT_PARAMS)
     fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
     evaluate_func = partial(evaluate_pipeline, train_data=train_data, test_data=test_data)
     run_date = datetime.now()
@@ -456,7 +456,7 @@ def main():
         baseline_pipeline=BASELINE_MODEL,
     )
     save_experiment_params(experiment_params_dict, save_dir)
-    # Gathering knowledge base
+    # Gathering knowledge base2
     # fit_fedot_cached = CacheDict.decorate(fit_evaluate_automl, get_cache_dir() / 'fedot_runs.pkl', inner_key='dataset.id')
     dataset_splits = {}
     for dataset_id in dataset_ids:

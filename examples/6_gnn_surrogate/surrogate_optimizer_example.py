@@ -16,7 +16,7 @@ if __name__ == '__main__':
     dataset_name = 'sylvine'  # Specify your OpenML dataset here to get the dataset meta-features.
     datasets_loader = OpenMLDatasetsLoader()
     train_data = datasets_loader.load_single(dataset_name, allow_name=True)
-    surrogate_knowledge_base_dir = get_checkpoints_dir() / 'tabular'
+    surrogate_knowledge_base_dir = get_checkpoints_dir() / 'base'
 
     # Load surrogate model
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(

@@ -48,7 +48,6 @@ class PipelineDatasetSurrogateModel(LightningModule):
             temperature: float = 10,
     ):
         super().__init__()
-
         if model_parameters['pipe_encoder_type'] == "simple_graph_encoder":
             self.pipeline_encoder = SimpleGNNEncoder(
                 **{k: v for k, v in model_parameters.items() if k != "name"})

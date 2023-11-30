@@ -1,36 +1,35 @@
+import logging
 import os.path
-import timeit
+import warnings
 from copy import deepcopy
 from datetime import datetime
+from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Any
 
-import numpy as np
 import openml
 import pandas as pd
+import yaml
 from fedot.api.main import Fedot
-from fedot.core.data.data import InputData
-from fedot.core.pipelines.node import PrimaryNode
+from fedot.core.composer.gp_composer.specific_operators import parameter_change_mutation
+from fedot.core.data.data import array_to_input_data
 from fedot.core.pipelines.pipeline import Pipeline
-from fedot.core.repository.dataset_types import DataTypesEnum
-from fedot.core.repository.tasks import TaskTypesEnum, Task
-from golem.core.optimisers.adaptive.agent_trainer import AgentTrainer
-from golem.core.optimisers.adaptive.history_collector import HistoryReader
-from golem.core.optimisers.genetic.gp_optimizer import EvoGraphOptimizer
-from golem.core.optimisers.objective import Objective
+from fedot.core.repository.operation_types_repository import OperationTypesRepository
+from fedot.core.repository.quality_metrics_repository import MetricsRepository
+from golem.core.optimisers.adaptive.experience_buffer import ExperienceBuffer
+from golem.core.optimisers.adaptive.mab_agents.contextual_mab_agent import ContextualMultiArmedBanditAgent
+from golem.core.optimisers.genetic.operators.base_mutations import MutationTypesEnum
+from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-import yaml
 
-from experiments.fedot_warm_start.run import evaluate_pipeline, save_evaluation, get_dataset_ids, \
-    get_current_formatted_date, setup_logging, save_experiment_params
-from meta_automl.data_preparation.dataset import OpenMLDataset
+from experiments.fedot_warm_start.run import evaluate_pipeline, get_dataset_ids, \
+    get_current_formatted_date, setup_logging, save_experiment_params, timed, COLLECT_METRICS, fit_evaluate_pipeline
+from meta_automl.data_preparation.dataset import OpenMLDataset, TabularData
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
 from meta_automl.data_preparation.file_system import get_project_root, get_cache_dir
-import warnings
-
-from meta_automl.data_preparation.models_loaders.fedot_history_loader import extract_best_models_from_history
+from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from meta_automl.surrogate.data_pipeline_surrogate import PipelineVectorizer
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
@@ -38,6 +37,7 @@ from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogat
 warnings.filterwarnings("ignore")
 
 N_DATASETS = 20
+COLLECT_METRICS_ENUM = tuple(map(MetricsRepository.metric_by_id, COLLECT_METRICS))
 
 
 def get_save_dir(dataset: str, experiment_name: str, launch_num: str) -> Path:
@@ -63,6 +63,22 @@ def fetch_datasets(n_datasets: Optional[int] = None, seed: int = 42, test_size: 
 
     datasets = {dataset.id_: dataset for dataset in OpenMLDatasetsLoader().load(dataset_ids)}
     return df_datasets_train, df_datasets_test, datasets
+
+
+def _drop_datasets_not_in_knowledge_base(dataset_ids: List[int]):
+    path_to_knowledge_base = os.path.join(get_project_root(), 'data', 'knowledge_base_0', 'knowledge_base.csv')
+    knowledge_base = pd.read_csv(path_to_knowledge_base)
+
+    datasets_to_use = []
+    logging.info("Drop datasets that are not in knowledge base...")
+    for dataset_id in tqdm(dataset_ids):
+        dataset_name = openml.datasets.get_dataset(dataset_id, download_data=False, download_qualities=False,
+                                                   download_features_meta_data=False,
+                                                   error_if_multiple=True).name
+        if dataset_name not in list(set(knowledge_base['dataset_name'].tolist())):
+            continue
+        datasets_to_use.append(dataset_id)
+    return datasets_to_use
 
 
 def split_datasets(dataset_ids, n_datasets: Optional[int] = None, update_train_test_split: bool = False) \
@@ -94,21 +110,24 @@ def run(path_to_config: str):
         config_dict = yaml.safe_load(input_stream)
 
     dataset_ids = get_dataset_ids()
-    dataset_ids_train, dataset_ids_test = split_datasets(dataset_ids, N_DATASETS)
+
+    # drop datasets that are not in knowledge base
+    dataset_ids = _drop_datasets_not_in_knowledge_base(dataset_ids=dataset_ids)
+
+    dataset_ids_train, dataset_ids_test = split_datasets(dataset_ids, N_DATASETS, update_train_test_split=True)
     dataset_ids = dataset_ids_train + dataset_ids_test
 
     experiment_params_dict = dict(
-            input_config=config_dict,
-            dataset_ids=dataset_ids,
-            dataset_ids_train=dataset_ids_train,
-            dataset_ids_test=dataset_ids_test,
-        )
+        input_config=config_dict,
+        dataset_ids=dataset_ids,
+        dataset_ids_train=dataset_ids_train,
+        dataset_ids_test=dataset_ids_test,
+    )
 
     experiment_labels = list(config_dict['setups'].keys())
 
     # run experiment per setup
     for label in experiment_labels:
-
         run_experiment(experiment_params_dict=experiment_params_dict,
                        dataset_ids=dataset_ids,
                        experiment_label=label)
@@ -117,7 +136,7 @@ def run(path_to_config: str):
 def run_experiment(experiment_params_dict: dict, dataset_ids: dict,
                    experiment_label: str):
     dataset_splits = {}
-    for dataset_id in tqdm(dataset_ids, 'FEDOT, all datasets'):
+    for dataset_id in tqdm(experiment_params_dict['dataset_ids_test'], 'FEDOT, all datasets'):
         dataset = OpenMLDataset(dataset_id)
         # if dataset.name not in experiment_params_dict['input_config']['datasets']['train']:
         #     continue
@@ -147,12 +166,14 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
     best_models_per_dataset = {}
     launch_num = config['launch_num']
     for i in tqdm(range(launch_num)):
+        experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
+
         save_dir = get_save_dir(experiment_name=experiment_label, dataset=dataset.name, launch_num=str(i))
         print(f'Current launch save dir path: {save_dir}')
         setup_logging(save_dir)
         save_experiment_params(experiment_params_dict, save_dir)
         timeout = config['timeout']
-        run_date = datetime.now()
+        meta_automl_time = 0
 
         # get surrogate model
         if experiment_label == 'FEDOT_MAB':
@@ -160,91 +181,193 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
             if context_agent_type == 'surrogate':
                 config['setups']['FEDOT_MAB']['context_agent_type'] = _load_pipeline_vectorizer()
 
-        # if pretrained bandit is specified
+        # if pretrained bandit must be used
         if experiment_label == 'FEDOT_MAB':
             adaptive_mutation_type = config['setups']['FEDOT_MAB']['adaptive_mutation_type']
             if adaptive_mutation_type == 'pretrained_contextual_mab':
-                bandit = _get_pretrained_bandit(dataset=dataset.name, dataset_ids=dataset_ids)
-                config['setups']['FEDOT_MAB']['adaptive_mutation_type'] = bandit
+                # if bandit have not been trained yet for this dataset
+                if isinstance(config['setups']['FEDOT_MAB']['adaptive_mutation_type'], str):
+                    meta_automl_time = datetime.now().second
+                    bandit = _get_pretrained_bandit(dataset=dataset.name,
+                                                    datasets_ids_train=experiment_params_dict['dataset_ids_train'],
+                                                    use_dataset_encoding=config['setups']['FEDOT_MAB'][
+                                                        'use_dataset_encoding'])
+                    meta_automl_time = datetime.now().second - meta_automl_time
+                    config['setups']['FEDOT_MAB']['adaptive_mutation_type'] = bandit
 
         # run fedot
-        time_start = timeit.default_timer()
-        fedot = Fedot(timeout=timeout, logging_level=30, **config['setups'][experiment_label])
-        fedot.fit(train_data)
-        automl_time = timeit.default_timer() - time_start
-
+        fedot = Fedot(timeout=timeout, logging_level=30, **config['setups'][experiment_label]['launch_params'])
         # test result on test data and save metrics
-        metrics = evaluate_pipeline(fedot.current_pipeline, train_data, test_data)
-        pipeline = fedot.current_pipeline
-        # run_results = get_result_data_row(dataset=dataset, run_label=experiment_label, pipeline=pipeline,
-        #                                   automl_time_sec=automl_time, automl_timeout_min=fedot.params.timeout,
-        #                                   history_obj=fedot.history, **metrics)
+        fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
+        result, fit_time = timed(fit_func)()
+        evaluate_and_save_results(train_data=train_data,
+                                  test_data=test_data,
+                                  pipeline=result,
+                                  experiment_date=experiment_date,
+                                  run_label=f'{launch_num}_{dataset.name}',
+                                  save_dir=save_dir,
+                                  automl_timeout=timeout * 60,
+                                  automl_fit_time=fit_time * 60,
+                                  meta_automl_time=meta_automl_time)
 
-        # save_evaluation(run_results, run_date, experiment_date)
 
-        # Filter out unique individuals with the best fitness
-        history = fedot.history
-        best_models = extract_best_models_from_history(dataset, history)
-        best_models_per_dataset[dataset_id] = best_models
+def evaluate_and_save_results(train_data: TabularData, test_data: TabularData, pipeline: Pipeline,
+                              run_label: str, experiment_date: datetime, save_dir: Path,
+                              automl_fit_time: int, automl_timeout: int, meta_automl_time: int):
+    train_data_for_fedot = array_to_input_data(train_data.x, train_data.y)
+    fit_func = partial(pipeline.fit, train_data_for_fedot)
+    evaluate_func = partial(evaluate_pipeline, train_data=train_data, test_data=test_data)
+    run_date = datetime.now()
+    pipeline, metrics, fit_time = fit_evaluate_pipeline(pipeline=pipeline, fit_func=fit_func,
+                                                        evaluate_func=evaluate_func)
+    save_evaluation(dataset=train_data.dataset,
+                    run_label=run_label,
+                    pipeline=pipeline,
+                    automl_time_min=automl_fit_time,
+                    pipeline_fit_time=fit_time,
+                    automl_timeout_min=automl_timeout,
+                    meta_learning_time_sec=meta_automl_time,
+                    run_data=run_date,
+                    experiment_date=experiment_date,
+                    save_dir=save_dir,
+                    **metrics)
+    return pipeline
 
 
-def _get_pretrained_bandit(dataset: str, dataset_ids: list):
+def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
+    run_results: Dict[str, Any] = dict(dataset_id=dataset.id,
+                                       dataset_name=dataset.name,
+                                       model_obj=pipeline,
+                                       model_str=pipeline.descriptive_id,
+                                       task_type='classification',
+                                       **kwargs)
+    try:
+        histories_dir = save_dir.joinpath('history')
+        models_dir = save_dir.joinpath('models')
+        eval_results_path = save_dir.joinpath('evaluation_results.csv')
+
+        histories_dir.mkdir(exist_ok=True)
+        models_dir.mkdir(exist_ok=True)
+
+        dataset_id = run_results['dataset_id']
+        run_label = run_results['run_label']
+        # define saving paths
+        model_path = models_dir.joinpath(f'{dataset_id}_{run_label}')
+        history_path = histories_dir.joinpath(f'{dataset_id}_{run_label}_history.json')
+        # replace objects with export paths for csv
+        run_results['model_path'] = str(model_path)
+        run_results.pop('model_obj').save(model_path)
+        run_results['history_path'] = str(history_path)
+        if 'history_obj' in run_results:
+            history_obj = run_results.pop('history_obj')
+            if history_obj is not None:
+                history_obj.save(run_results['history_path'])
+
+        df_evaluation_properties = pd.DataFrame([run_results])
+
+        if eval_results_path.exists():
+            df_results = pd.read_csv(eval_results_path)
+            df_results = pd.concat([df_results, df_evaluation_properties])
+        else:
+            df_results = df_evaluation_properties
+        df_results.to_csv(eval_results_path, index=False)
+
+    except Exception as e:
+        logging.exception(f'Saving results "{run_results}"')
+        if __debug__:
+            raise e
+
+
+def _get_pretrained_bandit(dataset: str, datasets_ids_train: list, use_dataset_encoding: bool = False):
     """ Return pretrained bandit on similar to specified datasets. """
-    base_path = os.path.join(get_project_root(), 'experiments',
-                             'mab_experiment')
-    dataset_similaruty_path = os.path.join(base_path, 'dataset_similarity.csv')
 
-    path_to_knowledge_base = os.path.join(base_path, 'knowledge_base.csv')
+    path_to_knowledge_base = os.path.join(get_project_root(), 'data', 'knowledge_base_0', 'knowledge_base.csv')
     knowledge_base = pd.read_csv(path_to_knowledge_base)
+    agent = get_contextual_bandit()
 
-    bandit = gather_data_from_histories(path_to_dataset_similarity=dataset_similaruty_path,
-                                        datasets=[dataset],
-                                        knowledge_base=knowledge_base,
-                                        dataset_ids=dataset_ids)[dataset]
+    j = 0
+    for dataset_id in datasets_ids_train:
+        if j == 2:
+            break
+        j += 1
+        dataset_train = OpenMLDataset(dataset_id)
+
+        dataset_train_name = dataset_train.name
+        if dataset_train_name == dataset or dataset_train_name not in list(
+                set(knowledge_base['dataset_name'].tolist())):
+            continue
+        path_to_histories = list(
+            set(list(knowledge_base[knowledge_base['dataset_name'] == dataset_train_name]['history_path'])))
+        if len(path_to_histories) == 0:
+            continue
+        agent = train_bandit_on_histories(path_to_histories, agent)
+    return agent
+
+
+def _get_mutation_class(mutation_str: str):
+    if 'parameter_change_mutation' in mutation_str:
+        return parameter_change_mutation
+    if 'MutationTypesEnum' in mutation_str:
+        return MutationTypesEnum[mutation_str.split('.')[1]]
+
+
+def train_bandit_on_histories(path_to_histories: List[str], bandit: ContextualMultiArmedBanditAgent):
+    """ Retrieve data from histories and train bandit on it. """
+    experience_buffer = ExperienceBuffer()
+    for path_to_history in tqdm(path_to_histories):
+        history = OptHistory.load(os.path.join(get_project_root(), 'data', 'knowledge_base_0', path_to_history))
+        for i, gen in enumerate(history.individuals):
+            if i == 2:
+                break
+            individuals = gen.data
+            for ind in individuals:
+                # simplify and use only the first operator and parent
+                if not ind.parent_operator or \
+                        not ind.parent_operator.operators or not ind.parent_operator.parent_individuals:
+                    continue
+
+                try:
+                    operator = ind.parent_operator.operators[0]
+                    # get mutation class since it is stored as str
+                    operator = _get_mutation_class(operator)
+                    parent_individual = ind.parent_operator.parent_individuals[0]
+                    fitness_difference = ind.fitness.value - parent_individual.fitness.value
+                    if ind.graph and operator and fitness_difference:
+                        experience_buffer.collect_experience(obs=ind, action=operator, reward=fitness_difference)
+                # since some individuals have None fitness
+                except TypeError:
+                    continue
+
+            # check if the is any experience collected
+            if experience_buffer._individuals:
+                bandit.partial_fit(experience=experience_buffer)
     return bandit
 
 
-def gather_data_from_histories(path_to_dataset_similarity: str, datasets: List[str],
-                               knowledge_base, dataset_ids):
-    dataset_similarity = pd.read_csv(path_to_dataset_similarity)
-
-    mab_per_dataset = dict.fromkeys(datasets, None)
-
-    for original_dataset_name in datasets:
-        similar = dataset_similarity[dataset_similarity['dataset'] == original_dataset_name]['similar_datasets'].tolist()[0]\
-            .replace("[", "").replace("]", "").split(" ")
-
-        # for s in similar:
-        #     if s != '':
-        #         n = int(s)
-                # dataset_name = datasets_dict[n].name
-                # if dataset_name == original_dataset_name or dataset_name not in list(set(knowledge_base['dataset_name'].tolist())):
-                #     continue
-                # path_to_histories = list(set(list(knowledge_base[knowledge_base['dataset_name'] == dataset_name]['history_path'])))
-                # if len(path_to_histories) == 0:
-                #     continue
-                # mab_per_dataset[original_dataset_name] = \
-                #     train_bandit_on_histories(path_to_histories, get_contextual_bandit())
-
-
-def pretrain_agent(optimizer: EvoGraphOptimizer, objective: Objective, results_dir: str) -> AgentTrainer:
-    agent = optimizer.mutation.agent
-    trainer = AgentTrainer(objective, optimizer.mutation, agent)
-    # load histories
-    history_reader = HistoryReader(Path(results_dir))
-    # train agent
-    trainer.fit(histories=history_reader.load_histories(), validate_each=1)
-    return trainer
+def get_contextual_bandit():
+    repo = OperationTypesRepository.assign_repo('model', 'model_repository.json')
+    context_agent_type = _load_pipeline_vectorizer()
+    mab = ContextualMultiArmedBanditAgent(actions=[parameter_change_mutation,
+                                                   MutationTypesEnum.single_change,
+                                                   MutationTypesEnum.single_drop,
+                                                   MutationTypesEnum.single_add,
+                                                   MutationTypesEnum.single_edge],
+                                          context_agent_type=context_agent_type,
+                                          available_operations=repo.operations)
+    return mab
 
 
 def _load_pipeline_vectorizer() -> PipelineVectorizer:
     """ Loads pipeline vectorizer with surrogate model. """
-    checkpoint_path = os.path.join(get_project_root(), 'experiments', 'base', 'checkpoints', 'last.ckpt')
-    hparams_file = os.path.join(get_project_root(), 'experiments', 'base', 'hparams.yaml')
+
+    surrogate_knowledge_base_dir = get_checkpoints_dir() / 'tabular'
+
+    # Load surrogate model
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
-        checkpoint_path=checkpoint_path,
-        hparams_file=hparams_file
+        checkpoint_path=surrogate_knowledge_base_dir / "checkpoints/best.ckpt",
+        hparams_file=surrogate_knowledge_base_dir / "hparams.yaml"
     )
+    surrogate_model.eval()
 
     pipeline_features_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")

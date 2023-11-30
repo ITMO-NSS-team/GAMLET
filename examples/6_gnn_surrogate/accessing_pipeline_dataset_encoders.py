@@ -8,7 +8,7 @@ if __name__ == '__main__':
     dataset_name = 'higgs'
     datasets_loader = OpenMLDatasetsLoader()
     dataset = datasets_loader.load_single(dataset_name, allow_name=True)
-    checkpoints_dir = get_checkpoints_dir() / 'tabular'
+    checkpoints_dir = get_checkpoints_dir() / 'base'
     # Load surrogate model
     surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
         checkpoint_path=checkpoints_dir / 'checkpoints/best.ckpt',

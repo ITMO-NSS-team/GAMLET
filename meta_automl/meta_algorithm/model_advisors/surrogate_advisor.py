@@ -33,7 +33,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         self.pipeline_dataloader = DataLoader(pipelines, batch_size=1)
 
         # loading surrogate model
-        checkpoints_dir = get_checkpoints_dir() / 'tabular'
+        checkpoints_dir = get_checkpoints_dir() / 'base'
         self.surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
             checkpoint_path=checkpoints_dir / 'checkpoints/best.ckpt',
             hparams_file=checkpoints_dir / 'hparams.yaml'

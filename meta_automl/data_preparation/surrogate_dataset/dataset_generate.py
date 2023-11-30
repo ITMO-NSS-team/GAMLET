@@ -27,7 +27,7 @@ def dataset_from_id_without_data_loading(dataset_id: DatasetIDType) -> CustomDat
 
 def dataset_from_id_with_data_loading(dataset_id: DatasetIDType) -> CustomDataset:
     """ Load dataset from '//10.9.14.114/calc/Nikitin/datasets/' into the project cache directory.
-    As a result, every model of the knowledge base will have its data available by
+    As a result, every model of the knowledge base2 will have its data available by
     `model.dataset.get_data()`.
     """
     dataset = CustomDataset(dataset_id)
