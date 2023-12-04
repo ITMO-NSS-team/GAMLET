@@ -1,10 +1,5 @@
-timeout: 0.5
-launch_num: 1
-datasets:
-  train:
-    - sylvine
-  test:
-    - car
+timeout: 1.5
+launch_num: 2
 
 setups:
   FEDOT_MAB:
@@ -13,7 +8,7 @@ setups:
       n_jobs: 1
       show_progress: false
     context_agent_type: surrogate
-    adaptive_mutation_type: pretrained_contextual_mab
+    adaptive_mutation_type_type: pretrained_contextual_mab
     use_dataset_encoding: false
 
   FEDOT_Classic:

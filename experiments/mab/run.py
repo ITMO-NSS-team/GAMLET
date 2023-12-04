@@ -1,5 +1,6 @@
 import logging
 import os.path
+import random
 import warnings
 from copy import deepcopy
 from datetime import datetime
@@ -38,6 +39,7 @@ warnings.filterwarnings("ignore")
 
 N_DATASETS = 20
 COLLECT_METRICS_ENUM = tuple(map(MetricsRepository.metric_by_id, COLLECT_METRICS))
+PRETRAINED_BANDIT = None
 
 
 def get_save_dir(dataset: str, experiment_name: str, launch_num: str) -> Path:
@@ -68,36 +70,33 @@ def fetch_datasets(n_datasets: Optional[int] = None, seed: int = 42, test_size: 
 def _drop_datasets_not_in_knowledge_base(dataset_ids: List[int]):
     path_to_knowledge_base = os.path.join(get_project_root(), 'data', 'knowledge_base_0', 'knowledge_base.csv')
     knowledge_base = pd.read_csv(path_to_knowledge_base)
+    knowledge_base_datasets_names = knowledge_base['dataset_name'].tolist()
 
-    datasets_to_use = []
+    datasets_ids_to_use = []
     logging.info("Drop datasets that are not in knowledge base...")
     for dataset_id in tqdm(dataset_ids):
         dataset_name = openml.datasets.get_dataset(dataset_id, download_data=False, download_qualities=False,
                                                    download_features_meta_data=False,
                                                    error_if_multiple=True).name
-        if dataset_name not in list(set(knowledge_base['dataset_name'].tolist())):
-            continue
-        datasets_to_use.append(dataset_id)
-    return datasets_to_use
+        if dataset_name in knowledge_base_datasets_names:
+            datasets_ids_to_use.append(dataset_id)
+    return datasets_ids_to_use
 
 
-def split_datasets(dataset_ids, n_datasets: Optional[int] = None, update_train_test_split: bool = False) \
+def split_datasets(dataset_ids, n_datasets_for_train: Optional[int] = None, update_train_test_split: bool = False) \
         -> Tuple[pd.DataFrame, pd.DataFrame]:
     split_path = Path(__file__).parent / 'train_test_datasets_split.csv'
 
     if update_train_test_split:
-        df_split_datasets = openml_datasets_train_test_split(dataset_ids, test_size=0.3, seed=42)
+        df_split_datasets = openml_datasets_train_test_split(dataset_ids,
+                                                             test_size=n_datasets_for_train/len(dataset_ids),
+                                                             seed=42)
         df_split_datasets.to_csv(split_path)
     else:
         df_split_datasets = pd.read_csv(split_path, index_col=0)
 
     df_train = df_split_datasets[df_split_datasets['is_train'] == 1]
     df_test = df_split_datasets[df_split_datasets['is_train'] == 0]
-
-    if n_datasets is not None:
-        frac = n_datasets / len(df_split_datasets)
-        df_train = df_train.sample(frac=frac, random_state=42)
-        df_test = df_test.sample(frac=frac, random_state=42)
 
     datasets_train = df_train.index.to_list()
     datasets_test = df_test.index.to_list()
@@ -111,10 +110,13 @@ def run(path_to_config: str):
 
     dataset_ids = get_dataset_ids()
 
-    # drop datasets that are not in knowledge base
-    dataset_ids = _drop_datasets_not_in_knowledge_base(dataset_ids=dataset_ids)
+    # drop datasets that are not in knowledge base -- there are 16 left right now
+    dataset_ids_train = _drop_datasets_not_in_knowledge_base(dataset_ids=dataset_ids)
 
-    dataset_ids_train, dataset_ids_test = split_datasets(dataset_ids, N_DATASETS, update_train_test_split=True)
+    # exclude train datasets
+    dataset_ids_test = list(set(dataset_ids) - set(dataset_ids_train))
+    # get 15 datasets for test
+    _, dataset_ids_test = split_datasets(dataset_ids_test, 15, update_train_test_split=True)
     dataset_ids = dataset_ids_train + dataset_ids_test
 
     experiment_params_dict = dict(
@@ -136,25 +138,51 @@ def run(path_to_config: str):
 def run_experiment(experiment_params_dict: dict, dataset_ids: dict,
                    experiment_label: str):
     dataset_splits = {}
+    pretrained_bandit = None
     for dataset_id in tqdm(experiment_params_dict['dataset_ids_test'], 'FEDOT, all datasets'):
         dataset = OpenMLDataset(dataset_id)
-        # if dataset.name not in experiment_params_dict['input_config']['datasets']['train']:
-        #     continue
         experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
 
         experiment_params_dict['experiment_start_date_iso'] = experiment_date_iso
+
+        pretrained_bandit = _get_pretrained_bandit(experiment_params_dict=experiment_params_dict,
+                                                   experiment_label=experiment_label,
+                                                   pretrained_bandit=pretrained_bandit)
 
         run_experiment_per_launch(experiment_params_dict=experiment_params_dict,
                                   dataset_splits=dataset_splits,
                                   config=deepcopy(experiment_params_dict['input_config']),
                                   dataset_id=dataset_id, dataset=dataset,
                                   dataset_ids=dataset_ids,
-                                  experiment_label=experiment_label)
+                                  experiment_label=experiment_label,
+                                  pretrained_bandit=pretrained_bandit)
+
+
+def _get_pretrained_bandit(experiment_params_dict: dict,
+                           experiment_label: str,
+                           pretrained_bandit: Optional[ContextualMultiArmedBanditAgent]):
+    """ Defines if there is a need to retrain bandit for each dataset depending on 'use_dataset_encoding' field. """
+    setup = experiment_params_dict['input_config']['setups'][experiment_label]
+
+    if experiment_label == 'FEDOT_MAB':
+        if not setup['use_dataset_encoding']:
+            if pretrained_bandit is None:
+                adaptive_mutation_type = setup['adaptive_mutation_type_type']
+                if adaptive_mutation_type == 'pretrained_contextual_mab':
+                    pretrained_bandit = _train_bandit(
+                        datasets_ids_train=experiment_params_dict['dataset_ids_train'],
+                        use_dataset_encoding=setup['use_dataset_encoding'])
+        else:
+            pretrained_bandit = _train_bandit(
+                datasets_ids_train=experiment_params_dict['dataset_ids_train'],
+                use_dataset_encoding=setup['use_dataset_encoding'])
+    return pretrained_bandit
 
 
 def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, dataset_id, dataset,
-                              dataset_ids, experiment_label):
+                              dataset_ids, experiment_label, pretrained_bandit):
     # get train and test
+    global PRETRAINED_BANDIT
     dataset_data = dataset.get_data()
     idx_train, idx_test = train_test_split(range(len(dataset_data.y)),
                                            test_size=0.3,
@@ -177,25 +205,21 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
 
         # get surrogate model
         if experiment_label == 'FEDOT_MAB':
-            context_agent_type = config['setups']['FEDOT_MAB']['context_agent_type']
+            context_agent_type = config['setups'][experiment_label]['context_agent_type']
             if context_agent_type == 'surrogate':
-                config['setups']['FEDOT_MAB']['context_agent_type'] = _load_pipeline_vectorizer()
+                config['setups'][experiment_label]['launch_params']['context_agent_type'] \
+                    = _load_pipeline_vectorizer()
 
         # if pretrained bandit must be used
         if experiment_label == 'FEDOT_MAB':
-            adaptive_mutation_type = config['setups']['FEDOT_MAB']['adaptive_mutation_type']
+            adaptive_mutation_type = config['setups'][experiment_label]['adaptive_mutation_type_type']
             if adaptive_mutation_type == 'pretrained_contextual_mab':
-                # if bandit have not been trained yet for this dataset
-                if isinstance(config['setups']['FEDOT_MAB']['adaptive_mutation_type'], str):
-                    meta_automl_time = datetime.now().second
-                    bandit = _get_pretrained_bandit(dataset=dataset.name,
-                                                    datasets_ids_train=experiment_params_dict['dataset_ids_train'],
-                                                    use_dataset_encoding=config['setups']['FEDOT_MAB'][
-                                                        'use_dataset_encoding'])
-                    meta_automl_time = datetime.now().second - meta_automl_time
-                    config['setups']['FEDOT_MAB']['adaptive_mutation_type'] = bandit
+                config['setups'][experiment_label]['launch_params']['adaptive_mutation_type'] \
+                    = deepcopy(pretrained_bandit)
 
         # run fedot
+        print('Run fedot...')
+        logging.info('Run fedot...')
         fedot = Fedot(timeout=timeout, logging_level=30, **config['setups'][experiment_label]['launch_params'])
         # test result on test data and save metrics
         fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
@@ -203,6 +227,7 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
         evaluate_and_save_results(train_data=train_data,
                                   test_data=test_data,
                                   pipeline=result,
+                                  history=fedot.history,
                                   experiment_date=experiment_date,
                                   run_label=f'{launch_num}_{dataset.name}',
                                   save_dir=save_dir,
@@ -212,7 +237,7 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
 
 
 def evaluate_and_save_results(train_data: TabularData, test_data: TabularData, pipeline: Pipeline,
-                              run_label: str, experiment_date: datetime, save_dir: Path,
+                              history: OptHistory, run_label: str, experiment_date: datetime, save_dir: Path,
                               automl_fit_time: int, automl_timeout: int, meta_automl_time: int):
     train_data_for_fedot = array_to_input_data(train_data.x, train_data.y)
     fit_func = partial(pipeline.fit, train_data_for_fedot)
@@ -223,6 +248,7 @@ def evaluate_and_save_results(train_data: TabularData, test_data: TabularData, p
     save_evaluation(dataset=train_data.dataset,
                     run_label=run_label,
                     pipeline=pipeline,
+                    history=history,
                     automl_time_min=automl_fit_time,
                     pipeline_fit_time=fit_time,
                     automl_timeout_min=automl_timeout,
@@ -234,12 +260,12 @@ def evaluate_and_save_results(train_data: TabularData, test_data: TabularData, p
     return pipeline
 
 
-def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
+def save_evaluation(save_dir: Path, dataset, pipeline, history, **kwargs):
     run_results: Dict[str, Any] = dict(dataset_id=dataset.id,
                                        dataset_name=dataset.name,
                                        model_obj=pipeline,
-                                       model_str=pipeline.descriptive_id,
                                        task_type='classification',
+                                       history=history,
                                        **kwargs)
     try:
         histories_dir = save_dir.joinpath('history')
@@ -258,8 +284,8 @@ def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
         run_results['model_path'] = str(model_path)
         run_results.pop('model_obj').save(model_path)
         run_results['history_path'] = str(history_path)
-        if 'history_obj' in run_results:
-            history_obj = run_results.pop('history_obj')
+        if 'history' in run_results:
+            history_obj = run_results.pop('history')
             if history_obj is not None:
                 history_obj.save(run_results['history_path'])
 
@@ -278,7 +304,7 @@ def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
             raise e
 
 
-def _get_pretrained_bandit(dataset: str, datasets_ids_train: list, use_dataset_encoding: bool = False):
+def _train_bandit(datasets_ids_train: list, use_dataset_encoding: bool = False):
     """ Return pretrained bandit on similar to specified datasets. """
 
     path_to_knowledge_base = os.path.join(get_project_root(), 'data', 'knowledge_base_0', 'knowledge_base.csv')
@@ -293,14 +319,11 @@ def _get_pretrained_bandit(dataset: str, datasets_ids_train: list, use_dataset_e
         dataset_train = OpenMLDataset(dataset_id)
 
         dataset_train_name = dataset_train.name
-        if dataset_train_name == dataset or dataset_train_name not in list(
-                set(knowledge_base['dataset_name'].tolist())):
-            continue
-        path_to_histories = list(
-            set(list(knowledge_base[knowledge_base['dataset_name'] == dataset_train_name]['history_path'])))
+        path_to_histories = list(knowledge_base[knowledge_base['dataset_name'] == dataset_train_name]['history_path'])
         if len(path_to_histories) == 0:
             continue
-        agent = train_bandit_on_histories(path_to_histories, agent)
+        agent = train_bandit_on_histories(path_to_histories, agent, gen_num=3)
+
     return agent
 
 
@@ -311,13 +334,14 @@ def _get_mutation_class(mutation_str: str):
         return MutationTypesEnum[mutation_str.split('.')[1]]
 
 
-def train_bandit_on_histories(path_to_histories: List[str], bandit: ContextualMultiArmedBanditAgent):
+def train_bandit_on_histories(path_to_histories: List[str], bandit: ContextualMultiArmedBanditAgent, gen_num: int):
     """ Retrieve data from histories and train bandit on it. """
     experience_buffer = ExperienceBuffer()
     for path_to_history in tqdm(path_to_histories):
+        logging.info(f"Training bandit on {path_to_history}")
         history = OptHistory.load(os.path.join(get_project_root(), 'data', 'knowledge_base_0', path_to_history))
         for i, gen in enumerate(history.individuals):
-            if i == 2:
+            if i == gen_num:
                 break
             individuals = gen.data
             for ind in individuals:
