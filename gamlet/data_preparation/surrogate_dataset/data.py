@@ -8,13 +8,13 @@ from torch_geometric.data import Data
 
 
 def my_inc(self, key, value, *args, **kwargs):
-    if key == 'subgraph_edge_index':
+    if key == "subgraph_edge_index":
         return self.num_subgraph_nodes
-    if key == 'subgraph_node_idx':
+    if key == "subgraph_node_idx":
         return self.num_nodes
-    if key == 'subgraph_indicator':
+    if key == "subgraph_indicator":
         return self.num_nodes
-    elif 'index' in key:
+    elif "index" in key:
         return self.num_nodes
     else:
         return 0
@@ -25,8 +25,16 @@ class GraphDataset(object):
     Computes rich feature representation of the grap including subraph features.
     """
 
-    def __init__(self, dataset, degree=False, k_hop=2, se="gnn", use_subgraph_edge_attr=False,
-                 cache_path=None, return_complete_index=True):
+    def __init__(
+        self,
+        dataset,
+        degree=False,
+        k_hop=2,
+        se="gnn",
+        use_subgraph_edge_attr=False,
+        cache_path=None,
+        return_complete_index=True,
+    ):
         self.dataset = dataset
 
         self.n_features = dataset[0].x.shape[-1]
@@ -38,7 +46,7 @@ class GraphDataset(object):
         self.se = se
         self.use_subgraph_edge_attr = use_subgraph_edge_attr
         self.cache_path = cache_path
-        if self.se == 'khopgnn':
+        if self.se == "khopgnn":
             Data.__inc__ = my_inc
             self.extract_subgraphs()
 
@@ -48,7 +56,7 @@ class GraphDataset(object):
             return
         self.degree_list = []
         for g in self.dataset:
-            deg = 1. / torch.sqrt(1. + utils.degree(g.edge_index[0], g.num_nodes))
+            deg = 1.0 / torch.sqrt(1.0 + utils.degree(g.edge_index[0], g.num_nodes))
             self.degree_list.append(deg)
 
     def extract_subgraphs(self):
@@ -86,11 +94,7 @@ class GraphDataset(object):
 
             for node_idx in range(graph.num_nodes):
                 sub_nodes, sub_edge_index, _, edge_mask = utils.k_hop_subgraph(
-                    node_idx,
-                    self.k_hop,
-                    graph.edge_index,
-                    relabel_nodes=True,
-                    num_nodes=graph.num_nodes
+                    node_idx, self.k_hop, graph.edge_index, relabel_nodes=True, num_nodes=graph.num_nodes
                 )
                 node_indices.append(sub_nodes)
                 edge_indices.append(sub_edge_index + edge_index_start)
@@ -104,12 +108,15 @@ class GraphDataset(object):
                     subgraph_edge_attr = torch.cat(edge_attributes)
                 else:
                     subgraph_edge_attr = None
-                torch.save({
-                    'subgraph_node_index': torch.cat(node_indices),
-                    'subgraph_edge_index': torch.cat(edge_indices, dim=1),
-                    'subgraph_indicator_index': torch.cat(indicators).type(torch.LongTensor),
-                    'subgraph_edge_attr': subgraph_edge_attr
-                }, filepath)
+                torch.save(
+                    {
+                        "subgraph_node_index": torch.cat(node_indices),
+                        "subgraph_edge_index": torch.cat(edge_indices, dim=1),
+                        "subgraph_indicator_index": torch.cat(indicators).type(torch.LongTensor),
+                        "subgraph_edge_attr": subgraph_edge_attr,
+                    },
+                    filepath,
+                )
             else:
                 self.subgraph_node_index.append(torch.cat(node_indices))
                 self.subgraph_edge_index.append(torch.cat(edge_indices, dim=1))
@@ -146,11 +153,11 @@ class GraphDataset(object):
         if self.se == "khopgnn":
             if self.cache_path is not None:
                 cache_file = torch.load("{}_{}.pt".format(self.cache_path, index))
-                data.subgraph_edge_index = cache_file['subgraph_edge_index']
-                data.num_subgraph_nodes = len(cache_file['subgraph_node_index'])
-                data.subgraph_node_idx = cache_file['subgraph_node_index']
-                data.subgraph_edge_attr = cache_file['subgraph_edge_attr']
-                data.subgraph_indicator = cache_file['subgraph_indicator_index']
+                data.subgraph_edge_index = cache_file["subgraph_edge_index"]
+                data.num_subgraph_nodes = len(cache_file["subgraph_node_index"])
+                data.subgraph_node_idx = cache_file["subgraph_node_index"]
+                data.subgraph_edge_attr = cache_file["subgraph_edge_attr"]
+                data.subgraph_indicator = cache_file["subgraph_indicator_index"]
                 return data
             data.subgraph_edge_index = self.subgraph_edge_index[index]
             data.num_subgraph_nodes = len(self.subgraph_node_index[index])
@@ -168,17 +175,17 @@ class GraphDataset(object):
 
 
 class SingleDataset(Dataset):
-    """Dataset for surrogate model. Stores dataset-pipeline experiments data.
+    """Dataset for surrogate model. Stores dataset-pipeline experiments data."""
 
-    """
     def __init__(self, indxs, data_pipe, data_dset):
         self.data_pipe = data_pipe
         self.data_dset = data_dset
 
-        self.indxs = indxs
-        
-        cnts = self.indxs.groupby('task_id').size()     
-        cnts = cnts[cnts> 1]  # remove records with only 1 pipeline per dataset
+        self.indxs = indxs[indxs.y > -1000000]
+        self.indxs = self.indxs.sort_values(by="y", ascending=False)
+
+        cnts = self.indxs.groupby("task_id").size()
+        cnts = cnts[cnts > 1]  # remove records with only 1 pipeline per dataset
         self.indxs = self.indxs[self.indxs.task_id.isin(set(cnts.index))]
         # self.weights = 1./cnts  # dataset weight
 
@@ -196,10 +203,10 @@ class SingleDataset(Dataset):
             x_dataset: vector of dataset meta-features.
             y: value of quality metric.
         """
-        task_id = self.indxs['task_id'].iloc[idx]
-        pipe_id = torch.tensor(self.indxs['pipeline_id'].iloc[idx])
+        task_id = self.indxs["task_id"].iloc[idx]
+        pipe_id = torch.tensor(self.indxs["pipeline_id"].iloc[idx])
 
-        y = torch.tensor(self.indxs['y'].iloc[idx], dtype=torch.float32)
+        y = torch.tensor(self.indxs["y"].iloc[idx], dtype=torch.float32)
         gr_data = self.data_pipe.__getitem__(pipe_id)
 
         dset_data = Data()
@@ -219,13 +226,15 @@ class PairDataset(SingleDataset):
 
     def __init__(self, indxs, data_pipe, data_dset):
         super().__init__(indxs, data_pipe, data_dset)
-        self.indxs['ind'] = list(range(len(self.indxs)))
-        self.task_pipe_dict = self.indxs.groupby('task_id')['ind'].apply(list).to_dict()
-        self.dateset_id_list = list(self.task_pipe_dict.keys())    
-    
+
+        self.indxs["ind"] = list(range(len(self.indxs)))
+
+        self.task_pipe_dict = self.indxs.groupby("task_id")["ind"].apply(list).to_dict()  # .apply(lambda x: x[:20])
+        self.dateset_id_list = list(self.task_pipe_dict.keys())
+
     def __len__(self):
-        return len(self.dateset_id_list)   
-    
+        return len(self.dateset_id_list)
+
     def __getitem__(self, itask):
         """
         Args:
@@ -239,7 +248,7 @@ class PairDataset(SingleDataset):
         task_id = self.dateset_id_list[itask]
         comb_ids = self.task_pipe_dict[task_id]
         idx1, idx2 = sample(comb_ids, 2)
-        
+
         _, _, gr_data1, _, y1 = super().__getitem__(idx1)
         _, _, gr_data2, dset_data2, y2 = super().__getitem__(idx2)
         return gr_data1, gr_data2, dset_data2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)

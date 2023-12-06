@@ -52,7 +52,7 @@ class MLPDatasetEncoder(nn.Module):
         )
 
         self.block1 = nn.Sequential(
-            nn.BatchNorm1d(hidden_dim),
+            # nn.BatchNorm1d(hidden_dim),
             nn.Dropout(p=dropout),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
@@ -65,8 +65,8 @@ class MLPDatasetEncoder(nn.Module):
         self.dim = output_dim
 
     def forward(self, data):
-        z = self.inp_layer(data.x)
-        z = self.block1(z)
+        # z = self.inp_layer(data.x)
+        z = self.block1(data.x)
         z = self.block2(z)
         return z
 

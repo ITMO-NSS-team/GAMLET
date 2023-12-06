@@ -25,7 +25,7 @@ model:
     dataset_encoder_type: "column"
     weight_decay: 0.001
     lr: 0.0001
-    temperature: 4
+    temperature: 5
   
 
 dataset_params:

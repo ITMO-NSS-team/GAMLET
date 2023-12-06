@@ -4,9 +4,9 @@ import yaml
 
 from gamlet.surrogate import training
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, required=True)
+    parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--train", action="store_true", default=False)
     parser.add_argument("--tune", action="store_true", default=False)
     parser.add_argument("--test", action="store_true", default=False)
