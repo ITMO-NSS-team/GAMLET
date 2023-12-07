@@ -4,13 +4,13 @@ thegolem==0.3.2
 openml==0.14.1
 pymfe==0.4.2
 pyyaml==6.0.1
-fedot-ind @ git+https://github.com/aimclub/Fedot.Industrial
---find-links https://download.pytorch.org/whl/torch_stable.html
-torch==2.0.0+cpu
-torch_geometric==2.3.0
---find-links https://data.pyg.org/whl/torch-2.0.0+cpu.html
-torch_scatter
-pytorch-lightning==2.0.5
+# fedot-ind @ git+https://github.com/aimclub/Fedot.Industrial
+# # --find-links https://download.pytorch.org/whl/torch_stable.html
+# torch==2.0.0+cpu
+# torch_geometric==2.3.0
+# # --find-links https://data.pyg.org/whl/torch-2.0.0+cpu.html
+# torch_scatter
+# pytorch-lightning==2.0.5
 
 # variable versions
 einops
@@ -24,3 +24,7 @@ tqdm>=4.65.0
 #dev-dependencies
 black
 isort
+
+# conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 -c pytorch
+# pip install torch_geometric torch_scatter -f https://data.pyg.org/whl/torch-1.13.1+cpu.html
+# pip install pytorch-lightning==1.9.5
