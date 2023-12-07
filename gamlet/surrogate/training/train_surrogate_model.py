@@ -271,7 +271,7 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate
     d_cand["y"] = 0
 
     _, _, test_dataset, _ = create_torch_dsets(
-        datasets, task_pipe_comb, pipelines, task_sets, splits=splits  # !!!!!!!!!!!
+        datasets, d_cand, pipelines, task_sets, splits=splits  
     )
     _, _, test_loader = _create_data_loaders(None, None, test_dataset, config)
 
@@ -283,8 +283,8 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate
     )
     model.eval()
 
-    trainer = Trainer()
-    trainer.test(model, dataloaders=test_loader)
+    # trainer = Trainer()
+    # trainer.test(model, dataloaders=test_loader)
 
     task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
     with torch.no_grad():

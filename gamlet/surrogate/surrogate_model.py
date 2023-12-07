@@ -236,9 +236,9 @@ class PipelineDatasetSurrogateModel(LightningModule):
     def on_test_epoch_end(self) -> None:
         """Calculate NDCG score over predicted during testing pipeline estimates."""
         results = self._get_metrics(self.test_step_outputs)
-        results2 = results.reset_index()
-        results2["stype"] = results2.task_id.str.split("_").apply(lambda x: x[1]).apply(lambda x: x[0])
-        print(results2.groupby("stype").ndcg.mean())
+        # results2 = results.reset_index()
+        # results2["stype"] = results2.task_id.str.split("_").apply(lambda x: x[1]).apply(lambda x: x[0])
+        # print(results2.groupby("stype").ndcg.mean())
 
         metrics = results.mean().to_dict()
         self.log("test_ndcg", metrics["ndcg"])
