@@ -26,8 +26,10 @@ class FEDOTPipelineFeaturesExtractor:
         operation_encoding: Optional[str] = "ordinal",
         hyperparameters_embedder: Optional[Callable] = None,
     ):
-        assert_message = "`operation_encoding` or `hyperparameters_embedder` or both should be provided"
-        assert operation_encoding is not None or hyperparameters_embedder is not None, assert_message
+        err_msg = "At least one of `operation_encoding` and `hyperparameters_embedder` must be provided."
+        if operation_encoding is None and hyperparameters_embedder is None:
+            raise ValueError(err_msg)
+
         models_repo = OperationTypesRepository()
         self.operation_types = []
         for k in models_repo.__initialized_repositories__.keys():
