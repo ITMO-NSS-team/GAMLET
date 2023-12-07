@@ -33,7 +33,7 @@ class FEDOTPipelineFeaturesExtractor:
         for k in models_repo.__initialized_repositories__.keys():
             for o in models_repo.__initialized_repositories__[k]:
                 self.operation_types.append(o.id)
-        self.operation_types += ["dataset"]
+        self.operation_types += ["dataset"]  # Artificial node that is appended to pipeline. Represents data source.
         self.operations_count = len(self.operation_types)
         self.operations_space = PipelineSearchSpace().get_parameters_dict()
 
@@ -156,10 +156,8 @@ class FEDOTPipelineFeaturesExtractor:
 
         return torch.LongTensor(edges).T
 
-    def _get_data(self, pipeline_json_string: str) -> Data:
-        nodes = self._get_nodes_from_json_string(pipeline_json_string)
-
-        # add dataset node!!!
+    @staticmethod
+    def _append_dataset_node(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         max_op_id = max([node["operation_id"] for node in nodes]) + 1
         for node in nodes:
             if not node["nodes_from"]:
@@ -176,6 +174,12 @@ class FEDOTPipelineFeaturesExtractor:
             dataset_node,
         ]
         nodes = dataset_node + nodes
+        return nodes
+
+    def _get_data(self, pipeline_json_string: str) -> Data:
+        nodes = self._get_nodes_from_json_string(pipeline_json_string)
+        # Add artificial `dataset` node to make minimal graph length > 1 to avoid errors in pytorch_geometric.
+        nodes = self._append_dataset_node(nodes)
 
         operations_ids = self._get_operations_ids(nodes)
         operations_names = self._get_operations_names(nodes, operations_ids)
