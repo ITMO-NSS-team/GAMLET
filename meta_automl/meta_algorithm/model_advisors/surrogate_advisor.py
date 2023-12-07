@@ -1,7 +1,6 @@
-from typing import List, Optional
+from typing import List
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 from fedot.core.pipelines.pipeline import Pipeline
@@ -10,9 +9,6 @@ from torch_geometric.data import Batch, Data
 
 from meta_automl.data_preparation.dataset import DatasetBase
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
-from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
-from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from meta_automl.meta_algorithm.model_advisors import ModelAdvisor
 
 
@@ -23,51 +19,15 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
     -----------
     surrogate_model: nn.Module
         Surrogate model to be used.
-    dataset_meta_features_extractor: MetaFeaturesExtractor, optional
-        Extractor of a dataset meta-features (defaults: None).
-        One can not specify the argument if use `datasets_features` argument in `predict` method.
-    dataset_meta_features_preprocessor: FeaturesPreprocessor, optional
-        Preprocessor of a dataset meta-features (defaults: None).
-        One can not specify the argument if use `datasets_features` argument in `predict` method.
-    pipeline_extractor: FEDOTPipelineFeaturesExtractor, optional
-        Extractor of a pipeline features (defaults: None).
-        One can not specify the argument if use `pipelines_features` argument in `predict` method.
-
     """
 
     def __init__(
         self,
         surrogate_model: nn.Module,
-        dataset_meta_features_extractor: Optional[MetaFeaturesExtractor] = None,
-        dataset_meta_features_preprocessor: Optional[FeaturesPreprocessor] = None,
-        pipeline_extractor: Optional[FEDOTPipelineFeaturesExtractor] = None,
     ):
         self.surrogate_model = surrogate_model
         self.surrogate_model.eval()
-        self.dataset_meta_features_extractor = dataset_meta_features_extractor
-        self.dataset_meta_features_preprocessor = dataset_meta_features_preprocessor
-        self.pipeline_extractor = pipeline_extractor
         self.device = next(self.surrogate_model.parameters()).device
-
-    def _preprocess_dataset_features(self, dataset: DatasetBase) -> Data:
-        """Extract dataset features.
-
-        Parameters
-        ----------
-        dataset: DatasetBase
-            Dataset to extract features from.
-
-        Returns
-        -------
-        dset_data : Data
-            Dataset features.
-
-        """
-        x = self.dataset_meta_features_extractor.extract([dataset], fill_input_nans=True).fillna(0)
-        x = self.dataset_meta_features_preprocessor.transform(x, single=False).fillna(0)
-        transformed = x.groupby(by=["dataset", "variable"])["value"].apply(list).apply(lambda x: pd.Series(x))
-        dset_data = Data(x=torch.tensor(transformed.values, dtype=torch.float32))
-        return dset_data
 
     def _predict_single(
         self,
@@ -119,9 +79,9 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
         self,
         pipelines: List[Pipeline],
         datasets: List[DatasetBase],
+        pipelines_features: List[Data],
+        datasets_features: List[Data],
         k: int = 5,
-        pipelines_features: Optional[List[Data]] = None,
-        datasets_features: Optional[List[Data]] = None,
     ) -> List[List[EvaluatedModel]]:
         """Select optimal pipelines for given list of datasets.
 
@@ -144,11 +104,6 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
             List of top models for each dataset.
 
         """
-        if pipelines_features is None:
-            pipelines_features = [self.pipeline_extractor(pipeline.save()[0]) for pipeline in pipelines]
-
-        if datasets_features is None:
-            datasets_features = [self._preprocess_dataset_features(dataset) for dataset in datasets]
 
         top_models = []
         for dset, dset_feats in zip(datasets, datasets_features):
