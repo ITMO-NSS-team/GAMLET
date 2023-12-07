@@ -1,8 +1,9 @@
 import json
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
+import torch.nn as nn
 from fedot.core.pipelines.tuning.search_space import PipelineSearchSpace
 from fedot.core.repository.operation_types_repository import OperationTypesRepository
 from torch_geometric.data import Data
@@ -91,7 +92,7 @@ class FEDOTPipelineFeaturesExtractor:
     def _operation_name2vec(self, operation_name: str) -> np.ndarray:
         return self.operation_name2vec[operation_name]
 
-    def _parameters2vec(self, operation_name: str, operation_parameters: Dict[str, Any]) -> np.ndarray:
+    def _operation_parameters2vec(self, operation_name: str, operation_parameters: Dict[str, Any]) -> np.ndarray:
         if operation_name not in self.operations_space:
             hyperparams_vec = np.asarray([])
         else:
@@ -113,8 +114,7 @@ class FEDOTPipelineFeaturesExtractor:
                 else:
                     parameter_value = -1
                 hyperparams_vec.append(parameter_value)
-        hyperparams_vec = np.asarray(hyperparams_vec).reshape(1, -1)
-        hyperparams_vec = self.hyperparameters_embedder(operation_name, hyperparams_vec).reshape(-1)
+        hyperparams_vec = np.asarray(hyperparams_vec)
         return hyperparams_vec
 
     def _operation2vec(self, operation_name: str, operation_parameters: Dict[str, Any]) -> np.ndarray:
@@ -123,7 +123,8 @@ class FEDOTPipelineFeaturesExtractor:
             name_vec = self._operation_name2vec(operation_name)
         parameters_vec = np.asarray([])
         if self.hyperparameters_embedder:
-            parameters_vec = self._parameters2vec(operation_name, operation_parameters)
+            parameters_vec = self._operation_parameters2vec(operation_name, operation_parameters)
+            parameters_vec = self.hyperparameters_embedder(operation_name, parameters_vec.reshape(1, -1)).reshape(-1)
         return np.hstack((name_vec, parameters_vec))
 
     def _operations2tensor(
@@ -183,13 +184,102 @@ class FEDOTPipelineFeaturesExtractor:
         # Add artificial `dataset` node to make minimal graph length > 1 to avoid errors in pytorch_geometric.
         nodes = self._append_dataset_node(nodes)
 
+        edge_index = self._get_edge_index_tensor(nodes)
+
         operations_ids = self._get_operations_ids(nodes)
         operations_names = self._get_operations_names(nodes, operations_ids)
         operations_parameters = self._get_operations_parameters(nodes, operations_ids)
         operations_tensor = self._operations2tensor(operations_names, operations_parameters)
-        edge_index = self._get_edge_index_tensor(nodes)
+
         data = Data(x=operations_tensor, edge_index=edge_index, in_size=operations_tensor.shape[1])
         return data
 
     def __call__(self, pipeline_json_string: str):
         return self._get_data(pipeline_json_string)
+
+
+class FPFEWithGradientFlow(FEDOTPipelineFeaturesExtractor):
+    """FEDOT pipeline features extractor that allows Gradient Flow to train `hyperparameters_embedder`.
+    Designed to be trained as part of a heterogeneous surrogate model.
+    This design is a workaround of the fact that it is not possible to store heterogeneous nodes in `torch_geometric.data.Batch`.
+
+    List of extracted features: directed adjacency matrix, nodes operation type, nodes hyperparameters.
+
+    Parameters:
+    -----------
+    hyperparameters_embedder: Callable object to embed hyperparameters.
+                              The object should accept an operation name and the operation
+                              hyperparameters vector of shape `[1, N]`.
+    operation_encoding: Type of operation encoding. Can be `"ordinal"`, `"onehot"` or `None`. Default: `"ordinal"`.
+    separate_name_and_hyperparams: Flag, whether to return encoded hyperparameters and node types as separate graphs.
+                                   Default: `True`.
+    """
+
+    def __init__(
+        self,
+        hyperparameters_embedder: nn.Module,
+        operation_encoding: Optional[str] = "ordinal",
+        separate_name_and_hyperparams: bool = True,
+    ):
+        super().__init__(operation_encoding, hyperparameters_embedder)
+        self.device = next(self.hyperparameters_embedder.parameters()).device
+        self.separate_name_and_hyperparams = separate_name_and_hyperparams
+
+    def _operation2tensor(
+        self,
+        operation_name: str,
+        operation_parameters: Dict[str, Any],
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        name_tensor = torch.FloatTensor([])
+        if self.operation_encoding is not None:
+            name_vec = self._operation_name2vec(operation_name)
+            name_tensor = torch.FloatTensor(name_vec.reshape(1, -1)).to(self.device)
+        parameters_vec = self._operation_parameters2vec(operation_name, operation_parameters)
+        parameters_vec = torch.FloatTensor(parameters_vec.reshape(1, -1)).to(self.device)
+        parameters_tensor = self.hyperparameters_embedder(operation_name, parameters_vec.reshape(1, -1)).reshape(-1)
+
+        if self.separate_name_and_hyperparams:
+            return name_tensor, parameters_tensor
+        else:
+            return torch.hstack((name_tensor, parameters_tensor))
+
+    def _operations2tensor(
+        self,
+        operations_names: List[str],
+        operations_parameters: List[Dict[str, Any]],
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        """Overriden method to allow gradient flow through qhyperparameters_embedder`."""
+        if self.separate_name_and_hyperparams:
+            names_tensor, parameters_tensor = [], []
+            for n, p in zip(operations_names, operations_parameters):
+                name_tensor_, parameters_tensor_ = self._operation2tensor(n, p)
+                names_tensor.append(name_tensor_)
+                parameters_tensor.append(parameters_tensor_)
+            names_tensor = torch.vstack(names_tensor)
+            parameters_tensor = torch.vstack(parameters_tensor)
+            return names_tensor, parameters_tensor
+        else:
+            tensor = torch.vstack(
+                [self._operation2tensor(n, p) for n, p in zip(operations_names, operations_parameters)]
+            )
+        return tensor
+
+    def _get_data(self, pipeline_json_string: str) -> Union[Data, Tuple[Data, Data]]:
+        nodes = self._get_nodes_from_json_string(pipeline_json_string)
+        # Add artificial `dataset` node to make minimal graph length > 1 to avoid errors in pytorch_geometric.
+        nodes = self._append_dataset_node(nodes)
+
+        edge_index = self._get_edge_index_tensor(nodes)
+
+        operations_ids = self._get_operations_ids(nodes)
+        operations_names = self._get_operations_names(nodes, operations_ids)
+        operations_parameters = self._get_operations_parameters(nodes, operations_ids)
+        if self.separate_name_and_hyperparams:
+            names_tensor, parameters_tensor = self._operations2tensor(operations_names, operations_parameters)
+            names_data = Data(x=names_tensor, edge_index=edge_index, in_size=names_tensor.shape[1])
+            parameters_data = Data(x=parameters_tensor, edge_index=edge_index, in_size=parameters_tensor.shape[1])
+            return names_data, parameters_data
+        else:
+            operations_tensor = self._operations2tensor(operations_names, operations_parameters)
+            data = Data(x=operations_tensor, edge_index=edge_index, in_size=operations_tensor.shape[1])
+            return data
