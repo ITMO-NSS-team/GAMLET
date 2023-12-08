@@ -12,6 +12,7 @@ from torch_geometric.data import Data
 from meta_automl.data_preparation.dataset import (CustomDataset,
                                                   DataNotFoundError,
                                                   DatasetData, DatasetIDType)
+from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
 from meta_automl.data_preparation.file_system.file_system import ensure_dir_exists
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
@@ -26,7 +27,7 @@ def dataset_from_id_without_data_loading(dataset_id: DatasetIDType) -> CustomDat
 
 def dataset_from_id_with_data_loading(dataset_id: DatasetIDType) -> CustomDataset:
     """ Load dataset from '//10.9.14.114/calc/Nikitin/datasets/' into the project cache directory.
-    As a result, every model of the knowledge base will have its data available by
+    As a result, every model of the knowledge base2 will have its data available by
     `model.dataset.get_data()`.
     """
     dataset = CustomDataset(dataset_id)
@@ -46,7 +47,7 @@ def dataset_from_id_with_data_loading(dataset_id: DatasetIDType) -> CustomDatase
         data_y = np.concatenate(data_y)
         data_x = pd.DataFrame(data_x)
         data_y = pd.DataFrame(data_y)
-        dataset_data = DatasetData(data_x, data_y)
+        dataset_data = DatasetData(dataset, data_x, data_y)
         dataset.dump_data(dataset_data)
     return dataset
 
@@ -70,6 +71,7 @@ class KnowledgeBaseToDataset:
             knowledge_base_directory: os.PathLike,
             dataset_directory: os.PathLike,
             meta_features_extractor: MetaFeaturesExtractor,
+            datasets_loader: DatasetsLoader,
             split: Literal['train', 'test', 'all'] = 'all',
             train_test_split_name: Optional[str] = "train_test_datasets_classification.csv",
             task_type: Optional[str] = "classification",
@@ -100,6 +102,7 @@ class KnowledgeBaseToDataset:
         self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(include_operations_hyperparameters=False,
                                                                  operation_encoding="ordinal")
         self.meta_features_extractor = meta_features_extractor
+        self.datasets_loader = datasets_loader
 
         self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory, **models_loader_kwargs)
         df_datasets = self.models_loader.parse_datasets(self.split, self.task_type)
@@ -191,10 +194,8 @@ class KnowledgeBaseToDataset:
         self._save_task_pipe_comb(task_pipe_comb)
 
     def convert_datasets(self):
-        datasets_meta_features = self.meta_features_extractor.extract(
-            self.df_datasets['dataset_id'].values.tolist(),
-            fill_input_nans=True,
-        )
+        datasets = self.datasets_loader.load(self.df_datasets['dataset_id'].values.tolist())
+        datasets_meta_features = self.meta_features_extractor.extract(datasets, fill_input_nans=True)
         # For PyMFE. OpenML provides a dictionary of floats.
         # if isinstance(datasets_meta_features[0], pd.DataFrame):
         #     datasets_meta_features = [df.iloc[0].to_dict() for df in datasets_meta_features]

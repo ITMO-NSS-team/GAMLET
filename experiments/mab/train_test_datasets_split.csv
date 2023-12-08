@@ -1,0 +1,16 @@
+dataset_id,dataset_name,category,is_train
+11,balance-scale,small_small_small,0
+40670,dna,big_big_small,0
+1053,jm1,big_small_binary,0
+40923,Devnagari-Script,big_big_big,0
+23381,dresses-sales,small_small_binary,0
+1497,wall-robot-navigation,big_small_small,0
+37,diabetes,small_small_binary,0
+1475,first-order-theorem-proving,big_big_small,0
+16,mfeat-karhunen,small_big_small,0
+458,analcatdata_authorship,small_big_small,0
+6332,cylinder-bands,small_big_binary,0
+469,analcatdata_dmft,small_small_small,0
+40978,Internet-Advertisements,big_big_binary,0
+40994,climate-model-simulation-crashes,small_small_binary,0
+40701,churn,big_small_binary,0

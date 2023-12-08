@@ -7,7 +7,8 @@ from typing import List
 from meta_automl.data_preparation.dataset import OpenMLDatasetIDType
 
 
-def openml_datasets_train_test_split(dataset_ids: List[OpenMLDatasetIDType], test_size: float, seed=None):
+def openml_datasets_train_test_split(dataset_ids: List[OpenMLDatasetIDType],
+                                     test_size: float, seed=None):
     df_openml_datasets = openml.datasets.list_datasets(dataset_ids, output_format='dataframe')
     df_openml_datasets_split_features = df_openml_datasets[
         ['name', 'NumberOfInstances', 'NumberOfFeatures', 'NumberOfClasses']].copy(deep=False)
@@ -39,7 +40,7 @@ def openml_datasets_train_test_split(dataset_ids: List[OpenMLDatasetIDType], tes
             stratify=df_datasets_to_split['category'],
             random_state=seed
         )
-        df_test_datasets = pd.concat([df_test_datasets, df_test_only_datasets])
+        # df_test_datasets = pd.concat([df_test_datasets, df_test_only_datasets])
     else:
         df_train_datasets, df_test_datasets = train_test_split(
             df_split_categories,
@@ -49,8 +50,7 @@ def openml_datasets_train_test_split(dataset_ids: List[OpenMLDatasetIDType], tes
         )
     df_train_datasets['is_train'] = 1
     df_test_datasets['is_train'] = 0
-    df_split_datasets = pd.concat([df_train_datasets, df_test_datasets]).join(
-        df_openml_datasets_split_features.drop(columns='name'))
+    df_split_datasets = df_test_datasets
     df_split_datasets = df_split_datasets.rename(columns={'name': 'dataset_name'})
     df_split_datasets.index.rename('dataset_id', inplace=True)
 

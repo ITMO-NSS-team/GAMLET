@@ -1,0 +1,19 @@
+timeout: 3
+launch_num: 1
+
+setups:
+  FEDOT_MAB:
+    launch_params:
+      problem: classification
+      n_jobs: -1
+      show_progress: false
+    context_agent_type: surrogate
+    adaptive_mutation_type_type: pretrained_contextual_mab
+    use_dataset_encoding: false
+    use_dataset_encoder: true
+
+  FEDOT_Classic:
+    launch_params:
+      problem: classification
+      n_jobs: -1
+      show_progress: false

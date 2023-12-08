@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import TypeVar, Union
 
 import openml
 
-from meta_automl.data_preparation.dataset import DatasetBase
-from meta_automl.data_preparation.dataset.dataset_base import DatasetData
+from meta_automl.data_preparation.dataset import DatasetBase, TabularData
 from meta_automl.data_preparation.file_system import update_openml_cache_dir
 
-OpenMLDatasetIDType = int
+OpenMLDatasetIDType = TypeVar('OpenMLDatasetIDType', bound=int)
 
 update_openml_cache_dir()
 
@@ -33,8 +32,10 @@ class OpenMLDataset(DatasetBase):
                                                      **get_dataset_kwargs)
         return cls(openml_dataset.id)
 
-    def get_data(self) -> DatasetData:
+    def get_data(self) -> TabularData:
         X, y, categorical_indicator, attribute_names = self._openml_dataset.get_data(
             target=self._openml_dataset.default_target_attribute
         )
-        return DatasetData(X, y, categorical_indicator, attribute_names)
+        X = X.to_numpy()
+        y = y.to_numpy()
+        return TabularData(self, X, y, categorical_indicator, attribute_names)

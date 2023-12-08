@@ -33,7 +33,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         self.pipeline_dataloader = DataLoader(pipelines, batch_size=1)
 
         # loading surrogate model
-        checkpoints_dir = get_checkpoints_dir() / 'tabular'
+        checkpoints_dir = get_checkpoints_dir() / 'base'
         self.surrogate_model = RankingPipelineDatasetSurrogateModel.load_from_checkpoint(
             checkpoint_path=checkpoints_dir / 'checkpoints/best.ckpt',
             hparams_file=checkpoints_dir / 'hparams.yaml'
@@ -51,7 +51,7 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
             extractor_params=extractor_params)
 
     def _preprocess_dataset_features(self, dataset):
-        x = self.meta_features_extractor.extract([dataset], fill_input_nans=True, use_cached=False).fillna(0)
+        x = self.meta_features_extractor.extract([dataset], fill_input_nans=True).fillna(0)
         x = self.meta_features_preprocessor.transform(x, single=False).fillna(0)
         transformed = x.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x: pd.Series(x))
         dset_data = Data()

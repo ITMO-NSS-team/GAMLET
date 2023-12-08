@@ -19,7 +19,7 @@ if __name__ == '__main__':
     for dataset_id in train_datasets['dataset_id']:
         dataset_models = models_loader.load(
             dataset_ids=[dataset_id],   # load models just for this exact dataset.
-            fitness_metric='logloss',       # must correspond to a metric name in a knowledge base.
+            fitness_metric='logloss',       # must correspond to a metric name in a knowledge base2.
         )
         models_for_train[dataset_id] = dataset_models
 
