@@ -25,13 +25,16 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from experiments.fedot_warm_start.run import evaluate_pipeline, get_dataset_ids, \
-    get_current_formatted_date, setup_logging, save_experiment_params, timed, COLLECT_METRICS, fit_evaluate_pipeline
+    get_current_formatted_date, setup_logging, save_experiment_params, timed, COLLECT_METRICS, fit_evaluate_pipeline, \
+    MF_EXTRACTOR_PARAMS
 from meta_automl.data_preparation.dataset import OpenMLDataset, TabularData
 from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
 from meta_automl.data_preparation.datasets_train_test_split import openml_datasets_train_test_split
 from meta_automl.data_preparation.file_system import get_project_root, get_cache_dir
 from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir
+from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
 from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
 from meta_automl.surrogate.data_pipeline_surrogate import PipelineVectorizer
 from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
@@ -119,11 +122,19 @@ def run(path_to_config: str):
     _, dataset_ids_test = split_datasets(dataset_ids_test, 15, update_train_test_split=True)
     dataset_ids = dataset_ids_train + dataset_ids_test
 
+    # get meta_feature_extractor and data_similarity_assessor to get the closest datasets
+    train_dataset_names = \
+        [OpenMLDataset(idx).name for idx in dataset_ids_train]
+    _, extractor, data_similarity_assessor = \
+        _train_meta_feature_extractor(dataset_names=train_dataset_names, dataset_ids=dataset_ids_train)
+
     experiment_params_dict = dict(
         input_config=config_dict,
         dataset_ids=dataset_ids,
         dataset_ids_train=dataset_ids_train,
         dataset_ids_test=dataset_ids_test,
+        extractor=extractor,
+        data_similarity_assessor=data_similarity_assessor
     )
 
     experiment_labels = list(config_dict['setups'].keys())
@@ -141,48 +152,62 @@ def run_experiment(experiment_params_dict: dict, dataset_ids: dict,
     pretrained_bandit = None
     for dataset_id in tqdm(experiment_params_dict['dataset_ids_test'], 'FEDOT, all datasets'):
         dataset = OpenMLDataset(dataset_id)
+        if dataset.name == 'balance-scale':
+            continue
         experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
 
         experiment_params_dict['experiment_start_date_iso'] = experiment_date_iso
 
-        pretrained_bandit = _get_pretrained_bandit(experiment_params_dict=experiment_params_dict,
-                                                   experiment_label=experiment_label,
-                                                   pretrained_bandit=pretrained_bandit)
+        pretrained_bandit, meta_learning_time = _get_pretrained_bandit(experiment_params_dict=experiment_params_dict,
+                                                                       experiment_label=experiment_label,
+                                                                       pretrained_bandit=pretrained_bandit,
+                                                                       dataset_id=dataset_id)
 
         run_experiment_per_launch(experiment_params_dict=experiment_params_dict,
                                   dataset_splits=dataset_splits,
-                                  config=deepcopy(experiment_params_dict['input_config']),
+                                  global_config=deepcopy(experiment_params_dict['input_config']),
                                   dataset_id=dataset_id, dataset=dataset,
                                   dataset_ids=dataset_ids,
                                   experiment_label=experiment_label,
-                                  pretrained_bandit=pretrained_bandit)
+                                  pretrained_bandit=pretrained_bandit,
+                                  meta_learning_time=meta_learning_time)
+        break
 
 
 def _get_pretrained_bandit(experiment_params_dict: dict,
                            experiment_label: str,
-                           pretrained_bandit: Optional[ContextualMultiArmedBanditAgent]):
+                           pretrained_bandit: Optional[ContextualMultiArmedBanditAgent],
+                           dataset_id: int):
     """ Defines if there is a need to retrain bandit for each dataset depending on 'use_dataset_encoding' field. """
     setup = experiment_params_dict['input_config']['setups'][experiment_label]
 
-    if experiment_label == 'FEDOT_MAB':
+    meta_learning_time = 0
+
+    if 'MAB' in experiment_label:
         if not setup['use_dataset_encoding']:
             if pretrained_bandit is None:
                 adaptive_mutation_type = setup['adaptive_mutation_type_type']
                 if adaptive_mutation_type == 'pretrained_contextual_mab':
-                    pretrained_bandit = _train_bandit(
-                        datasets_ids_train=experiment_params_dict['dataset_ids_train'],
-                        use_dataset_encoding=setup['use_dataset_encoding'])
+                    meta_learning_time = datetime.now()
+                    if experiment_params_dict['input_config']['setups'][experiment_label]['use_dataset_encoder']:
+                        relevant_dataset_ids = _get_relevant_dataset_ids(dataset_id=dataset_id,
+                                                                         experiment_params_dict=experiment_params_dict)
+                        pretrained_bandit = _train_bandit(
+                            datasets_ids_train=relevant_dataset_ids)
+                        meta_learning_time = (datetime.now() - meta_learning_time).seconds
+                    else:
+                        pretrained_bandit = _train_bandit(
+                            datasets_ids_train=experiment_params_dict['dataset_ids_train'])
+                        meta_learning_time = (datetime.now() - meta_learning_time).seconds
         else:
             pretrained_bandit = _train_bandit(
-                datasets_ids_train=experiment_params_dict['dataset_ids_train'],
-                use_dataset_encoding=setup['use_dataset_encoding'])
-    return pretrained_bandit
+                datasets_ids_train=experiment_params_dict['dataset_ids_train'])
+    return pretrained_bandit, meta_learning_time
 
 
-def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, dataset_id, dataset,
-                              dataset_ids, experiment_label, pretrained_bandit):
+def run_experiment_per_launch(experiment_params_dict, dataset_splits, global_config, dataset_id, dataset,
+                              dataset_ids, experiment_label, pretrained_bandit, meta_learning_time):
     # get train and test
-    global PRETRAINED_BANDIT
     dataset_data = dataset.get_data()
     idx_train, idx_test = train_test_split(range(len(dataset_data.y)),
                                            test_size=0.3,
@@ -191,7 +216,7 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
     train_data, test_data = dataset_data[idx_train], dataset_data[idx_test]
     dataset_splits[dataset_id] = dict(train=train_data, test=test_data)
 
-    best_models_per_dataset = {}
+    config = deepcopy(global_config)
     launch_num = config['launch_num']
     for i in tqdm(range(launch_num)):
         experiment_date, experiment_date_iso, experiment_date_for_path = get_current_formatted_date()
@@ -199,9 +224,11 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
         save_dir = get_save_dir(experiment_name=experiment_label, dataset=dataset.name, launch_num=str(i))
         print(f'Current launch save dir path: {save_dir}')
         setup_logging(save_dir)
-        save_experiment_params(experiment_params_dict, save_dir)
+        params_to_save = deepcopy(experiment_params_dict)
+        params_to_save.pop('extractor')
+        params_to_save.pop('data_similarity_assessor')
+        save_experiment_params(params_to_save, save_dir)
         timeout = config['timeout']
-        meta_automl_time = 0
 
         # get surrogate model
         if experiment_label == 'FEDOT_MAB':
@@ -214,13 +241,18 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
         if experiment_label == 'FEDOT_MAB':
             adaptive_mutation_type = config['setups'][experiment_label]['adaptive_mutation_type_type']
             if adaptive_mutation_type == 'pretrained_contextual_mab':
+                # to save mabs
+                current_bandit = deepcopy(pretrained_bandit)
+                current_bandit._path_to_save = os.path.join(save_dir, 'mab')
+                os.makedirs(current_bandit._path_to_save, exist_ok=True)
+                # to use the same state of MAB for every launch
                 config['setups'][experiment_label]['launch_params']['adaptive_mutation_type'] \
-                    = deepcopy(pretrained_bandit)
+                    = current_bandit
 
         # run fedot
         print('Run fedot...')
         logging.info('Run fedot...')
-        fedot = Fedot(timeout=timeout, logging_level=30, **config['setups'][experiment_label]['launch_params'])
+        fedot = Fedot(timeout=timeout, logging_level=20, **config['setups'][experiment_label]['launch_params'])
         # test result on test data and save metrics
         fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
         result, fit_time = timed(fit_func)()
@@ -233,7 +265,7 @@ def run_experiment_per_launch(experiment_params_dict, dataset_splits, config, da
                                   save_dir=save_dir,
                                   automl_timeout=timeout * 60,
                                   automl_fit_time=fit_time * 60,
-                                  meta_automl_time=meta_automl_time)
+                                  meta_automl_time=meta_learning_time)
 
 
 def evaluate_and_save_results(train_data: TabularData, test_data: TabularData, pipeline: Pipeline,
@@ -278,7 +310,7 @@ def save_evaluation(save_dir: Path, dataset, pipeline, history, **kwargs):
         dataset_id = run_results['dataset_id']
         run_label = run_results['run_label']
         # define saving paths
-        model_path = models_dir.joinpath(f'{dataset_id}_{run_label}')
+        model_path = models_dir
         history_path = histories_dir.joinpath(f'{dataset_id}_{run_label}_history.json')
         # replace objects with export paths for csv
         run_results['model_path'] = str(model_path)
@@ -304,25 +336,25 @@ def save_evaluation(save_dir: Path, dataset, pipeline, history, **kwargs):
             raise e
 
 
-def _train_bandit(datasets_ids_train: list, use_dataset_encoding: bool = False):
+def _train_bandit(datasets_ids_train: list):
     """ Return pretrained bandit on similar to specified datasets. """
 
     path_to_knowledge_base = os.path.join(get_project_root(), 'data', 'knowledge_base_0', 'knowledge_base.csv')
     knowledge_base = pd.read_csv(path_to_knowledge_base)
     agent = get_contextual_bandit()
 
-    j = 0
+    # j = 0
     for dataset_id in datasets_ids_train:
-        if j == 2:
-            break
-        j += 1
+        # if j == 2:
+        #     break
+        # j += 1
         dataset_train = OpenMLDataset(dataset_id)
 
         dataset_train_name = dataset_train.name
         path_to_histories = list(knowledge_base[knowledge_base['dataset_name'] == dataset_train_name]['history_path'])
         if len(path_to_histories) == 0:
             continue
-        agent = train_bandit_on_histories(path_to_histories, agent, gen_num=3)
+        agent = train_bandit_on_histories(path_to_histories, agent, gen_num=15)
 
     return agent
 
@@ -379,6 +411,37 @@ def get_contextual_bandit():
                                           context_agent_type=context_agent_type,
                                           available_operations=repo.operations)
     return mab
+
+
+def _train_meta_feature_extractor(dataset_names: List[str], dataset_ids: List[int]) \
+        -> Tuple[List[OpenMLDataset], PymfeExtractor, KNeighborsSimilarityAssessor]:
+    # Meta Features
+    extractor = PymfeExtractor(extractor_params=MF_EXTRACTOR_PARAMS)
+    datasets = OpenMLDatasetsLoader().load(dataset_names, allow_names=True)
+    meta_features = extractor.extract(datasets, fill_input_nans=True)
+    meta_features = meta_features.fillna(0)
+    # Datasets similarity
+    data_similarity_assessor = KNeighborsSimilarityAssessor(
+        n_neighbors=min(len(dataset_ids), 5))
+    data_similarity_assessor.fit(meta_features, dataset_ids)
+    return datasets, extractor, data_similarity_assessor
+
+
+def _get_relevant_dataset_ids(dataset_id: int, experiment_params_dict) -> List[int]:
+    """ Function to get ids of datasets which are the closest to specified one. """
+
+    extractor = experiment_params_dict['extractor']
+    data_similarity_assessor = experiment_params_dict['data_similarity_assessor']
+    dataset_ids = [idx for idx in experiment_params_dict['dataset_ids_train']]
+
+    dataset = OpenMLDataset(dataset_id)
+    cur_meta_features = extractor.extract([dataset], fill_input_nans=True)
+    cur_meta_features = cur_meta_features.fillna(0)
+    try:
+        similar_datasets = [int(idx) for idx in list(data_similarity_assessor.predict(cur_meta_features)[0])]
+    except ValueError:
+        similar_datasets = random.sample(dataset_ids, 5)
+    return similar_datasets
 
 
 def _load_pipeline_vectorizer() -> PipelineVectorizer:

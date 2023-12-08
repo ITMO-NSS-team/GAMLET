@@ -29,6 +29,9 @@ class PymfeExtractor(MetaFeaturesExtractor):
         accumulated_meta_features = []
 
         for i, dataset_data in enumerate(tqdm(data_sequence, desc='Extracting meta features of the datasets')):
+            print(dataset_data)
+            if dataset_data.name == 'adult':
+                continue
             if isinstance(dataset_data, DatasetBase):
                 dataset_data = dataset_data.get_data()
             meta_features = self._extract_single(dataset_data, fill_input_nans, fit_kwargs, extract_kwargs)
