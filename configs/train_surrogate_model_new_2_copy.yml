@@ -1,0 +1,82 @@
+training_method: "train_hetero_surrogate_model"
+
+batch_size: 2
+
+num_dataloader_workers: 0
+
+model:
+  class: "HeteroPipelineDatasetRankingSurrogateModel"
+  model_parameters:
+    pipeline_extractor:
+      operation_encoding: "ordinal"
+      hyperparameters_embedder: null
+    
+    node_embedder:
+      op_hyperparams_embedder:
+        class: "HyperparametersEmbedder"
+        out_dim: 7
+      # op_name_embedder:
+      #   class: # TODO
+      # embedding_joiner:
+      #   class: "CatEmbeddingJoiner"
+    
+    pipeline_encoder:
+      type: "simple_graph_encoder"  # "graph_transformer" doesnt compatible with torch 2.1.0
+      d_model: 64
+      in_size: null  
+      num_heads: 8
+      num_layers: 2
+      dropout: 0.3
+      in_embed: false
+      batch_norm: True  # If false, LayerNorm is used.
+      gnn_type: "graphsage"
+      dim_feedforward: null  # The parameter is inferred
+      num_class: 1
+      k_hop: 2
+      se: "gnn"
+      deg: null  # The parameter is inferred
+      global_pool: "mean"
+      use_edge_attr: False
+
+    dataset_encoder:
+      type: "aggregated"  #"column" or "aggregated"
+      dim_dataset: null  # The parameter is inferred
+      d_model_dset: 64
+    
+  weight_decay: 0.0001
+  lr: 0.001
+  temperature: 5
+  
+# "column"
+dataset_params:
+  root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"
+  # root_path: "./data/openml/"
+  # root_path: "./data/openml_meta_features_and_fedot_pipelines/all"
+
+
+trainer:
+  limit_train_batches: 10
+  limit_val_batches: 10
+  limit_test_batches: 10
+  log_every_n_steps: 1
+  num_sanity_val_steps: 0
+  max_epochs: 2
+  accelerator: "cpu"
+  devices: "auto"
+
+tensorboard_logger:
+tensorboard_logger:
+  save_dir: "/Users/cherniak/itmo_job/GAMLET/experiment_logs/"
+  name: "no_meta_features_and_fedot_pipelines__no_type_with_hyperparams(4_with_learnables)/"
+
+model_checkpoint_callback:
+  save_top_k: 1
+  monitor: "val_ndcg"
+  mode: "max"
+  save_last: False
+  every_n_epochs: 1
+
+early_stopping_callback:
+  monitor: "val_ndcg"
+  mode: "max"
+  patience: 10

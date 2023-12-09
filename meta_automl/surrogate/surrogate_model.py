@@ -10,7 +10,6 @@ from pytorch_lightning import LightningModule
 from sklearn.metrics import ndcg_score
 from torch import Tensor
 from torch_geometric.data import Batch
-
 from meta_automl.surrogate.encoders import ColumnDatasetEncoder, GraphTransformer, MLPDatasetEncoder, SimpleGNNEncoder
 
 
@@ -25,7 +24,7 @@ def to_labels_k(x, klim):
     return vals
 
 
-def get_metrics(self, outputs: Dict[str, np.ndarray], k_top: int = 3) -> Any:
+def get_metrics(outputs: Dict[str, np.ndarray], k_top: int = 3) -> Any:
     """Calculate mean metrics score value over multiple predictions.
 
     Parameters:
@@ -94,27 +93,31 @@ class PipelineDatasetSurrogateModel(LightningModule):
     ):
         super().__init__()
 
-        if model_parameters["pipe_encoder_type"] == "simple_graph_encoder":
-            self.pipeline_encoder = SimpleGNNEncoder(**{k: v for k, v in model_parameters.items() if k != "name"})
-        elif model_parameters["pipe_encoder_type"] == "graph_transformer":
-            self.pipeline_encoder = GraphTransformer(**{k: v for k, v in model_parameters.items() if k != "name"})
+        if model_parameters["pipeline_encoder"]["type"] == "simple_graph_encoder":
+            config = model_parameters["pipeline_encoder"]
+            self.pipeline_encoder = SimpleGNNEncoder(**{k: v for k, v in config.items() if k != "type"})
+        elif model_parameters["pipe_encoder_type"]["type"] == "graph_transformer":
+            config = model_parameters["pipeline_encoder"]
+            self.pipeline_encoder = GraphTransformer(**{k: v for k, v in model_parameters.items() if k != "type"})
 
-        if model_parameters["dataset_encoder_type"] == "column":
+        if model_parameters["dataset_encoder"]["type"] == "column":
+            config = model_parameters["dataset_encoder"]
             self.dataset_encoder = ColumnDatasetEncoder(
-                model_parameters["dim_dataset"],
-                hidden_dim=model_parameters["d_model_dset"],
-                output_dim=model_parameters["d_model_dset"],
+                input_dim=config["dim_dataset"],
+                hidden_dim=config["d_model_dset"],
+                output_dim=config["d_model_dset"],
             )
-        elif model_parameters["dataset_encoder_type"] == "aggregated":
+        elif model_parameters["dataset_encoder"]["type"] == "aggregated":
+            config = model_parameters["dataset_encoder"]
             self.dataset_encoder = MLPDatasetEncoder(
-                model_parameters["dim_dataset"],
-                hidden_dim=model_parameters["d_model_dset"],
-                output_dim=model_parameters["d_model_dset"],
+                input_dim=config["dim_dataset"],
+                hidden_dim=config["d_model_dset"],
+                output_dim=config["d_model_dset"],
             )
         else:
             raise ValueError("dataset_encoder_type should be 'column' or 'aggregated'")
 
-        cat_dim = self.dataset_encoder.dim + 64  # self.pipeline_encoder.dim
+        cat_dim = self.dataset_encoder.out_dim + self.pipeline_encoder.out_dim
         self.final_model = nn.Sequential(
             nn.BatchNorm1d(cat_dim),
             nn.Linear(cat_dim, cat_dim),

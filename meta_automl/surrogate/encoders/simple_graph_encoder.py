@@ -51,6 +51,7 @@ class SimpleGNNEncoder(nn.Module):
         else:
             self.embedding = nn.Linear(in_features=in_size, out_features=d_model, bias=False)
         self.max_seq_len = max_seq_len
+        self.out_dim = d_model
 
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
