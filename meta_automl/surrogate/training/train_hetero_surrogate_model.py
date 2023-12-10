@@ -44,7 +44,7 @@ def build_datasets(config: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset, D
     )
     print("Making test dataset")
     val_dataset = HeteroPipelineAndDatasetFeaturesDataset(
-        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/train_task_pipe_comb.csv",
+        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/test_task_pipe_comb.csv",
         id2pipe,
         id2dataset,
         is_val=True,

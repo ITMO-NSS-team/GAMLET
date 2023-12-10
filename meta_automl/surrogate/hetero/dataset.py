@@ -67,7 +67,7 @@ class HeteroPipelineAndDatasetFeaturesDataset(Dataset):
         elif metric1 > metric2:
             label = 1.0
         else:
-            label = 1.0
+            label = 0
         return pipe1_json_string, pipe2_json_string, ds_data, label
 
     def _get_val_sample(self, idx) -> Tuple[int, int, str, torch.Tensor, float]:

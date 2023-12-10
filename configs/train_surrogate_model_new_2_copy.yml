@@ -1,6 +1,6 @@
 training_method: "train_hetero_surrogate_model"
 
-batch_size: 2
+batch_size: 2048
 
 num_dataloader_workers: 0
 
@@ -21,9 +21,9 @@ model:
       #   class: "CatEmbeddingJoiner"
     
     pipeline_encoder:
-      type: "simple_graph_encoder"  # "graph_transformer" doesnt compatible with torch 2.1.0
+      type: "graph_transformer"  # simple_graph_encoder
       d_model: 64
-      in_size: null  
+      in_size: null  # The parameter is inferred
       num_heads: 8
       num_layers: 2
       dropout: 0.3
@@ -55,25 +55,21 @@ dataset_params:
 
 
 trainer:
-  limit_train_batches: 10
-  limit_val_batches: 10
-  limit_test_batches: 10
   log_every_n_steps: 1
   num_sanity_val_steps: 0
-  max_epochs: 2
+  max_epochs: 100
   accelerator: "cpu"
   devices: "auto"
 
 tensorboard_logger:
-tensorboard_logger:
   save_dir: "/Users/cherniak/itmo_job/GAMLET/experiment_logs/"
-  name: "no_meta_features_and_fedot_pipelines__no_type_with_hyperparams(4_with_learnables)/"
+  name: "no_meta_features_and_fedot_pipelines__no_type_with_hyperparams__joined_training__transfromer/"
 
 model_checkpoint_callback:
   save_top_k: 1
   monitor: "val_ndcg"
   mode: "max"
-  save_last: False
+  save_last: True
   every_n_epochs: 1
 
 early_stopping_callback:

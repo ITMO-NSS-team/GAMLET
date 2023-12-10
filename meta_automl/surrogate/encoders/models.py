@@ -87,7 +87,7 @@ class GraphTransformer(nn.Module):
         self.out_dim = d_model
 
     def forward(self, data, return_attn=False):
-        x, edge_index, edge_attr = data.x.to(dtype=torch.long), data.edge_index, data.edge_attr
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         node_depth = data.node_depth if hasattr(data, "node_depth") else None
 

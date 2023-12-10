@@ -96,9 +96,9 @@ class PipelineDatasetSurrogateModel(LightningModule):
         if model_parameters["pipeline_encoder"]["type"] == "simple_graph_encoder":
             config = model_parameters["pipeline_encoder"]
             self.pipeline_encoder = SimpleGNNEncoder(**{k: v for k, v in config.items() if k != "type"})
-        elif model_parameters["pipe_encoder_type"]["type"] == "graph_transformer":
+        elif model_parameters["pipeline_encoder"]["type"] == "graph_transformer":
             config = model_parameters["pipeline_encoder"]
-            self.pipeline_encoder = GraphTransformer(**{k: v for k, v in model_parameters.items() if k != "type"})
+            self.pipeline_encoder = GraphTransformer(**{k: v for k, v in config.items() if k != "type"})
 
         if model_parameters["dataset_encoder"]["type"] == "column":
             config = model_parameters["dataset_encoder"]
