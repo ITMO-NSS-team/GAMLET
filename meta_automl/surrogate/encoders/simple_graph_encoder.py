@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+from typing import Union
+
 import torch
 import torch.nn.functional as F
 import torch_geometric.nn as gnn
-from torch import nn
+from torch import Tensor, nn
+from torch_geometric.data import Batch
 
 from .gnn_layers import get_simple_gnn_layer
 
@@ -10,14 +13,14 @@ from .gnn_layers import get_simple_gnn_layer
 class SimpleGNNEncoder(nn.Module):
     def __init__(
         self,
-        in_size,
-        d_model,
-        gnn_type="gcn",
-        dropout=0.0,
-        num_layers=4,
-        batch_norm=False,
-        in_embed=True,
-        max_seq_len=None,
+        in_size: int,
+        d_model: int,
+        gnn_type: str = "gcn",
+        dropout: float = 0.0,
+        num_layers: int = 4,
+        batch_norm: bool = False,
+        in_embed: bool = True,
+        max_seq_len: int = None,
         **kwargs,
     ):
         super().__init__()
@@ -53,12 +56,12 @@ class SimpleGNNEncoder(nn.Module):
         self.max_seq_len = max_seq_len
         self.out_dim = d_model
 
-    def forward(self, data):
+    def forward(self, data: Batch) -> Tensor:
         x, edge_index, batch = data.x, data.edge_index, data.batch
 
         if hasattr(data, "node_depth"):
-            node_depth = data.node_depth 
-            output = self.embedding(x, node_depth.view(-1, ))
+            node_depth = data.node_depth
+            output = self.embedding(x, node_depth.view(-1))
         else:
             output = self.embedding(x)
 
