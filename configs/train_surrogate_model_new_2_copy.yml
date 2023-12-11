@@ -13,15 +13,17 @@ model:
     
     node_embedder:
       op_hyperparams_embedder:
-        class: "HyperparametersEmbedder"
-        out_dim: 7
+        class: HyperparametersEmbedder #"PretrainedHyperparametersEmbedder"
+        # autoencoder_ckpt_path: "/Users/cherniak/itmo_job/GAMLET/experiment_logs/embed_hyperparameters/to_8_with_learnables/checkpoints/epoch=9-step=980.ckpt"
+        out_dim: 7 #8
+        # trainable: true
       # op_name_embedder:
       #   class: # TODO
       # embedding_joiner:
       #   class: "CatEmbeddingJoiner"
     
     pipeline_encoder:
-      type: "graph_transformer"  # simple_graph_encoder
+      type: "simple_graph_encoder"  # graph_transformer
       d_model: 64
       in_size: null  # The parameter is inferred
       num_heads: 8
@@ -63,7 +65,7 @@ trainer:
 
 tensorboard_logger:
   save_dir: "/Users/cherniak/itmo_job/GAMLET/experiment_logs/"
-  name: "no_meta_features_and_fedot_pipelines__no_type_with_hyperparams__joined_training__transfromer/"
+  name: "pymfe_meta_features_and_fedot_pipelines__no_type_with_hyperparams__joined_training/"
 
 model_checkpoint_callback:
   save_top_k: 1
@@ -72,7 +74,7 @@ model_checkpoint_callback:
   save_last: True
   every_n_epochs: 1
 
-early_stopping_callback:
-  monitor: "val_ndcg"
-  mode: "max"
-  patience: 10
+early_stopping_callback: null
+  # monitor: "val_ndcg"
+  # mode: "max"
+  # patience: 10

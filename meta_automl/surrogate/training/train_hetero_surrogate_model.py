@@ -30,7 +30,7 @@ def build_datasets(config: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset, D
     print("Loading id2pipe")
     #  avoid repeated loading of mappings
     with open("/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/id2pipeline_path.pickle", "rb") as f:
-            id2pipe = pickle.load(f)
+        id2pipe = pickle.load(f)
     print("Loading id2dataset")
     with open("/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/id2dataset_id.pickle", "rb") as f:
         id2dataset = pickle.load(f)    
@@ -38,6 +38,7 @@ def build_datasets(config: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset, D
     print("Making train dataset")
     train_dataset = HeteroPipelineAndDatasetFeaturesDataset(
         "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/train_task_pipe_comb.csv",
+        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/datasets.csv",
         id2pipe,
         id2dataset,
         is_val=False,
@@ -45,13 +46,14 @@ def build_datasets(config: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset, D
     print("Making test dataset")
     val_dataset = HeteroPipelineAndDatasetFeaturesDataset(
         "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/test_task_pipe_comb.csv",
+        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/datasets.csv",
         id2pipe,
         id2dataset,
         is_val=True,
     )
     meta_data = {
-        "in_size": 8,  # TODO: change  #Changed from default 7
-        "dim_dataset": 2,
+        "in_size": 7,  # TODO: change
+        "dim_dataset": train_dataset.dataset_metafeatures.shape[1],
     }
     return train_dataset, val_dataset, val_dataset, meta_data
 

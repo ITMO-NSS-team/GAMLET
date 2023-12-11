@@ -41,18 +41,18 @@ class HeteroPipelineDatasetRankingSurrogateModel(RankingPipelineDatasetSurrogate
         data = Data(x=torch.vstack(node_embeddings), edge_index=edge_index, in_size=self.node_embedder.out_dim)
         return data
 
-    def training_step(self, batch: Tuple[List[str], List[str], torch.Tensor, torch.Tensor], *args, **kwargs) -> Tensor:
+    def training_step(self, batch: Tuple[List[str], List[str], Batch, torch.Tensor], *args, **kwargs) -> Tensor:
         pipe1_json_str, pipe2_json_str, dset_data, y = batch
-        x_pipe1 = Batch.from_data_list([self._pipeline_json_string2data(p) for p in pipe1_json_str])
-        x_pipe2 = Batch.from_data_list([self._pipeline_json_string2data(p) for p in pipe2_json_str])
-        return super().training_step((x_pipe1, x_pipe2, Data(x=dset_data), y), *args, **kwargs)  # Why dataset features are of Data type, not Tensor?
+        x_pipe1 = Batch.from_data_list([self._pipeline_json_string2data(p) for p in pipe1_json_str]).to(self.device)
+        x_pipe2 = Batch.from_data_list([self._pipeline_json_string2data(p) for p in pipe2_json_str]).to(self.device)
+        return super().training_step((x_pipe1, x_pipe2, dset_data, y), *args, **kwargs)  # Why dataset features are of Data type, not Tensor?
 
-    def validation_step(self, batch: Tuple[Tensor, Batch, List[str], Batch, Tensor], *args, **kwargs: Any) -> None:
+    def validation_step(self, batch: Tuple[Tensor, Tensor, List[str], Batch, Tensor], *args, **kwargs: Any) -> None:
         task_id, pipe_id, pipe_json_str, x_dset, y_true = batch
         x_graph = Batch.from_data_list([self._pipeline_json_string2data(p) for p in pipe_json_str])
-        return super().validation_step((task_id, pipe_id, x_graph, Data(x=x_dset), y_true), *args, **kwargs)  # Why dataset features are of Data type, not Tensor?
+        return super().validation_step((task_id, pipe_id, x_graph, x_dset, y_true), *args, **kwargs)  # Why dataset features are of Data type, not Tensor?
 
-    def test_step(self, batch: Tuple[Tensor, Batch, List[str], Batch, Tensor], *args, **kwargs: Any) -> None:
+    def test_step(self, batch: Tuple[Tensor, Tensor, List[str], Batch, Tensor], *args, **kwargs: Any) -> None:
         task_id, pipe_id, pipe_json_str, x_dset, y_true = batch
         x_graph = Batch.from_data_list([self._pipeline_json_string2data(p) for p in pipe_json_str])
-        return super().test_step((task_id, pipe_id, x_graph, Data(x=x_dset), y_true), *args, **kwargs)  # Why dataset features are of Data type, not Tensor?
+        return super().test_step((task_id, pipe_id, x_graph, x_dset, y_true), *args, **kwargs)  # Why dataset features are of Data type, not Tensor?
