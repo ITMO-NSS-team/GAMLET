@@ -50,7 +50,7 @@ def build_datasets(config: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset, D
         is_val=True,
     )
     meta_data = {
-        "in_size": 7,  # TODO: change
+        "in_size": 8,  # TODO: change  #Changed from default 7
         "dim_dataset": 2,
     }
     return train_dataset, val_dataset, val_dataset, meta_data
