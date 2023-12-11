@@ -57,4 +57,4 @@ early_stopping_callback:
 
 model_data:
   save_name: "timeseries"
-  save_dir: "./model_checkpoints/timeseries/"
+  save_dir: "./model_checkpoints/timeseries/1/"

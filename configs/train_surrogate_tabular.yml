@@ -58,4 +58,4 @@ early_stopping_callback:
 
 model_data:
   save_name: "tabular"
-  save_dir: "./model_checkpoints/tabular/"
+  save_dir: "./model_checkpoints/tabular/2/"
