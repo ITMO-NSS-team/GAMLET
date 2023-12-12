@@ -10,6 +10,9 @@ from meta_automl.data_preparation.meta_features_extractors.dataset_meta_features
 
 
 def explode_ungrouped_metafeatures(df: DatasetMetaFeatures) -> DatasetMetaFeatures:
+    """ Transforms DataFrame of non-summarized meta-features, initially having values as lists in the form
+        ``<columns=features, idx=dataset_id>``, to the form ``<dataset, feature, variable, value>`` with float values.
+    """
     output = []
     n_features = len(df.features)
     for index, row in df.iterrows():
