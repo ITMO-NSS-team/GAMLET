@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional, Sequence, Union
 
 import numpy as np
-import pandas as pd
 from fedot.core.data.data import InputData
 from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.repository.dataset_types import DataTypesEnum
