@@ -4,7 +4,7 @@ import logging
 import warnings
 from copy import deepcopy
 from functools import partial
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 from pymfe.mfe import MFE
@@ -12,20 +12,21 @@ from tqdm import tqdm
 
 from meta_automl.data_preparation.dataset import DatasetBase, TabularData
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
+from meta_automl.data_preparation.meta_features_extractors.dataset_meta_features import DatasetMetaFeatures
 
 logger = logging.getLogger(__file__)
 
 
 class PymfeExtractor(MetaFeaturesExtractor):
-    default_params = {'groups': 'default'}
+    default_params = dict(groups='default')
 
-    def __init__(self, extractor_params: Optional[Dict[str, Any]] = None):
+    def __init__(self, **extractor_params):
         self.extractor_params = extractor_params if extractor_params is not None else self.default_params
-        self._extractor = MFE(**self.extractor_params)
+        self._extractor = MFE(**extractor_params)
 
     def extract(self, data_sequence: Sequence[Union[DatasetBase, TabularData]],
                 fill_input_nans: bool = False, fit_kwargs: Optional[Dict[str, Any]] = None,
-                extract_kwargs: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
+                extract_kwargs: Optional[Dict[str, Any]] = None) -> DatasetMetaFeatures:
         accumulated_meta_features = []
 
         for i, dataset_data in enumerate(tqdm(data_sequence, desc='Extracting meta features of the datasets')):
@@ -34,7 +35,8 @@ class PymfeExtractor(MetaFeaturesExtractor):
             meta_features = self._extract_single(dataset_data, fill_input_nans, fit_kwargs, extract_kwargs)
             accumulated_meta_features.append(meta_features)
 
-        output = pd.concat(accumulated_meta_features)
+        output = DatasetMetaFeatures(pd.concat(accumulated_meta_features), is_summarized=self.summarize_features,
+                                     features=self.features)
         return output
 
     def _extract_single(self, dataset_data: TabularData, fill_input_nans: bool = False,
@@ -71,8 +73,12 @@ class PymfeExtractor(MetaFeaturesExtractor):
         return meta_features_extracted
 
     @property
-    def summarize_features(self):
+    def summarize_features(self) -> bool:
         return not ("summary" in self.extractor_params and self.extractor_params["summary"] is None)
+
+    @property
+    def features(self) -> Tuple[str, ...]:
+        return self._extractor.features
 
     @staticmethod
     def fill_nans(x: pd.DataFrame, cat_cols_indicator: Sequence[bool]):

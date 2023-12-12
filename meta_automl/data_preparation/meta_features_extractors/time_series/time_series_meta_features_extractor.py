@@ -12,6 +12,7 @@ from tqdm import tqdm
 from meta_automl.data_preparation.dataset import TimeSeriesData, TimeSeriesDataset
 from meta_automl.data_preparation.file_system import get_project_root
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
+from meta_automl.data_preparation.meta_features_extractors.dataset_meta_features import DatasetMetaFeatures
 
 TS_FEATURES_COUNT = 184
 
@@ -23,7 +24,7 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
         self._extractor = self._load_extractor()
         self.meta_feature_names = np.arange(TS_FEATURES_COUNT)
 
-    def extract(self, datasets_or_ids: Sequence[Union[TimeSeriesDataset, TimeSeriesData]]) -> pd.DataFrame:
+    def extract(self, datasets_or_ids: Sequence[Union[TimeSeriesDataset, TimeSeriesData]]) -> DatasetMetaFeatures:
 
         rows = {}
 
@@ -41,7 +42,8 @@ class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
             meta_features_extracted = dict(zip(self.meta_feature_names, meta_features_extracted))
             rows[dataset_data.id] = meta_features_extracted
 
-        meta_features = pd.DataFrame.from_dict(rows, orient='index')
+        meta_features = DatasetMetaFeatures.from_dict(rows, orient='index')
+        meta_features.features = tuple(range(TS_FEATURES_COUNT))
 
         return meta_features
 
