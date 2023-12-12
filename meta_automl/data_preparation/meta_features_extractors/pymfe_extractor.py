@@ -74,7 +74,7 @@ class PymfeExtractor(MetaFeaturesExtractor):
 
     @property
     def summarize_features(self) -> bool:
-        return not ("summary" in self.extractor_params and self.extractor_params["summary"] is None)
+        return self.extractor_params.get('summary', True) is not None
 
     @property
     def features(self) -> Tuple[str, ...]:

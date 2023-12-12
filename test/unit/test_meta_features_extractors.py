@@ -36,9 +36,11 @@ def test_table_meta_features_extraction(dataset_ids, extractor_params):
     assert isinstance(meta_features, DatasetMetaFeatures)
     assert list(meta_features.index) == dataset_ids
     assert set(meta_features.columns) == set(extractor._extractor.extract_metafeature_names())
+    assert (extractor.summarize_features == meta_features.is_summarized ==
+            (extractor_params.get('summary', True) is not None))
     for dataset_id in dataset_ids:
         dataset_cache_path = get_dataset_cache_path_by_id(OpenMLDataset, dataset_id)
-        assert_cache_file_exists(dataset_cache_path)  # Extractor downloaded necessary data
+        assert_cache_file_exists(dataset_cache_path)
 
 
 def test_ts_meta_features_extraction(timeseries_dataset_ids):
@@ -49,3 +51,6 @@ def test_ts_meta_features_extraction(timeseries_dataset_ids):
     extractor = TimeSeriesFeaturesExtractor()
     meta_features = extractor.extract(datasets)
     assert list(meta_features.index) == timeseries_dataset_ids
+    assert isinstance(meta_features, DatasetMetaFeatures)
+    assert meta_features.is_summarized
+    assert set(meta_features.features) == set(meta_features.columns)
