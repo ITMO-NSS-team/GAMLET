@@ -11,21 +11,15 @@ def main():
     datasets_loader = CustomDatasetsLoader(dataset_from_id_func=dataset_from_id_without_data_loading)
     extractor_params = get_extractor_params(get_configs_dir() / "use_features.json")
 
-    meta_features_extractor = PymfeExtractor(
-        extractor_params=extractor_params,
-    )
-
-    meta_features_preprocessor = FeaturesPreprocessor(extractor_params=extractor_params)
-
     converter = KnowledgeBaseToDataset(
         knowledge_base_directory=get_data_dir() / "knowledge_base_1",
         dataset_directory=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines",
-        meta_features_extractor=meta_features_extractor,
+        meta_features_extractor=PymfeExtractor(**extractor_params),
         datasets_loader=datasets_loader,
         train_test_split_name="train_test_datasets_classification.csv",
         task_type="classification",
         fitness_metric="fitness",
-        meta_features_preprocessors=meta_features_preprocessor,
+        meta_features_preprocessor=FeaturesPreprocessor(),
         models_loader_kwargs={"datasets_loader": datasets_loader}
     )
     converter.convert_pipelines()

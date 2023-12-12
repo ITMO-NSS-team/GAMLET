@@ -43,19 +43,15 @@ class SurrogateGNNPipelineAdvisor(ModelAdvisor):
         # Prepare dataset extractor and extract metafeatures
         config_dir = get_configs_dir() / 'use_features.json'
         extractor_params = get_extractor_params(config_dir)
-        self.meta_features_extractor = PymfeExtractor(
-            extractor_params=extractor_params,
-        )
+        self.meta_features_extractor = PymfeExtractor(**extractor_params)
         self.meta_features_preprocessor = FeaturesPreprocessor(
-            load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
-            extractor_params=extractor_params)
+            load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle")
 
     def _preprocess_dataset_features(self, dataset):
         x = self.meta_features_extractor.extract([dataset], fill_input_nans=True).fillna(0)
         x = self.meta_features_preprocessor.transform(x, single=False).fillna(0)
         transformed = x.groupby(by=['dataset', 'variable'])['value'].apply(list).apply(lambda x: pd.Series(x))
-        dset_data = Data()
-        dset_data.x = torch.tensor(transformed.values, dtype=torch.float32)
+        dset_data = Data(torch.tensor(transformed.values, dtype=torch.float32))
         dset_data_loader = DataLoader([dset_data], batch_size=1)
         return next(iter(dset_data_loader))
 

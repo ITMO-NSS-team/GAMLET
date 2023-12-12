@@ -13,6 +13,7 @@ from meta_automl.data_preparation.dataset import (CustomDataset,
                                                   DataNotFoundError,
                                                   DatasetData, DatasetIDType)
 from meta_automl.data_preparation.datasets_loaders import DatasetsLoader
+from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
 from meta_automl.data_preparation.file_system.file_system import ensure_dir_exists
 from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor
 from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
@@ -77,7 +78,7 @@ class KnowledgeBaseToDataset:
             task_type: Optional[str] = "classification",
             fitness_metric: Optional[str] = "f1",
             exclude_datasets=None,
-            meta_features_preprocessors: Dict[str, Any] = None,
+            meta_features_preprocessor: FeaturesPreprocessor = None,
             use_hyperpar: bool = False,
             models_loader_kwargs=None,
     ) -> None:
@@ -95,7 +96,7 @@ class KnowledgeBaseToDataset:
         self.split = split
         self.fitness_metric = fitness_metric
         self.exclude_datasets = exclude_datasets
-        self.meta_features_preprocessors = meta_features_preprocessors
+        self.meta_features_preprocessors = meta_features_preprocessor
 
         ensure_dir_exists(Path(self.dataset_directory, self.split))
 
