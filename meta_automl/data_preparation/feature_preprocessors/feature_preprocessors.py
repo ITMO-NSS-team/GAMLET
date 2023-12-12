@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -66,16 +66,16 @@ class FeaturesPreprocessor:
             data: DatasetMetaFeatures,
             single: bool = False,
     ) -> DatasetMetaFeatures:
-        result = data.copy()
 
         if data.is_summarized:
-            result = explode_ungrouped_metafeatures(result)
-            for key in data.features:
+            result = explode_ungrouped_metafeatures(data)
+            for key in result.features:
                 data_ = data.loc[(data["feature"] == key), "value"].values.reshape(-1, 1)
                 result.loc[(data["feature"] == key), "value"] = self.preprocessors[key].transform(data_)
         else:
-            for key in data.columns:
-                result[key] = self.preprocessors[key].transform(data[key].values.reshape(-1, 1))
+            result = data.copy()
+            for key in result.columns:
+                result[key] = self.preprocessors[key].transform(result[key].values.reshape(-1, 1))
         # for key, value in data.items():
         #     if single:
         #         result[key] = self.preprocessors[key].transform(np.array(value).reshape(1, 1)).item(0)
