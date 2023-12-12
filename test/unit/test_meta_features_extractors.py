@@ -28,7 +28,7 @@ def timeseries_dataset_ids():
 
 
 def test_table_meta_features_extraction(dataset_ids):
-    extractor = PymfeExtractor(extractor_params={'groups': 'general'})
+    extractor = PymfeExtractor(groups='general')
     datasets = [OpenMLDataset(dataset_id) for dataset_id in dataset_ids]
     meta_features = extractor.extract(datasets, fill_input_nans=True)
     assert list(meta_features.index) == dataset_ids
