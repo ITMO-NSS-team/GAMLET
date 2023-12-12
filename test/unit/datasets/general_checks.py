@@ -20,5 +20,5 @@ def assert_cache_file_exists(path: Path):
 def check_dataset_cache(dataset: DatasetBase):
     cache_path = get_dataset_cache_path(dataset)
     assert_cache_file_exists(cache_path)
-    if dataset.id_ in test.constants.OPENML_CACHED_DATASETS:
+    if dataset.id in test.constants.OPENML_CACHED_DATASETS:
         assert_file_unmodified_during_test(cache_path)

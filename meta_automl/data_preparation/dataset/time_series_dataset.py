@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from meta_automl.data_preparation.dataset import DatasetIDType
-from meta_automl.data_preparation.dataset.dataset_base import DatasetBase, TimeSeriesData
+from meta_automl.data_preparation.dataset import DatasetIDType, TimeSeriesData
+from meta_automl.data_preparation.dataset.dataset_base import DatasetBase
 from meta_automl.data_preparation.file_system import get_project_root
 
 
@@ -18,8 +18,8 @@ class TimeSeriesDataset(DatasetBase):
             self.path_to_knowledge_base = Path(get_project_root(), 'data', 'knowledge_base_time_series_0', 'datasets')
 
     def get_data(self) -> TimeSeriesData:
-        path_to_series = Path(self.path_to_knowledge_base, self.id_, 'data.csv')
+        path_to_series = Path(self.path_to_knowledge_base, self.id, 'data.csv')
         series = pd.read_csv(path_to_series)['value'].values
         x = series[:-self.forecast_length]
         y = series[-self.forecast_length:]
-        return TimeSeriesData(x, y, self.forecast_length)
+        return TimeSeriesData(self, x, y, self.forecast_length)

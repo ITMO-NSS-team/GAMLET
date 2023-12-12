@@ -31,12 +31,9 @@ if __name__ == '__main__':
 
     # Prepare dataset extractor and extract metafeatures
     extractor_params = get_extractor_params(get_configs_dir() / 'use_features.json')
-    meta_features_extractor = PymfeExtractor(
-        extractor_params=extractor_params,
-    )
+    meta_features_extractor = PymfeExtractor(**extractor_params)
     meta_features_preprocessor = FeaturesPreprocessor(
-        load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle",
-        extractor_params=extractor_params)
+        load_path=get_data_dir() / "pymfe_meta_features_and_fedot_pipelines/all/meta_features_preprocessors.pickle")
     x_dset = meta_features_extractor.extract([train_data], fill_input_nans=True).fillna(0)
 
     # Compose extractors and model into joint structure

@@ -7,7 +7,7 @@ def main():
         'nomao', 'sylvine', 'kc1', 'jungle_chess_2pcs_raw_endgame_complete', 'credit-g', 'delta_ailerons', 'pol'
     ]
     loader = OpenMLDatasetsLoader()
-    extractor = PymfeExtractor(extractor_params={'groups': 'general'})
+    extractor = PymfeExtractor(groups='general')
 
     datasets = loader.load(dataset_names, allow_names=True)
     meta_features = extractor.extract(datasets)
@@ -16,3 +16,4 @@ def main():
 
 if __name__ == '__main__':
     result = main()
+    print(result)

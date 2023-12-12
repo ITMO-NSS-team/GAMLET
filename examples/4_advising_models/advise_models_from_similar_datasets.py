@@ -15,7 +15,7 @@ def main():
     dataset_names = ['monks-problems-1', 'apsfailure', 'australian', 'bank-marketing']
     datasets = OpenMLDatasetsLoader().load(dataset_names, allow_names=True)
     # Extract meta-features and load on demand.
-    extractor = PymfeExtractor(extractor_params={'groups': 'general'})
+    extractor = PymfeExtractor(groups='general')
     meta_features = extractor.extract(datasets)
     # Preprocess meta-features, as KNN does not support NaNs.
     meta_features = meta_features.dropna(axis=1, how='any')
