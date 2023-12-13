@@ -12,15 +12,14 @@ def test_dataset_models_scaler():
     fitness_metric_name = ['a', 'b', 'c']
     predictor = Pipeline(PipelineNode('rf'))
     datasets = [CustomDataset(i) for i in range(3)]
-    dataset_ids = [dataset.id for dataset in datasets]
     n_models = 5
     models = [[EvaluatedModel(
         predictor=predictor, dataset=dataset,
         fitness=SingleObjFitness(dataset.id + i + 1, dataset.id + i + 2, dataset.id + i + 3),
         fitness_metric_name=fitness_metric_name) for i in range(n_models)] for dataset in datasets]
-    scaler = DatasetModelsFitnessScaler().fit(dataset_ids, models)
-    new_models_1 = scaler.transform(dataset_ids, models)
-    new_models_2 = scaler.fit_transform(dataset_ids, models)
+    scaler = DatasetModelsFitnessScaler().fit(models, datasets)
+    new_models_1 = scaler.transform(models, datasets)
+    new_models_2 = scaler.fit_transform(models, datasets)
 
     assert np.array(new_models_1).shape == np.array(new_models_2).shape
 
