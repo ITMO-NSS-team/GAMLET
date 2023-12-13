@@ -1,7 +1,8 @@
-from copy import copy, deepcopy
+from copy import copy
 from typing import Any, Dict, Sequence
 
 from sklearn.preprocessing import MinMaxScaler
+from typing_extensions import Self
 
 from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
@@ -12,12 +13,13 @@ class DatasetModelsFitnessScaler:
         self.scaler_class = scaler_class
         self.scalers: Dict[DatasetIDType, Any] = {}
 
-    def fit(self, dataset_ids: Sequence[DatasetIDType], models: Sequence[Sequence[EvaluatedModel]]):
+    def fit(self, dataset_ids: Sequence[DatasetIDType], models: Sequence[Sequence[EvaluatedModel]]) -> Self:
         for dataset_id, dataset_models in zip(dataset_ids, models):
             scaler = self.scaler_class()
             self.scalers[dataset_id] = scaler
             fitness_values_array = [model.fitness.values for model in dataset_models]
             scaler.fit(fitness_values_array)
+        return self
 
     def transform(self, dataset_ids: Sequence[DatasetIDType], models: Sequence[Sequence[EvaluatedModel]]):
         new_models = [[copy(model) for model in dataset_models] for dataset_models in models]
