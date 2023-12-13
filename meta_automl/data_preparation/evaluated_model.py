@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Sequence, Union
 
 from golem.core.optimisers.fitness import Fitness
 
@@ -12,6 +12,6 @@ PredictorType = Any
 class EvaluatedModel:
     predictor: PredictorType
     fitness: Fitness
-    fitness_metric_name: str
+    fitness_metric_name: Union[str, Sequence[str]]
     dataset: DatasetBase
     metadata: Dict[str, Any] = field(default_factory=dict)
