@@ -6,6 +6,7 @@ n_datasets: 16 # null for all available datasets
 test_size: 0.25
 train_timeout: 15
 test_timeout: 15
+n_automl_repetitions: 10
 #meta_learning_params:
 n_best_dataset_models_to_memorize: 10
 mf_extractor_params:
