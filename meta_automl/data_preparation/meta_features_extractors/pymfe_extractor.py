@@ -82,9 +82,12 @@ class PymfeExtractor(MetaFeaturesExtractor):
     def fill_nans(x: np.ndarray, cat_cols_indicator: Sequence[bool]) -> np.ndarray:
         x_new = pd.DataFrame(x)
         for col in x_new.columns:
+            is_all_nan = x_new[col].isna().values.all()
             is_categorical = cat_cols_indicator[col]
-            if is_categorical:
-                fill_value = x_new[col].mode(dropna=True)
+            if is_all_nan:
+                fill_value = 0
+            elif is_categorical:
+                fill_value = x_new[col].mode(dropna=True).values[0]
             else:
                 fill_value = x_new[col].median(skipna=True)
             x_new[col].fillna(fill_value, inplace=True)
