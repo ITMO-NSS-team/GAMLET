@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 import warnings
-from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
+import numpy as np
 import pandas as pd
 from pymfe.mfe import MFE
 from tqdm import tqdm
@@ -52,8 +52,6 @@ class PymfeExtractor(MetaFeaturesExtractor):
         cat_cols_indicator = dataset_data.categorical_indicator
         if fill_input_nans:
             x = self.fill_nans(x, cat_cols_indicator)
-        x = x.to_numpy()
-        y = y.to_numpy()
         if cat_cols_indicator is not None:
             cat_cols = [i for i, val in enumerate(cat_cols_indicator) if val]
         else:
@@ -81,13 +79,16 @@ class PymfeExtractor(MetaFeaturesExtractor):
         return self._extractor.features
 
     @staticmethod
-    def fill_nans(x: pd.DataFrame, cat_cols_indicator: Sequence[bool]):
-        x_new = deepcopy(x)
-        for idx, col in enumerate(x.columns):
-            is_categorical = cat_cols_indicator[idx]
-            if is_categorical:
-                fill_value = x_new[col].mode(dropna=True)
+    def fill_nans(x: np.ndarray, cat_cols_indicator: Sequence[bool]) -> np.ndarray:
+        x_new = pd.DataFrame(x)
+        for col in x_new.columns:
+            is_all_nan = x_new[col].isna().values.all()
+            is_categorical = cat_cols_indicator[col]
+            if is_all_nan:
+                fill_value = 0
+            elif is_categorical:
+                fill_value = x_new[col].mode(dropna=True).values[0]
             else:
                 fill_value = x_new[col].median(skipna=True)
             x_new[col].fillna(fill_value, inplace=True)
-        return x_new
+        return x_new.to_numpy()
