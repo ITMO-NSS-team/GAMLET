@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class MetaLearningApproach(ABC):
     @dataclass
     class Parameters:
-        any_param: None
+        pass
 
     @dataclass
     class Data:
