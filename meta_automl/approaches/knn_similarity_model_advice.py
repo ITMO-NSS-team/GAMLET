@@ -26,22 +26,15 @@ class KNNSimilarityModelAdvice(MetaLearningApproach):
             assessor_params=assessor_params,
             advisor_params=advisor_params,
         )
-        self.data = self.Data()
-
-        mf_extractor = PymfeExtractor(extractor_params=mf_extractor_params)
-        datasets_similarity_assessor = KNeighborsSimilarityAssessor(**assessor_params)
-
-        models_loader = FedotHistoryLoader()
-        model_advisor = DiverseModelAdvisor(**advisor_params)
-
         self.components = self.Components(
-            models_loader=models_loader,
+            models_loader=FedotHistoryLoader(),
             models_fitness_scaler=DatasetModelsFitnessScaler(MinMaxScaler),
-            mf_extractor=mf_extractor,
+            mf_extractor=PymfeExtractor(**mf_extractor_params),
             mf_scaler=MinMaxScaler(),
-            datasets_similarity_assessor=datasets_similarity_assessor,
-            model_advisor=model_advisor,
+            datasets_similarity_assessor=KNeighborsSimilarityAssessor(**assessor_params),
+            model_advisor=DiverseModelAdvisor(**advisor_params),
         )
+        self.data = self.Data()
 
     @dataclass
     class Parameters:
@@ -124,11 +117,9 @@ class KNNSimilarityModelAdvice(MetaLearningApproach):
         advisor = self.components.model_advisor
 
         meta_features = mf_extractor.extract(datasets_data, fill_input_nans=True)
-
         meta_features.fillna(0, inplace=True)
-
         meta_features[meta_features.columns] = mf_scaler.transform(meta_features)
-
         similar_dataset_ids = assessor.predict(meta_features)
+        models = advisor.predict(similar_dataset_ids)
 
-        return advisor.predict(similar_dataset_ids)
+        return models
