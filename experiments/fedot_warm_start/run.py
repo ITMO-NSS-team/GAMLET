@@ -248,13 +248,14 @@ def save_evaluation(save_dir: Path, dataset, pipeline, **kwargs):
 
 
 def run_fedot(train_data: TabularData, test_data: TabularData, timeout: float,
-              run_label: str, experiment_date: datetime, save_dir: Path, fedot_evaluations_cache: CacheDict,
+              run_label: str, repetition: int, experiment_date: datetime, save_dir: Path,
+              fedot_evaluations_cache: CacheDict,
               initial_assumption: Optional[Sequence[Pipeline]] = None, meta_learning_time_sec: float = 0.):
     fedot = Fedot(timeout=timeout, initial_assumption=initial_assumption, **FEDOT_PARAMS)
     fit_func = partial(fedot.fit, features=train_data.x, target=train_data.y)
     evaluate_func = partial(evaluate_pipeline, train_data=train_data, test_data=test_data)
     run_date = datetime.now()
-    cache_key = f'{run_label}_{train_data.id}_{timeout}'
+    cache_key = f'{run_label}_{train_data.id}_{timeout}_{repetition}'
     with fedot_evaluations_cache as cache_dict:
         cached_run = cache_dict[cache_key]
         if cached_run:
@@ -350,17 +351,16 @@ def main():
         train_data, test_data = dataset_data[idx_train], dataset_data[idx_test]
         dataset_splits[dataset_id] = dict(train=train_data, test=test_data)
     knowledge_base = {dataset_id: [] for dataset_id in dataset_ids_train}
-    fedot_evaluations_cache = CacheDict(get_cache_dir() / 'fedot_runs.pkl', access='e')
+    fedot_evaluations_cache = CacheDict(get_cache_dir() / 'fedot_runs.pkl')
     description = 'FEDOT, all datasets'
     for dataset_id in (pbar := tqdm(dataset_ids, description)):
-        if dataset_id != 40975: continue
         pbar.set_description(description + f' ({dataset_id})')
         timeout = TRAIN_TIMEOUT if dataset_id in dataset_ids_test else TEST_TIMEOUT
         train_data, test_data = dataset_splits[dataset_id]['train'], dataset_splits[dataset_id]['test']
         run_label = 'FEDOT'
         for repetition in range(N_AUTOML_REPETITIONS):
             try:
-                fedot = run_fedot(train_data, test_data, timeout, run_label, experiment_date, save_dir,
+                fedot = run_fedot(train_data, test_data, timeout, run_label, repetition, experiment_date, save_dir,
                                   fedot_evaluations_cache)
                 # TODO:
                 #   x Start FEDOT `N_BEST_DATASET_MODELS_TO_MEMORIZE` times, but not in one run
@@ -398,7 +398,7 @@ def main():
         run_label = 'MetaFEDOT'
         for repetition in range(N_AUTOML_REPETITIONS):
             try:
-                run_fedot(train_data, test_data, timeout, run_label, experiment_date, save_dir,
+                run_fedot(train_data, test_data, timeout, run_label, repetition, experiment_date, save_dir,
                           fedot_evaluations_cache, initial_assumption=assumption_pipelines,
                           meta_learning_time_sec=meta_learning_time_sec)
             except Exception as e:
