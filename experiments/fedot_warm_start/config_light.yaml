@@ -1,6 +1,7 @@
 ---
 seed: 42
 tmpdir: '/var/essdata/tmp'
+save_dir_prefix: light_
 #data_settings:
 n_datasets: 16 # null for all available datasets
 test_size: 0.25
@@ -15,4 +16,4 @@ assessor_params:
   n_neighbors: 5
 advisor_params:
   minimal_distance: 1
-  n_best_to_advise: 5
+  n_best_to_advise: 3

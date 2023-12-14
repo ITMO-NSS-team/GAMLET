@@ -14,4 +14,4 @@ assessor_params:
   n_neighbors: 2
 advisor_params:
   minimal_distance: 1
-  n_best_to_advise: 5
+  n_best_to_advise: 3
