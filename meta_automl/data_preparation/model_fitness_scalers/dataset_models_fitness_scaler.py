@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Dict, Sequence, Type
+from typing import Dict, Sequence, Type, TypeVar
 
 from sklearn.base import OneToOneFeatureMixin, TransformerMixin
 from sklearn.preprocessing import MinMaxScaler
@@ -8,7 +8,7 @@ from typing_extensions import Self
 from meta_automl.data_preparation.dataset.dataset_base import DatasetType_co
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 
-ScalerType = Type[OneToOneFeatureMixin, TransformerMixin]
+ScalerType = TypeVar('ScalerType', OneToOneFeatureMixin, TransformerMixin)
 
 
 class DatasetModelsFitnessScaler:
