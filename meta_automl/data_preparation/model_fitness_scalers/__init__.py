@@ -1,1 +1,1 @@
-from .dataset_models_fitness_scaler import DatasetModelsFitnessScaler
+from .dataset_models_fitness_scaler import DatasetModelsFitnessScaler, ScalerType

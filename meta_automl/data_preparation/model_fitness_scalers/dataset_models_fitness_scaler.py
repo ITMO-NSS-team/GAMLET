@@ -1,18 +1,20 @@
 from copy import copy
-from typing import Any, Dict, Sequence
+from typing import Dict, Sequence, Type
 
+from sklearn.base import OneToOneFeatureMixin, TransformerMixin
 from sklearn.preprocessing import MinMaxScaler
 from typing_extensions import Self
 
-from meta_automl.data_preparation.dataset import DatasetIDType
 from meta_automl.data_preparation.dataset.dataset_base import DatasetType_co
 from meta_automl.data_preparation.evaluated_model import EvaluatedModel
 
+ScalerType = Type[OneToOneFeatureMixin, TransformerMixin]
+
 
 class DatasetModelsFitnessScaler:
-    def __init__(self, scaler_class=MinMaxScaler):
+    def __init__(self, scaler_class: Type[ScalerType] = MinMaxScaler):
         self.scaler_class = scaler_class
-        self.scalers: Dict[DatasetIDType, Any] = {}
+        self.scalers: Dict[str, ScalerType] = {}
 
     def fit(self, models: Sequence[Sequence[EvaluatedModel]], datasets: Sequence[DatasetType_co]) -> Self:
         dataset_representations = map(repr, datasets)
