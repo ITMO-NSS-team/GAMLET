@@ -67,16 +67,16 @@ def get_pipeline_features(pipeline_extractor: FEDOTPipelineFeaturesExtractor, pi
 
 class KnowledgeBaseToDataset:
     def __init__(
-        self,
-        knowledge_base_directory: os.PathLike,
-        dataset_directory: os.PathLike,
-        data_type: str,
-        meta_features_extractor: MetaFeaturesExtractor,
-        datasets_loader: DatasetsLoader,
-        split: Literal['train', 'test', 'all'] = "all",
-        exclude_datasets=None,
-        meta_features_preprocessor: FeaturesPreprocessor = None,
-        use_hyperpar: bool = False,
+            self,
+            knowledge_base_directory: os.PathLike,
+            dataset_directory: os.PathLike,
+            data_type: str,
+            meta_features_extractor: MetaFeaturesExtractor,
+            datasets_loader: DatasetsLoader,
+            split: Literal['train', 'test', 'all'] = "all",
+            exclude_datasets=None,
+            meta_features_preprocessor: FeaturesPreprocessor = None,
+            use_hyperpar: bool = False,
     ) -> None:
         if exclude_datasets is None:
             exclude_datasets = []
