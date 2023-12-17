@@ -15,7 +15,7 @@ model:
       op_hyperparams_embedder:
         class: HyperparametersEmbedder #"PretrainedHyperparametersEmbedder"
         # autoencoder_ckpt_path: "/Users/cherniak/itmo_job/GAMLET/experiment_logs/embed_hyperparameters/to_8_with_learnables/checkpoints/epoch=9-step=980.ckpt"
-        out_dim: 7 #8
+        out_dim: 8
         # trainable: true
       # op_name_embedder:
       #   class: # TODO
@@ -25,7 +25,7 @@ model:
     pipeline_encoder:
       type: "simple_graph_encoder"  # graph_transformer
       d_model: 64
-      in_size: null  # The parameter is inferred
+      in_size: 8 # model.node_embedder.op_hyperparams_embedder.out_dim
       num_heads: 8
       num_layers: 2
       dropout: 0.3

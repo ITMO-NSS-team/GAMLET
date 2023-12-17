@@ -52,14 +52,13 @@ def build_datasets(config: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset, D
         is_val=True,
     )
     meta_data = {
-        "in_size": 7,  # TODO: change
         "dim_dataset": train_dataset.dataset_metafeatures.shape[1],
     }
     return train_dataset, val_dataset, val_dataset, meta_data
 
 def build_model(config: Dict[str, Any], meta_data: Dict[str, Any]) -> nn.Module: # TODO: implement
     model_class = getattr(surrogate_model, config["model"]["class"])
-    config["model"]["model_parameters"]["pipeline_encoder"]["in_size"] = meta_data["in_size"]
+    # config["model"]["model_parameters"]["pipeline_encoder"]["in_size"] = meta_data["in_size"]
     config["model"]["model_parameters"]["dataset_encoder"]["dim_dataset"] = meta_data["dim_dataset"]
     dim_feedforward = 2 * config["model"]["model_parameters"]["pipeline_encoder"]["d_model"]
     config["model"]["model_parameters"]["pipeline_encoder"]["dim_feedforward"] = dim_feedforward

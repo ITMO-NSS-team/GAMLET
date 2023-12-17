@@ -57,7 +57,10 @@ class HeteroPipelineAndDatasetFeaturesDataset(Dataset):
     def _get_train_sample(self) -> Tuple[str, str, Data, float]:
         task_id = np.random.choice(self.dataset_ids, 1).item()
         group = self.groups[task_id]
-        idxes = np.random.choice(group.index, 2, replace=False)
+        idx1 = np.random.choice(group.index, 1).item()
+        metric1 = group.loc[idx1].metric.item()
+        idx2 = np.random.choice(group[group.metric != metric1].index, 1).item()
+        idxes = np.asarray([idx1, idx2])
         samples = group.loc[idxes]
         metric1, metric2 = samples.metric.to_list()
         pipe1, pipe2 = samples.pipeline_id.to_list()
@@ -72,9 +75,9 @@ class HeteroPipelineAndDatasetFeaturesDataset(Dataset):
         if metric1 == metric2:
             label = 0.5
         elif metric1 > metric2:
-            label = 1.0
+            label = 0 # 1.0
         else:
-            label = 0
+            label = 1.0 # 0
         return pipe1_json_string, pipe2_json_string, ds_data, label
 
     def _get_val_sample(self, idx) -> Tuple[int, int, str, Data, float]:
