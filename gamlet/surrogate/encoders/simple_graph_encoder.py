@@ -47,6 +47,7 @@ class SimpleGNNEncoder(nn.Module):
                                        out_features=d_model,
                                        bias=False)
         self.max_seq_len = max_seq_len
+        self.dim = d_model
 
     def forward(self, data):
 
