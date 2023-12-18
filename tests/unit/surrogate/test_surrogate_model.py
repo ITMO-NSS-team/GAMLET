@@ -8,7 +8,7 @@ from gamlet.surrogate import surrogate_model
 
 @pytest.fixture(scope='module')
 def read_config():
-    with open(get_configs_dir() / 'train_surrogate_model.yml') as f:
+    with open(get_configs_dir() / 'train_surrogate_tabular.yml') as f:
         config = yaml.load(f, yaml.Loader)
     return config
 
