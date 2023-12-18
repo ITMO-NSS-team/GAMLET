@@ -4,6 +4,6 @@ scanner:
 
 flake8:
   max-line-length: 120  # Default is 79 in PEP 8
-  ignore: []
+  ignore: [ ]
 
 no_blank_comment: False  # Every PR will have its own pep8speaks stats
