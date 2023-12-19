@@ -5,8 +5,8 @@ from typing import Any, TYPE_CHECKING, Type
 
 import openml
 
+from gamlet.data_preparation.file_system import ensure_dir_exists, get_data_dir
 from gamlet.data_preparation.file_system.cache_properties import CacheProperties, CacheType
-from gamlet.data_preparation.file_system.file_system import ensure_dir_exists, get_data_dir
 
 if TYPE_CHECKING:
     from gamlet.data_preparation.dataset import DatasetBase

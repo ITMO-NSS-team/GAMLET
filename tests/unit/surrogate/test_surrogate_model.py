@@ -2,7 +2,7 @@ import pytest
 import torch
 import yaml
 
-from gamlet.data_preparation.file_system.file_system import get_configs_dir, get_data_dir
+from gamlet.data_preparation.file_system import get_configs_dir, get_data_dir
 from gamlet.surrogate import surrogate_model
 
 

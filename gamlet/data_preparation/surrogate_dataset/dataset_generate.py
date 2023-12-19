@@ -17,7 +17,7 @@ from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeatures
 from gamlet.data_preparation.dataset import (CustomDataset,
                                              DataNotFoundError,
                                              DatasetData, DatasetIDType)
-from gamlet.data_preparation.file_system.file_system import ensure_dir_exists
+from gamlet.data_preparation.file_system import ensure_dir_exists
 
 
 def dataset_from_id_without_data_loading(dataset_id: DatasetIDType) -> CustomDataset:

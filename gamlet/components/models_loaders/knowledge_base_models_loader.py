@@ -16,7 +16,7 @@ from typing_extensions import Literal
 
 from gamlet.components.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
 from gamlet.components.models_loaders import ModelsLoader
-from gamlet.data_preparation.dataset.time_series_dataset import TimeSeriesDataset
+from gamlet.data_preparation.dataset import TimeSeriesDataset
 from gamlet.data_preparation.evaluated_model import EvaluatedModel
 from gamlet.data_preparation.file_system import get_data_dir, get_project_root
 

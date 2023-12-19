@@ -1,7 +1,7 @@
 from gamlet.components.datasets_loaders.custom_datasets_loader import CustomDatasetsLoader
 from gamlet.components.feature_preprocessors import FeaturesPreprocessor
 from gamlet.components.meta_features_extractors import PymfeExtractor
-from gamlet.data_preparation.file_system.file_system import get_configs_dir, get_data_dir
+from gamlet.data_preparation.file_system import get_configs_dir, get_data_dir
 from gamlet.data_preparation.surrogate_dataset.dataset_generate import (KnowledgeBaseToDataset,
                                                                         dataset_from_id_without_data_loading)
 from gamlet.surrogate.data_pipeline_surrogate import get_extractor_params

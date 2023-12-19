@@ -7,8 +7,7 @@ from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
 from gamlet.components.feature_preprocessors import FeaturesPreprocessor
 from gamlet.components.meta_features_extractors import PymfeExtractor
 from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from gamlet.data_preparation.file_system import get_data_dir
-from gamlet.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir
+from gamlet.data_preparation.file_system import get_checkpoints_dir, get_configs_dir, get_data_dir
 from gamlet.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
 from gamlet.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
