@@ -1,8 +1,8 @@
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir
-from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.surrogate.data_pipeline_surrogate import PipelineVectorizer
-from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
+from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+from gamlet.data_preparation.file_system.file_system import get_checkpoints_dir
+from gamlet.surrogate.data_pipeline_surrogate import PipelineVectorizer
+from gamlet.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
 if __name__ == '__main__':
     dataset_name = 'higgs'

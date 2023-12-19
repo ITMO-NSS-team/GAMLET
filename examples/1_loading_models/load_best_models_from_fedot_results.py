@@ -1,4 +1,4 @@
-from meta_automl.data_preparation.models_loaders import FEDOTPipelinesLoader
+from gamlet.components.models_loaders import FEDOTPipelinesLoader
 
 
 def main():

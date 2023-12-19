@@ -1,4 +1,4 @@
-from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
+from gamlet.components.models_loaders import KnowledgeBaseModelsLoader
 
 
 if __name__ == '__main__':

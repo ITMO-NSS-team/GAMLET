@@ -2,7 +2,7 @@ import argparse
 
 import yaml
 
-from meta_automl.surrogate import training
+from gamlet.surrogate import training
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

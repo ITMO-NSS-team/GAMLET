@@ -2,12 +2,12 @@ from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from golem.core.optimisers.fitness import SingleObjFitness
 from sklearn.model_selection import train_test_split
 
-from meta_automl.data_preparation.dataset import OpenMLDataset
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-from meta_automl.data_preparation.evaluated_model import EvaluatedModel
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
-from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
-from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
+from gamlet.components.dataset_similarity_assessors import KNeighborsSimilarityAssessor
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
+from gamlet.components.meta_features_extractors import PymfeExtractor
+from gamlet.components.model_advisors import DiverseModelAdvisor
+from gamlet.data_preparation.dataset import OpenMLDataset
+from gamlet.data_preparation.evaluated_model import EvaluatedModel
 
 
 def main():

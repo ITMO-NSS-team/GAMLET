@@ -3,14 +3,14 @@ from functools import partial
 from fedot.api.main import Fedot
 from golem.core.optimisers.meta.surrogate_optimizer import SurrogateEachNgenOptimizer
 
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.file_system import get_data_dir
-from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
-from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
-from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
+from gamlet.components.feature_preprocessors import FeaturesPreprocessor
+from gamlet.components.meta_features_extractors import PymfeExtractor
+from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+from gamlet.data_preparation.file_system import get_data_dir
+from gamlet.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir
+from gamlet.surrogate.data_pipeline_surrogate import DataPipelineSurrogate, get_extractor_params
+from gamlet.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
 if __name__ == '__main__':
     dataset_name = 'sylvine'  # Specify your OpenML dataset here to get the dataset meta-features.
