@@ -1,8 +1,8 @@
 from sklearn.model_selection import train_test_split
 
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
-from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
+from gamlet.components.meta_features_extractors import PymfeExtractor
+from gamlet.components.dataset_similarity_assessors import KNeighborsSimilarityAssessor
 
 
 def main():

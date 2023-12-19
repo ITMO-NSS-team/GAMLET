@@ -3,8 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from meta_automl.data_preparation.file_system import file_system, get_data_dir, get_project_root
-from meta_automl.data_preparation.file_system import update_openml_cache_dir
+from gamlet.data_preparation.file_system import file_system, get_data_dir, get_project_root, update_openml_cache_dir
 from test import constants
 
 

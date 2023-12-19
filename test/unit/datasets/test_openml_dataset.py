@@ -1,5 +1,5 @@
-from meta_automl.data_preparation.dataset import OpenMLDataset, DatasetData
-from meta_automl.data_preparation.file_system import get_dataset_cache_path_by_id
+from gamlet.data_preparation.dataset import DatasetData, OpenMLDataset
+from gamlet.data_preparation.file_system import get_dataset_cache_path_by_id
 from test.constants import OPENML_CACHED_DATASETS
 from test.unit.datasets.general_checks import check_dataset_cache
 

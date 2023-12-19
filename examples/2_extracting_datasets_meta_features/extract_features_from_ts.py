@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
 
-from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
-from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors import TimeSeriesFeaturesExtractor
+from gamlet.components.datasets_loaders import TimeSeriesDatasetsLoader
+from gamlet.components.meta_features_extractors import TimeSeriesFeaturesExtractor
+from gamlet.data_preparation.file_system import get_project_root
 
 
 def main():

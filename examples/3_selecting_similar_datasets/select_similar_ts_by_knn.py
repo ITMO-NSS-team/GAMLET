@@ -3,10 +3,10 @@ from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 
-from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
-from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors import TimeSeriesFeaturesExtractor
-from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
+from gamlet.components.dataset_similarity_assessors import KNeighborsSimilarityAssessor
+from gamlet.components.datasets_loaders import TimeSeriesDatasetsLoader
+from gamlet.components.meta_features_extractors import TimeSeriesFeaturesExtractor
+from gamlet.data_preparation.file_system import get_project_root
 
 
 def main():

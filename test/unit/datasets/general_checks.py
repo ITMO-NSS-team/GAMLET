@@ -1,9 +1,8 @@
 from pathlib import Path
 
 import test.constants
-from meta_automl.data_preparation.dataset import DatasetBase
-from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.file_system import get_dataset_cache_path
+from gamlet.data_preparation.dataset import DatasetBase
+from gamlet.data_preparation.file_system import get_dataset_cache_path, get_project_root
 
 
 def assert_file_unmodified_during_test(path: Path):

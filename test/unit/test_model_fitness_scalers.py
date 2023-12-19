@@ -3,9 +3,9 @@ from fedot.core.pipelines.node import PipelineNode
 from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.optimisers.fitness import SingleObjFitness
 
-from meta_automl.data_preparation.dataset import CustomDataset
-from meta_automl.data_preparation.evaluated_model import EvaluatedModel
-from meta_automl.data_preparation.model_fitness_scalers import DatasetModelsFitnessScaler
+from gamlet.components.model_fitness_scalers import DatasetModelsFitnessScaler
+from gamlet.data_preparation.dataset import CustomDataset
+from gamlet.data_preparation.evaluated_model import EvaluatedModel
 
 
 def test_dataset_models_scaler():

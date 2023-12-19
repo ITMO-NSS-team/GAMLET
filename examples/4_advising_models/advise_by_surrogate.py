@@ -6,14 +6,14 @@ import pandas as pd
 import torch
 from torch_geometric.data import Data
 
-from meta_automl.data_preparation.dataset import DatasetBase, OpenMLDataset
-from meta_automl.data_preparation.feature_preprocessors import FeaturesPreprocessor
-from meta_automl.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir, get_data_dir
-from meta_automl.data_preparation.meta_features_extractors import MetaFeaturesExtractor, PymfeExtractor
-from meta_automl.data_preparation.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
-from meta_automl.meta_algorithm.model_advisors import SurrogateGNNModelAdvisor
-from meta_automl.surrogate.data_pipeline_surrogate import get_extractor_params
-from meta_automl.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
+from gamlet.components.feature_preprocessors import FeaturesPreprocessor
+from gamlet.components.meta_features_extractors import MetaFeaturesExtractor, PymfeExtractor
+from gamlet.components.model_advisors import SurrogateGNNModelAdvisor
+from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
+from gamlet.data_preparation.dataset import DatasetBase, OpenMLDataset
+from gamlet.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir, get_data_dir
+from gamlet.surrogate.data_pipeline_surrogate import get_extractor_params
+from gamlet.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 
 SURROGATE_MODEL_CHECKPOINT_FILE = get_checkpoints_dir() / "tabular" / "checkpoints" / "best.ckpt"
 SURROGATE_MODEL_HYPERPARAMETERS_FILE = get_checkpoints_dir() / "tabular" / "hparams.yaml"

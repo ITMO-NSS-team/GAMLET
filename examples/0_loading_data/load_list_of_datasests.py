@@ -1,4 +1,4 @@
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
 
 
 def get_datasets():

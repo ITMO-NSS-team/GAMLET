@@ -24,6 +24,6 @@ jobs:
         pip install pytest
         pip install pytest-cov
     - name: Run tests and collect coverage
-      run: pytest --cov=meta_automl --cov-report=xml
+      run: pytest --cov=gamlet --cov-report=xml
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3

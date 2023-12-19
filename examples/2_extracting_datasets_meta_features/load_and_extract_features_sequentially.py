@@ -1,5 +1,5 @@
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
+from gamlet.components.meta_features_extractors import PymfeExtractor
 
 
 def main():

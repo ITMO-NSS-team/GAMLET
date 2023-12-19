@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from meta_automl.data_preparation.dataset import TimeSeriesData, TimeSeriesDataset
-from meta_automl.data_preparation.file_system import get_project_root
+from gamlet.data_preparation.dataset import TimeSeriesData, TimeSeriesDataset
+from gamlet.data_preparation.file_system import get_project_root
 
 
 def test_ts_dataset_creation(timeseries_dataset_ids):

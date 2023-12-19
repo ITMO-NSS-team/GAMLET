@@ -1,4 +1,4 @@
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader, TimeSeriesDatasetsLoader
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader, TimeSeriesDatasetsLoader
 from test.unit.datasets.general_checks import check_dataset_cache
 
 

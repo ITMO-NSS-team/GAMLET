@@ -6,13 +6,13 @@ from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from meta_automl.data_preparation.dataset import TimeSeriesDataset
-from meta_automl.data_preparation.datasets_loaders import TimeSeriesDatasetsLoader
-from meta_automl.data_preparation.evaluated_model import EvaluatedModel
-from meta_automl.data_preparation.file_system import get_project_root
-from meta_automl.data_preparation.meta_features_extractors import TimeSeriesFeaturesExtractor
-from meta_automl.meta_algorithm.dataset_similarity_assessors import KNeighborsSimilarityAssessor
-from meta_automl.meta_algorithm.model_advisors import DiverseModelAdvisor
+from gamlet.components.dataset_similarity_assessors import KNeighborsSimilarityAssessor
+from gamlet.components.datasets_loaders import TimeSeriesDatasetsLoader
+from gamlet.components.meta_features_extractors import TimeSeriesFeaturesExtractor
+from gamlet.components.model_advisors import DiverseModelAdvisor
+from gamlet.data_preparation.dataset import TimeSeriesDataset
+from gamlet.data_preparation.evaluated_model import EvaluatedModel
+from gamlet.data_preparation.file_system import get_project_root
 
 
 def dataset_to_models(d_id):

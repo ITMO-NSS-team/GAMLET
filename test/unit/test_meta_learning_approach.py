@@ -3,10 +3,10 @@ from dataclasses import dataclass
 import numpy as np
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 
-from meta_automl.approaches import MetaLearningApproach
-from meta_automl.approaches.knn_similarity_model_advice import KNNSimilarityModelAdvice
-from meta_automl.data_preparation.dataset import OpenMLDataset
-from meta_automl.data_preparation.file_system import get_data_dir
+from gamlet.approaches import MetaLearningApproach
+from gamlet.approaches.knn_similarity_model_advice import KNNSimilarityModelAdvice
+from gamlet.data_preparation.dataset import OpenMLDataset
+from gamlet.data_preparation.file_system import get_data_dir
 from test.constants import OPENML_CACHED_DATASETS
 
 

@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from meta_automl.data_preparation.dataset import OpenMLDataset
-from meta_automl.data_preparation.file_system import get_cache_dir, get_data_dir, get_dataset_cache_path_by_id
-from meta_automl.data_preparation.file_system.cache import get_dataset_cache_path, get_openml_cache_dir
+from gamlet.data_preparation.dataset import OpenMLDataset
+from gamlet.data_preparation.file_system import get_cache_dir, get_data_dir, get_dataset_cache_path_by_id
+from gamlet.data_preparation.file_system.cache import get_dataset_cache_path, get_openml_cache_dir
 from test.constants import OPENML_CACHED_DATASETS
 
 
