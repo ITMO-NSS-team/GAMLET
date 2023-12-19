@@ -15,4 +15,4 @@ class DatasetMetaFeatures(DataFrame):
 
     @property
     def _constructor(self):
-        return functools.partial(type(self), is_summarized=self.is_summarized)
+        return functools.partial(type(self), is_summarized=self.is_summarized, features=self.features)
