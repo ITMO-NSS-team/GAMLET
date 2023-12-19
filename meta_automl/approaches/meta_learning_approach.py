@@ -17,15 +17,15 @@ class MetaLearningApproach(ABC):
         pass
 
     @dataclass
-    class Data:
-        """ It aims to define and store training data needed for this approach.
-        It is recommended to fill into `fit()`. """
-        pass
-
-    @dataclass
     class Components:
         """ It aims to define and store instances of the meta-learning components needed for this approach.
         It is recommended to fill into `__init__()`"""
+        pass
+
+    @dataclass
+    class Data:
+        """ It aims to define and store training data needed for this approach.
+        It is recommended to fill into `fit()`. """
         pass
 
     @abstractmethod

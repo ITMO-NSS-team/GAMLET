@@ -44,14 +44,6 @@ class KNNSimilarityModelAdvice(MetaLearningApproach):
         advisor_params: dict = field(default_factory=dict)
 
     @dataclass
-    class Data:
-        meta_features: DatasetMetaFeatures = None
-        datasets: List[OpenMLDataset] = None
-        datasets_data: List[OpenMLDataset] = None
-        dataset_ids: List[DatasetIDType] = None
-        best_models: List[List[EvaluatedModel]] = None
-
-    @dataclass
     class Components:
         models_loader: FedotHistoryLoader
         models_fitness_scaler: DatasetModelsFitnessScaler
@@ -59,6 +51,14 @@ class KNNSimilarityModelAdvice(MetaLearningApproach):
         mf_scaler: ScalerType
         datasets_similarity_assessor: KNeighborsSimilarityAssessor
         model_advisor: DiverseModelAdvisor
+
+    @dataclass
+    class Data:
+        meta_features: DatasetMetaFeatures = None
+        datasets: List[OpenMLDataset] = None
+        datasets_data: List[OpenMLDataset] = None
+        dataset_ids: List[DatasetIDType] = None
+        best_models: List[List[EvaluatedModel]] = None
 
     def fit(self,
             datasets_data: Sequence[TabularData],
