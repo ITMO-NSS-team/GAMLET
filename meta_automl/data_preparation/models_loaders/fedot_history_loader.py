@@ -28,7 +28,7 @@ def extract_best_models_from_history(
                 best_individuals.insert(0, individual)
 
         best_individuals = list({ind.graph.descriptive_id: ind for ind in best_individuals}.values())
-        best_individuals = best_individuals[:n_best_models_to_load - 1]
+        best_individuals = best_individuals[:n_best_models_to_load]
 
         node_params_repo = DefaultOperationParamsRepository()
         for individual in best_individuals:
@@ -55,8 +55,14 @@ class FedotHistoryLoader(ModelsLoader):
              evaluate_model_func: Optional[Sequence[Callable]] = None,
              ) -> List[List[EvaluatedModel]]:
         result = []
-        for dataset, histories, eval_func in zip(datasets, histories, evaluate_model_func):
-            result += [
-                extract_best_models_from_history(dataset, history, n_best_dataset_models_to_load, eval_func)
-                for history in histories]
+        if evaluate_model_func is not None:
+            for dataset, histories, eval_func in zip(datasets, histories, evaluate_model_func):
+                result += [
+                    extract_best_models_from_history(dataset, history, n_best_dataset_models_to_load, eval_func)
+                    for history in histories]
+        else:
+            for dataset, histories in zip(datasets, histories):
+                result += [
+                    extract_best_models_from_history(dataset, history, n_best_dataset_models_to_load)
+                    for history in histories]
         return result
