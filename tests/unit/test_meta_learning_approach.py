@@ -7,7 +7,7 @@ from gamlet.approaches import MetaLearningApproach
 from gamlet.approaches.knn_similarity_model_advice import KNNSimilarityModelAdvice
 from gamlet.data_preparation.dataset import OpenMLDataset
 from gamlet.data_preparation.file_system import get_data_dir
-from test.constants import OPENML_CACHED_DATASETS
+from tests.constants import OPENML_CACHED_DATASETS
 
 
 class LinearTransformer:

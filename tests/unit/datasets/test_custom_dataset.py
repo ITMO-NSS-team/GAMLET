@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from gamlet.data_preparation.dataset import CustomDataset, DataNotFoundError, TabularData
-from test.unit.datasets.general_checks import assert_cache_file_exists
+from tests.unit.datasets.general_checks import assert_cache_file_exists
 
 
 def get_new_dataset_data(dataset) -> TabularData:

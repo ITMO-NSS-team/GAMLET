@@ -1,7 +1,7 @@
 from gamlet.data_preparation.dataset import DatasetData, OpenMLDataset
 from gamlet.data_preparation.file_system import get_dataset_cache_path_by_id
-from test.constants import OPENML_CACHED_DATASETS
-from test.unit.datasets.general_checks import check_dataset_cache
+from tests.constants import OPENML_CACHED_DATASETS
+from tests.unit.datasets.general_checks import check_dataset_cache
 
 
 def test_openml_dataset_cache_exists_only_if_preloaded(openml_dataset_ids):

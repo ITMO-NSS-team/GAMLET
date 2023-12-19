@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from gamlet.data_preparation.file_system import file_system, get_data_dir, get_project_root, update_openml_cache_dir
-from test import constants
+from tests import constants
 
 
 def pytest_configure():

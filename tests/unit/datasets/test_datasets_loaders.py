@@ -1,5 +1,5 @@
 from gamlet.components.datasets_loaders import OpenMLDatasetsLoader, TimeSeriesDatasetsLoader
-from test.unit.datasets.general_checks import check_dataset_cache
+from tests.unit.datasets.general_checks import check_dataset_cache
 
 
 def test_group_load_new_datasets(openml_dataset_ids):

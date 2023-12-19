@@ -8,8 +8,8 @@ from gamlet.components.datasets_loaders import TimeSeriesDatasetsLoader
 from gamlet.data_preparation.file_system import get_dataset_cache_path_by_id, get_project_root
 from gamlet.components.meta_features_extractors import PymfeExtractor, TimeSeriesFeaturesExtractor
 from gamlet.components.meta_features_extractors import DatasetMetaFeatures
-from test.constants import OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD, TS_DATASETS_IDS_TO_LOAD
-from test.unit.datasets.general_checks import assert_cache_file_exists
+from tests.constants import OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD, TS_DATASETS_IDS_TO_LOAD
+from tests.unit.datasets.general_checks import assert_cache_file_exists
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def test_table_meta_features_extraction(dataset_ids, extractor_params):
 def test_ts_meta_features_extraction(timeseries_dataset_ids):
     datasets_loader = TimeSeriesDatasetsLoader(
         custom_path=Path(get_project_root(),
-                         'test', 'data', 'cache', 'datasets', 'custom_dataset'))
+                         'tests', 'data', 'cache', 'datasets', 'custom_dataset'))
     datasets = datasets_loader.load(dataset_ids=timeseries_dataset_ids)
     extractor = TimeSeriesFeaturesExtractor()
     meta_features = extractor.extract(datasets)

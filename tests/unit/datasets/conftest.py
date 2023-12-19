@@ -4,7 +4,7 @@ import pytest
 
 from gamlet.data_preparation.dataset import OpenMLDataset
 from gamlet.data_preparation.file_system import get_dataset_cache_path_by_id
-from test.constants import OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD, TS_DATASETS_IDS_TO_LOAD
+from tests.constants import OPENML_CACHED_DATASETS, OPENML_DATASET_IDS_TO_LOAD, TS_DATASETS_IDS_TO_LOAD
 
 
 @pytest.fixture
