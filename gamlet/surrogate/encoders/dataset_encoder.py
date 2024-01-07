@@ -52,7 +52,6 @@ class MLPDatasetEncoder(nn.Module):
         )
 
         self.block1 = nn.Sequential(
-            # nn.BatchNorm1d(hidden_dim),
             nn.Dropout(p=dropout),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),

@@ -13,7 +13,6 @@ def main():
 
     converter = KnowledgeBaseToDataset(
         knowledge_base_directory=get_data_dir() / "knowledge_base_time_series_0/knowledge_base_time_series_0",
-        # knowledge_base_1"
         dataset_directory=get_data_dir() / "timeseries",  # pymfe_meta_features_and_fedot_pipelines
         data_type="ts",
         datasets_loader=datasets_loader,
@@ -22,7 +21,6 @@ def main():
     )
     converter.convert_pipelines()
     # converter.convert_datasets()
-
 
 if __name__ == "__main__":
     main()

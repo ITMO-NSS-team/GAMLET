@@ -15,16 +15,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
 from gamlet.surrogate import surrogate_model
-
-from .train_surrogate_model import (
-    get_files,
-    create_torch_dsets,
-    _create_data_loaders,
-    _parse_dataset_config,
-    _create_model,
-    do_training,
-)
-
+from gamlet.surrogate.training import setup_loaders,do_training
 
 def _generate_config(config, trial):
     # Model parameters
@@ -48,12 +39,6 @@ def _generate_config(config, trial):
     )
 
     config["d_model_dset"] = trial.suggest_int("d_model_dset", *config["d_model_dset"])
-
-    # config["batch_norm"] = trial.suggest_categorical(
-    #     "batch_norm",
-    #     config["batch_norm"],
-    # )
-
     # config["gnn_type"] = trial.suggest_categorical("gnn_type", [x for x in config["gnn_type"]])
     config["k_hop"] = trial.suggest_int(
         "k_hop",
@@ -131,23 +116,7 @@ def tune_surrogate_model(config: dict, n_trials: int):
         load_if_exists=True,
     )
 
-    dataset_configs = _parse_dataset_config(config)
-    datasets, task_pipe_comb, pipelines, splits = get_files(
-        config["dataset_params"]["root_path"], index_col=dataset_configs["index_col"]
-    )
-    train_dataset, val_dataset, test_dataset, meta_data = create_torch_dsets(
-        datasets,
-        task_pipe_comb,
-        pipelines,
-        splits=splits,
-        is_pair=dataset_configs["is_pair"],
-        is_folded=config["dataset_params"]["is_folded"],
-    )
-    assert len(train_dataset) != 0
-    assert len(val_dataset) != 0
-    assert len(test_dataset) != 0
-    train_loader, val_loader, test_loader = _create_data_loaders(train_dataset, val_dataset, test_dataset, config)
-
+    train_loader, val_loader, test_loader, config, meta_data = setup_loaders(config)
     objective_function = partial(
         objective,
         config_base=config,
@@ -160,5 +129,4 @@ def tune_surrogate_model(config: dict, n_trials: int):
         objective_function,
         n_trials=n_trials,
         show_progress_bar=True,
-        # catch=(AssertionError,),
     )

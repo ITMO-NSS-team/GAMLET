@@ -201,6 +201,11 @@ def _create_model(config, meta_data):
 
 def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     """Create surrogate model and do training according to config parameters."""
+    train_loader, val_loader, test_loader, config, meta_data = setup_loaders(config)
+    do_training(train_loader, val_loader, test_loader, config, meta_data)
+    
+    
+def setup_loaders(config: Dict[str, Any]):
     dataset_configs = _parse_dataset_config(config)
 
     datasets, task_pipe_comb, pipelines, splits = get_files(
@@ -216,7 +221,7 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     assert len(val_dataset) != 0
     assert len(test_dataset) != 0
     train_loader, val_loader, test_loader = _create_data_loaders(train_dataset, val_dataset, test_dataset, config)
-    do_training(train_loader, val_loader, test_loader, config, meta_data)
+    return train_loader, val_loader, test_loader, config, meta_data
 
 
 def do_training(train_loader, val_loader, test_loader, config, meta_data):
@@ -282,9 +287,6 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate
         hparams_file=config["model_data"]["save_dir"] + "hparams.yaml",
     )
     model.eval()
-
-    # trainer = Trainer()
-    # trainer.test(model, dataloaders=test_loader)
 
     task_ids, pipe_ids, y_preds, y_trues = [], [], [], []
     with torch.no_grad():

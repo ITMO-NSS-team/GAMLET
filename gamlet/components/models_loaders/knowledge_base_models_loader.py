@@ -59,8 +59,7 @@ def read_history(d_ids, knowledge_base_path):
         for gen in history.generations:
             for ind in gen:
                 pipeline = adapter.restore(ind.graph)
-                metadata = dict()  # {'dataset_id': d_id}
-                metadata['dataset_id'] = d_id
+                metadata = {'dataset_id': d_id}
                 models.append(EvaluatedModel(pipeline, -1 * ind.fitness.value, history.objective.metric_names[0],
                                              TimeSeriesDataset(d_id), metadata))
     return models
@@ -93,11 +92,6 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
 
         df_knowledge_base = self.df_knowledge_base
         df_knowledge_base = df_knowledge_base[df_knowledge_base['dataset_id'].isin(dataset_ids)]
-
-        # cached_datasets = {}
-        # for id_ in dataset_ids:
-        #     cached_datasets[id_] = self.datasets_loader.load_single(id_)
-        # df_knowledge_base['dataset_cache'] = df_knowledge_base['dataset_id'].map(cached_datasets)
 
         partitions = max(cpu_count() - 2, 1)
         models = parallelize(df_knowledge_base,

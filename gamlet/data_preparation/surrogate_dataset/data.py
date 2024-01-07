@@ -221,7 +221,6 @@ class SingleDataset(Dataset):
 class PairDataset(SingleDataset):
     """Dataset for surrogate model. Used to train on ranking objective.
     Returns pair of pipelines for chosen dataset.
-
     """
 
     def __init__(self, indxs, data_pipe, data_dset):
@@ -229,7 +228,7 @@ class PairDataset(SingleDataset):
 
         self.indxs["ind"] = list(range(len(self.indxs)))
 
-        self.task_pipe_dict = self.indxs.groupby("task_id")["ind"].apply(list).to_dict()  # .apply(lambda x: x[:20])
+        self.task_pipe_dict = self.indxs.groupby("task_id")["ind"].apply(list).to_dict() 
         self.dateset_id_list = list(self.task_pipe_dict.keys())
 
     def __len__(self):

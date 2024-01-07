@@ -28,8 +28,7 @@ model:
     dataset_encoder_type: "column"
     weight_decay: [0.0001, 0.1]
     lr: [0.0001, 0.001]
-    temperature: [1, 10, 3] 
-  
+    temperature: [1, 10, 3]   
 
 dataset_params:
   root_path: "./data/timeseries/all"
@@ -57,3 +56,7 @@ early_stopping_callback:
   monitor: "val_ndcg"
   mode: "max"
   patience: 5
+  
+model_data:
+  save_name: "timeseries"
+  save_dir: "./model_checkpoints/timeseries/1/"
