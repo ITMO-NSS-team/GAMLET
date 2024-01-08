@@ -12,7 +12,7 @@ from torch_geometric.data import Data
 from gamlet.components.datasets_loaders import DatasetsLoader
 from gamlet.components.feature_preprocessors import FeaturesPreprocessor
 from gamlet.components.meta_features_extractors import MetaFeaturesExtractor
-from gamlet.components.models_loaders import KBTSModelsLoader, KnowledgeBaseModelsLoader
+from gamlet.components.models_loaders import KBTSModelsLoader, CompatKBModelsLoader
 from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from gamlet.data_preparation.dataset import (CustomDataset,
                                              DataNotFoundError,
@@ -97,7 +97,7 @@ class KnowledgeBaseToDataset:
         self.meta_features_extractor = meta_features_extractor
 
         if data_type == "table":
-            self.models_loader = KnowledgeBaseModelsLoader(self.knowledge_base_directory)
+            self.models_loader = CompatKBModelsLoader(self.knowledge_base_directory)
         elif data_type == "ts":
             self.models_loader = KBTSModelsLoader(self.knowledge_base_directory)
         df_datasets = self.models_loader.load_dataset_split(self.split)
