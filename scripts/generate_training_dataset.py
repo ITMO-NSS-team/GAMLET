@@ -20,7 +20,7 @@ def main():
         meta_features_preprocessor=FeaturesPreprocessor()
     )
     converter.convert_pipelines()
-    # converter.convert_datasets()
+    converter.convert_datasets()
 
 if __name__ == "__main__":
     main()

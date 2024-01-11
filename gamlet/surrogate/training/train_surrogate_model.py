@@ -27,7 +27,11 @@ def get_files(path, index_col=0):
     """Loading preprocessed data and creating Dataset objects for model training
     Parameters:
     -----------
-
+    Returns:
+         datasets: table of dataset metafeatures
+         task_pipe_comb: table of pipeline-dataset correspondance and metric values
+         pipelines: list of pipeline objects
+         splits: train-test splits
     """
     with open(os.path.join(path, "pipelines.pickle"), "rb") as input_file:
         pipelines = pickle.load(input_file)
