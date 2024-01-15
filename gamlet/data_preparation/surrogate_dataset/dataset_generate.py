@@ -12,7 +12,7 @@ from torch_geometric.data import Data
 from gamlet.components.datasets_loaders import DatasetsLoader
 from gamlet.components.feature_preprocessors import FeaturesPreprocessor
 from gamlet.components.meta_features_extractors import MetaFeaturesExtractor
-from gamlet.components.models_loaders import KBTSModelsLoader, CompatKBModelsLoader
+from gamlet.components.models_loaders import KBTSModelsLoader, CompatKBModelsLoader, ModelsLoader
 from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from gamlet.data_preparation.dataset import (CustomDataset,
                                              DataNotFoundError,
@@ -70,7 +70,7 @@ class KnowledgeBaseToDataset:
             self,
             knowledge_base_directory: os.PathLike,
             dataset_directory: os.PathLike,
-            data_type: str,
+            models_loader: ModelsLoader,
             meta_features_extractor: MetaFeaturesExtractor,
             datasets_loader: DatasetsLoader,
             split: Literal['train', 'test', 'all'] = "all",
@@ -83,6 +83,7 @@ class KnowledgeBaseToDataset:
 
         self.knowledge_base_directory = knowledge_base_directory
         self.dataset_directory = dataset_directory
+        self.models_loader = models_loader
         self.split = split
         self.exclude_datasets = exclude_datasets
         self.datasets_loader = datasets_loader
@@ -95,14 +96,9 @@ class KnowledgeBaseToDataset:
             include_operations_hyperparameters=False, operation_encoding="ordinal"
         )
         self.meta_features_extractor = meta_features_extractor
-
-        if data_type == "table":
-            self.models_loader = CompatKBModelsLoader(self.knowledge_base_directory)
-        elif data_type == "ts":
-            self.models_loader = KBTSModelsLoader(self.knowledge_base_directory)
+       
         df_datasets = self.models_loader.load_dataset_split(self.split)
         self.df_datasets = df_datasets[df_datasets["dataset_name"].apply(lambda x: x not in self.exclude_datasets)]
-        
 
     def _check_for_duplicated_datasets(self):
         occurences = self.df_datasets.dataset_id.value_counts()

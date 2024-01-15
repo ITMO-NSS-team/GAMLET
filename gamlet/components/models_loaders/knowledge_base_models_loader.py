@@ -32,7 +32,7 @@ def parallelize(data, func, num_workers):
     return data
 
 
-def process_record(df, knowledge_base_path, fitness_metric: str):
+def process_record(df, cached_datasets, knowledge_base_path, fitness_metric: str):
     models = []
     for _, row in df.iterrows():
         json_path = knowledge_base_path.joinpath(PureWindowsPath(row['model_path']))
@@ -42,8 +42,12 @@ def process_record(df, knowledge_base_path, fitness_metric: str):
 
         metric_value = row[fitness_metric]
         # fitness = SingleObjFitness(metric_value)
-        metadata = dict(row)
-        models.append(EvaluatedModel(predictor, metric_value, fitness_metric, None, metadata))  # row['dataset_cache']
+        metadata = dict(row)   
+        models.append(EvaluatedModel(predictor, 
+                                     metric_value, 
+                                     fitness_metric, 
+                                     cached_datasets[row['dataset_id']], 
+                                     metadata))  
     return models
 
 
@@ -96,13 +100,14 @@ class KnowledgeBaseModelsLoader(ModelsLoader):
         cached_datasets = {}
         for id_ in dataset_ids:
             cached_datasets[id_] = self.datasets_loader.load_single(id_)
-        df_knowledge_base['dataset_cache'] = df_knowledge_base['dataset_id'].map(cached_datasets)
+        # df_knowledge_base['dataset_cache'] = df_knowledge_base['dataset_id'].map(cached_datasets)
 
-        partitions = max(cpu_count() - 2, 1)
-        models = parallelize(df_knowledge_base,
-                             partial(process_record, knowledge_base_path=self.knowledge_base_path,
-                                     fitness_metric=fitness_metric),
-                             num_workers=partitions)
+        partitions = max(cpu_count() - 2, 1)     
+        get_models = partial(process_record, 
+                              cached_datasets, 
+                              knowledge_base_path=self.knowledge_base_path,
+                              fitness_metric=fitness_metric)
+        models = parallelize(df_knowledge_base, get_models, num_workers=partitions)
         return models
 
     def parse_datasets(
@@ -143,7 +148,10 @@ class CompatKBModelsLoader(ModelsLoader):
 
         if dataset_ids is None:
             dataset_ids = self.load_dataset_split()['dataset_id']
-
+        cached_datasets = {}
+        for id_ in dataset_ids:
+            cached_datasets[id_] = self.datasets_loader.load_single(id_)
+            
         self.df_knowledge_base['fitness_coef'] = -1
         self.df_knowledge_base[fitness_metric] *= self.df_knowledge_base['fitness_coef']
 
@@ -151,10 +159,11 @@ class CompatKBModelsLoader(ModelsLoader):
         df_knowledge_base = df_knowledge_base[df_knowledge_base['dataset_id'].isin(dataset_ids)]
 
         partitions = max(cpu_count() - 2, 1)
-        models = parallelize(df_knowledge_base,
-                             partial(process_record, knowledge_base_path=self.knowledge_base_path,
-                                     fitness_metric=fitness_metric),
-                             num_workers=partitions)
+        get_models = partial(process_record, 
+                              cached_datasets, 
+                              knowledge_base_path=self.knowledge_base_path,
+                              fitness_metric=fitness_metric)
+        models = parallelize(df_knowledge_base, get_models, num_workers=partitions)
         return models
 
     def load_dataset_split(
@@ -178,6 +187,7 @@ class KBTSModelsLoader(ModelsLoader):
     ''' Models loader used for loading of timeseries database. Should be removed in future versions!'''
     def __init__(self,
                  kb_path,
+                 datasets_loader: DatasetsLoader = TimeSeriesDatasetsLoader(),
                  split_f_name='train_test_datasets.csv'):
         self.knowledge_base_path = get_project_root() / kb_path / 'datasets'
         self.split_file = get_project_root() / kb_path / split_f_name
@@ -191,6 +201,7 @@ class KBTSModelsLoader(ModelsLoader):
             dataset_ids = os.listdir(self.knowledge_base_path)
             assert len(dataset_ids) != 0, "Datasets not found"
         partitions = max(cpu_count() - 2, 1)
+           
         get_models = partial(read_history, knowledge_base_path=self.knowledge_base_path)
         models = parallelize(dataset_ids, get_models,
                              num_workers=partitions)
