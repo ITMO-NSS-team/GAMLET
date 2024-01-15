@@ -14,7 +14,7 @@ from fedot.core.pipelines.pipeline import Pipeline
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
 from typing_extensions import Literal
 
-from gamlet.components.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader
+from gamlet.components.datasets_loaders import DatasetsLoader, OpenMLDatasetsLoader, TimeSeriesDatasetsLoader
 from gamlet.components.models_loaders import ModelsLoader
 from gamlet.data_preparation.dataset import TimeSeriesDataset
 from gamlet.data_preparation.evaluated_model import EvaluatedModel
