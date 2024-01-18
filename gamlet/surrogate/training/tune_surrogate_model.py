@@ -1,21 +1,17 @@
 """The module contains custom method to tune `surrogate.models.SurrogateModel`."""
 from copy import deepcopy
 from functools import partial
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import numpy as np
 import optuna
-import torch
 from optuna.pruners import HyperbandPruner
 from optuna.samplers import TPESampler
 from optuna.trial import Trial
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
-from gamlet.surrogate import surrogate_model
-from gamlet.surrogate.training import setup_loaders,do_training
+from gamlet.surrogate.training import setup_loaders, do_training
+
 
 def _generate_config(config, trial):
     # Model parameters
