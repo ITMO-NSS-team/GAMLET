@@ -207,8 +207,8 @@ def train_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float]]:
     """Create surrogate model and do training according to config parameters."""
     train_loader, val_loader, test_loader, config, meta_data = setup_loaders(config)
     do_training(train_loader, val_loader, test_loader, config, meta_data)
-    
-    
+
+
 def setup_loaders(config: Dict[str, Any]):
     dataset_configs = _parse_dataset_config(config)
 
@@ -280,7 +280,7 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:  # Evalutate
     d_cand["y"] = 0
 
     _, _, test_dataset, _ = create_torch_dsets(
-        datasets, d_cand, pipelines, task_sets, splits=splits  
+        datasets, d_cand, pipelines, task_sets, splits=splits
     )
     _, _, test_loader = _create_data_loaders(None, None, test_dataset, config)
 

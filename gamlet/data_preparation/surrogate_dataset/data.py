@@ -1,5 +1,5 @@
 import os
-from random import choice, sample
+from random import sample
 
 import torch
 import torch_geometric.utils as utils
@@ -228,7 +228,7 @@ class PairDataset(SingleDataset):
 
         self.indxs["ind"] = list(range(len(self.indxs)))
 
-        self.task_pipe_dict = self.indxs.groupby("task_id")["ind"].apply(list).to_dict() 
+        self.task_pipe_dict = self.indxs.groupby("task_id")["ind"].apply(list).to_dict()
         self.dateset_id_list = list(self.task_pipe_dict.keys())
 
     def __len__(self):
