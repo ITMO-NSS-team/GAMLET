@@ -4,9 +4,9 @@ import yaml
 
 from gamlet.surrogate import training
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, required=True)
+    parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--train", action="store_true", default=False)
     parser.add_argument("--tune", action="store_true", default=False)
     parser.add_argument("--test", action="store_true", default=False)
@@ -19,8 +19,7 @@ if __name__ == '__main__':
         training_method = getattr(training, config["training_method"])
         training_method(config)
     elif args.test:
-        training_method = getattr(training, config["training_method"])
-        training_method(config)
+        training.test_ranking(config)
     elif args.tune:
         tuning_method = getattr(training, config["tuning_method"])
         n_trials = config.pop("n_trials")

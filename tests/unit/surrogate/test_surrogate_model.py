@@ -2,13 +2,13 @@ import pytest
 import torch
 import yaml
 
-from gamlet.data_preparation.file_system.file_system import get_configs_dir, get_data_dir
+from gamlet.data_preparation.file_system import get_configs_dir, get_data_dir
 from gamlet.surrogate import surrogate_model
 
 
 @pytest.fixture(scope='module')
 def read_config():
-    with open(get_configs_dir() / 'train_surrogate_model.yml') as f:
+    with open(get_configs_dir() / 'train_surrogate_tabular.yml') as f:
         config = yaml.load(f, yaml.Loader)
     return config
 

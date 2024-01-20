@@ -11,7 +11,7 @@ from gamlet.components.meta_features_extractors import MetaFeaturesExtractor, Py
 from gamlet.components.model_advisors import SurrogateGNNModelAdvisor
 from gamlet.components.pipeline_features_extractors import FEDOTPipelineFeaturesExtractor
 from gamlet.data_preparation.dataset import DatasetBase, OpenMLDataset
-from gamlet.data_preparation.file_system.file_system import get_checkpoints_dir, get_configs_dir, get_data_dir
+from gamlet.data_preparation.file_system import get_checkpoints_dir, get_configs_dir, get_data_dir
 from gamlet.surrogate.data_pipeline_surrogate import get_extractor_params
 from gamlet.surrogate.surrogate_model import RankingPipelineDatasetSurrogateModel
 

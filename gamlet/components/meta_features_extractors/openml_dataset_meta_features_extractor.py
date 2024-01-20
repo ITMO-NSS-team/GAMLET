@@ -1,10 +1,13 @@
-from typing import Dict, List
+from __future__ import annotations
+
+from typing import Dict, List, TYPE_CHECKING
 
 import numpy as np
 import openml
 import pandas as pd
 
-from gamlet.components.feature_preprocessors import FeaturesPreprocessor
+if TYPE_CHECKING:
+    from gamlet.components.feature_preprocessors import FeaturesPreprocessor
 
 
 class OpenMLDatasetMetaFeaturesExtractor:

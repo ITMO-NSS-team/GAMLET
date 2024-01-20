@@ -8,10 +8,10 @@ model:
     in_size: null  # The parameter is inferred
     num_class: 1
     d_model: 64
-    d_model_dset: 64
+    d_model_dset: 128
     dim_feedforward: null  # The parameter is inferred
     dropout: 0.3
-    num_heads: 8
+    num_heads: 4
     num_layers: 2
     #    layer_norm: True
     batch_norm: True  # not LAYER_NORM
@@ -19,18 +19,19 @@ model:
     k_hop: 2
     se: "gnn"
     deg: null  # The parameter is inferred
-    global_pool: "mean"
+    global_pool: "cls"
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
-    dataset_encoder_type: "agg"
-  weight_decay: 0.0001
-  lr: 0.001
-  temperature: 5
+    dataset_encoder_type: "column"
+    weight_decay: 0.001
+    lr: 0.0001
+    temperature: 5
   
 
 dataset_params:
-  root_path: "./data/TS"
-
+  root_path: "./data/timeseries/all"
+  is_folded: False
+  
 trainer:
   log_every_n_steps: 1
   num_sanity_val_steps: 0
@@ -39,8 +40,8 @@ trainer:
   devices: "auto"
 
 tensorboard_logger:
-  save_dir: "./logs/TS"
-  name: "model_training"
+  save_dir: "./logs"
+  name: "timeseries_train"
 
 model_checkpoint_callback:
   save_top_k: 1
@@ -53,3 +54,7 @@ early_stopping_callback:
   monitor: "val_ndcg"
   mode: "max"
   patience: 10
+
+model_data:
+  save_name: "timeseries"
+  save_dir: "./model_checkpoints/timeseries/1/"
