@@ -23,6 +23,8 @@ model:
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
     dataset_encoder_type: "column"  #"column" or "aggregated"
+    dataset_encoder_aggregation_type: ["mean", "std"] # "mean", "aggregated", "std", "deepsets"
+    dataset_encoder_aggregation_mode: "cat" # "cat", "proj", "sum", "mean", "max", "min", "logsumexp", "std", "var", "attn"
     weight_decay: 0.01
     lr: 0.0001
     temperature: 5

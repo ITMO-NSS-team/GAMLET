@@ -48,6 +48,8 @@ class PipelineDatasetSurrogateModel(LightningModule):
         if model_parameters["dataset_encoder_type"] == "column":
             self.dataset_encoder = ColumnDatasetEncoder(
                 model_parameters["dim_dataset"],
+                aggr_type = model_parameters["dataset_encoder_aggregation_type"],
+                aggr_mode = model_parameters["dataset_encoder_aggregation_mode"],
                 hidden_dim=model_parameters["d_model_dset"],
                 output_dim=model_parameters["d_model_dset"],
             )
@@ -101,7 +103,8 @@ class PipelineDatasetSurrogateModel(LightningModule):
         z_dataset = self.dataset_encoder(dset)
 
         assert not torch.isnan(z_dataset).any()
-
+        #print("z_daataset", z_dataset.shape, "z_pipeline", z_pipeline.shape)
+        #print(torch.cat((z_pipeline, z_dataset), 1).shape)
         return self.final_model(torch.cat((z_pipeline, z_dataset), 1))
 
     def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
