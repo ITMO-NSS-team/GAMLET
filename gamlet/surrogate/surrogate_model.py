@@ -63,6 +63,7 @@ class PipelineDatasetSurrogateModel(LightningModule):
             raise ValueError("dataset_encoder_type should be 'column' or 'aggregated'")
 
         cat_dim = self.dataset_encoder.dim + self.pipeline_encoder.dim
+        print('cat_dim', cat_dim, "dim_encoder", self.dataset_encoder.dim)
         self.final_model = nn.Sequential(
             nn.BatchNorm1d(cat_dim),
             nn.Linear(cat_dim, cat_dim),

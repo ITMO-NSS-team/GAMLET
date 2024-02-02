@@ -8,7 +8,7 @@ model:
     in_size: null  # The parameter is inferred
     num_class: 1
     d_model: 64
-    d_model_dset: 64
+    d_model_dset: 64 # default 64, use 30 for 2 types except deepsets, use 60 for 3 types dataset_encoder_aggregation_type, 
     dim_feedforward: null  # The parameter is inferred
     dropout: 0.3
     num_heads: 8
@@ -23,7 +23,7 @@ model:
     use_edge_attr: False
     pipe_encoder_type: "graph_transformer"
     dataset_encoder_type: "column"  #"column" or "aggregated"
-    dataset_encoder_aggregation_type: ["mean", "std"] # "mean", "aggregated", "std", "deepsets"
+    dataset_encoder_aggregation_type: ["deepsets", "max"] # "mean", "aggregated", "std", "deepsets", "max"
     dataset_encoder_aggregation_mode: "cat" # "cat", "proj", "sum", "mean", "max", "min", "logsumexp", "std", "var", "attn"
     weight_decay: 0.01
     lr: 0.0001

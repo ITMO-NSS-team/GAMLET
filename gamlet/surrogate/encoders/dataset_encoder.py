@@ -85,14 +85,12 @@ class ColumnDatasetEncoder(nn.Module):
         self.inp_layer = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
         )
-        self.pad = 34
         if "deepsets" in aggr_type:
             mlp1 = nn.Sequential(nn.BatchNorm1d(input_dim), nn.Linear(input_dim, hidden_dim), nn.ReLU())
             mlp2 = nn.Sequential(nn.BatchNorm1d(hidden_dim), nn.Linear(hidden_dim, hidden_dim), nn.ReLU())
             agg_f = CustormAggregation(mlp1, mlp2)
             index = aggr_type.index("deepsets")
             aggr_type[index] = agg_f
-            self.pad = 0
         self.multi_aggr = aggr.MultiAggregation(
             aggrs=aggr_type,
             mode=aggr_mode)
@@ -100,7 +98,5 @@ class ColumnDatasetEncoder(nn.Module):
 
     def forward(self, data):
         z = data.x
-        print(self.pad)
-        z = nn.functional.pad(self.multi_aggr(z, ptr=data.ptr, dim=0), (0, self.pad))
-        print(z.shape)
+        z = self.multi_aggr(z, ptr=data.ptr, dim=0)
         return z
