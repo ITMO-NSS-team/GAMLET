@@ -1,0 +1,33 @@
+<oml:data_set_description xmlns:oml="http://openml.org/openml">
+  <oml:id>333</oml:id>
+  <oml:name>monks-problems-1</oml:name>
+  <oml:version>1</oml:version>
+  <oml:description>**Author**: Sebastian Thrun (Carnegie Mellon University)  
+**Source**: [UCI](https://archive.ics.uci.edu/ml/datasets/MONK's+Problems) - October 1992  
+**Please cite**: [UCI](https://archive.ics.uci.edu/ml/citation_policy.html)   
+
+**The Monk's Problems: Problem 1**  
+Once upon a time, in July 1991, the monks of Corsendonk Priory were faced with a school held in their priory, namely the 2nd European Summer School on Machine Learning. After listening more than one week to a wide variety of learning algorithms, they felt rather confused: Which algorithm would be optimal? And which one to avoid? As a consequence of this dilemma, they created a simple task on which all learning algorithms ought to be compared: the three MONK's problems.
+
+The target concept associated with the 1st Monk's problem is the binary outcome of the logical formula:  
+MONK-1: (a1 == a2) or (a5 == 1)
+
+In this dataset, the original train and test sets were merged to allow other sampling procedures. However, the original train-test splits can be found as one of the OpenML tasks. 
+
+### Attribute information: 
+* attr1: 1, 2, 3 
+* attr2: 1, 2, 3 
+* attr3: 1, 2 
+* attr4: 1, 2, 3 
+* attr5: 1, 2, 3, 4 
+* attr6: 1, 2 
+
+### Relevant papers  
+The MONK's Problems - A Performance Comparison of Different Learning Algorithms, by S.B. Thrun, J. Bala, E. Bloedorn, I. Bratko, B. Cestnik, J. Cheng, K. De Jong, S. Dzeroski, S.E. Fahlman, D. Fisher, R. Hamann, K. Kaufman, S. Keller, I. Kononenko, J. Kreuziger, R.S. Michalski, T. Mitchell, P. Pachowicz, Y. Reich H. Vafaie, W. Van de Welde, W. Wenzel, J. Wnek, and J. Zhang. Technical Report CS-CMU-91-197, Carnegie Mellon University, Dec. 1991.  </oml:description>
+  <oml:description_version>1</oml:description_version>
+  <oml:format>ARFF</oml:format>
+  <oml:creator>Sebastian Thrun</oml:creator>     <oml:collection_date>1992-10-01</oml:collection_date>  <oml:upload_date>2014-08-26T17:11:18</oml:upload_date>
+  <oml:language>English</oml:language>  <oml:licence>Public</oml:licence>  <oml:url>https://api.openml.org/data/v1/download/52236/monks-problems-1.arff</oml:url>
+  <oml:parquet_url>http://openml1.win.tue.nl/dataset333/dataset_333.pq</oml:parquet_url>  <oml:file_id>52236</oml:file_id>  <oml:default_target_attribute>class</oml:default_target_attribute>        <oml:citation>https://archive.ics.uci.edu/ml/citation_policy.html</oml:citation>  <oml:tag>artificial</oml:tag><oml:tag>Machine Learning</oml:tag><oml:tag>mythbusting_1</oml:tag><oml:tag>OpenML100</oml:tag><oml:tag>Statistics</oml:tag><oml:tag>study_1</oml:tag><oml:tag>study_123</oml:tag><oml:tag>study_135</oml:tag><oml:tag>study_14</oml:tag><oml:tag>study_144</oml:tag><oml:tag>study_15</oml:tag><oml:tag>study_20</oml:tag><oml:tag>study_34</oml:tag><oml:tag>study_41</oml:tag><oml:tag>study_50</oml:tag><oml:tag>study_52</oml:tag><oml:tag>study_7</oml:tag><oml:tag>uci</oml:tag>  <oml:visibility>public</oml:visibility>  <oml:original_data_url>https://archive.ics.uci.edu/ml/datasets/MONK's+Problems</oml:original_data_url>  <oml:paper_url>https://link.springer.com/article/10.1023/A:1022622132310</oml:paper_url>  <oml:minio_url>http://openml1.win.tue.nl/dataset333/dataset_333.pq</oml:minio_url>  <oml:status>active</oml:status>
+  <oml:processing_date>2020-11-20 18:58:56</oml:processing_date>      <oml:md5_checksum>6cd008dccee6a34420c091dfe7cdb457</oml:md5_checksum>
+</oml:data_set_description>

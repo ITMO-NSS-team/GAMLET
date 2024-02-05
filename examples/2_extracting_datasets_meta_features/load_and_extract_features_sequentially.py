@@ -1,5 +1,5 @@
-from meta_automl.data_preparation.datasets_loaders import OpenMLDatasetsLoader
-from meta_automl.data_preparation.meta_features_extractors import PymfeExtractor
+from gamlet.components.datasets_loaders import OpenMLDatasetsLoader
+from gamlet.components.meta_features_extractors import PymfeExtractor
 
 
 def main():
@@ -7,12 +7,13 @@ def main():
         'nomao', 'sylvine', 'kc1', 'jungle_chess_2pcs_raw_endgame_complete', 'credit-g', 'delta_ailerons', 'pol'
     ]
     loader = OpenMLDatasetsLoader()
-    extractor = PymfeExtractor(extractor_params={'groups': 'general'})
+    extractor = PymfeExtractor(groups='general')
 
-    cached_datasets = loader.load(dataset_names)
-    meta_features = extractor.extract(cached_datasets)
+    datasets = loader.load(dataset_names, allow_names=True)
+    meta_features = extractor.extract(datasets)
     return meta_features
 
 
 if __name__ == '__main__':
     result = main()
+    print(result)

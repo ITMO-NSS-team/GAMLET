@@ -1,6 +1,14 @@
-# MetaFEDOT
+# GAMLET
 
-MetaFEDOT is an open platform for sharing meta-learning experiences in **AutoML** and more
+[![ITMO](https://github.com/ITMO-NSS-team/open-source-ops/blob/add_badge/badges/ITMO_badge_rus.svg)](https://itmo.ru)
+[![licence](https://img.shields.io/github/license/itmo-nss-team/metafedot)](https://github.com/itmo-nss-team/metafedot/blob/main/LICENSE)
+[![package](https://badge.fury.io/py/gamlet.svg)](https://badge.fury.io/py/gamlet)
+[![Build](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml/badge.svg)](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml)
+[![Documentation Status](https://readthedocs.org/projects/gamlet/badge/?version=latest)](https://gamlet.readthedocs.io/en/latest/?badge=latest)
+[![codecov](https://codecov.io/gh/ITMO-NSS-team/GAMLET/graph/badge.svg?token=N3Z9YTPHP9)](https://codecov.io/gh/ITMO-NSS-team/GAMLET)
+[![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT&countColor=%23263759&style=plastic&labelStyle=lower)](https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT)
+
+GAMLET (previously known as MetaFEDOT) is an open platform for sharing meta-learning experiences in **AutoML** and more
 general **Graph Optimization**.
 The project has 3 major long-term goals:
 
@@ -23,7 +31,7 @@ and maintaining their external interfaces.
 Automate dataset management, including retrieval, caching, and loading into memory. Optimize experiments by minimizing
 calls to the dataset source and conserve memory usage.
 
-### Models Loader & Model
+### Models Loader & EvaluatedModel
 
 Import and consolidate model evaluation data for datasets. Support experiment selection based on predefined criteria,
 currently compatible with FEDOT AutoML framework results.
@@ -43,3 +51,11 @@ similarity measures. For example, one of implementations uses the "NearestNeighb
 
 Combines results from Models Loader and Datasets Similarity Assessor. Provides recommendations for models based on
 loaded data and similar datasets. Possible implementations allow for heuristic-based suggestions.
+
+
+# Surrogate training | hyperparameter_search running:
+From the repository root run:
+
+`python scripts/main.py <--train|--tune> --config <path_to_your_config>`.
+
+Follow `configs/train_surrogate_model.yml` and `configs/tune_surrogate_model.yml` as reference for training and hyperparameter search accordingly.

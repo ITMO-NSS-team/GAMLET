@@ -1,4 +1,4 @@
-from meta_automl.data_preparation.models_loaders import KnowledgeBaseModelsLoader
+from gamlet.components.models_loaders import KnowledgeBaseModelsLoader
 
 
 if __name__ == '__main__':
@@ -16,12 +16,12 @@ if __name__ == '__main__':
     # ===== Another way to get train models, but also group them by datasets:
     models_for_train = {}
 
-    for dataset_name in train_datasets['dataset_name']:
+    for dataset_id in train_datasets['dataset_id']:
         dataset_models = models_loader.load(
-            dataset_names=[dataset_name],   # load models just for this exact dataset.
+            dataset_ids=[dataset_id],   # load models just for this exact dataset.
             fitness_metric='logloss',       # must correspond to a metric name in a knowledge base.
         )
-        models_for_train[dataset_name] = dataset_models
+        models_for_train[dataset_id] = dataset_models
 
         # If you need to load data to the local storage
         # dataset = OpenMLDatasetsLoader().load_single(dataset_name)

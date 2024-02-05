@@ -1,2 +1,0 @@
-from .meta_features_extractor import MetaFeaturesExtractor
-from .pymfe_extractor import PymfeExtractor
