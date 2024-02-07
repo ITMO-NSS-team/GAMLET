@@ -13,7 +13,7 @@ class Buffer:
         self.dones = []
 
     def append(self, state, action, reward, done):
-        self.states.append(state.numpy())
+        self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
         self.dones.append(done)
@@ -30,8 +30,8 @@ class Buffer:
 class PPO(nn.Module):
     metadata = {'name': 'PPO'}
 
-    def __init__(self, state_dim, action_dim, hidden_dim: int = 128, gamma: float = 1.0, batch_size: int = 128, epsilon: float = 0.3,
-                 pi_lr: float = 5e-4, v_lr: float = 5e-4, epoch_n: int = 30, device: str = 'cpu'):
+    def __init__(self, state_dim, action_dim, hidden_dim: int = 128, gamma: float = 0.95, batch_size: int = 128, epsilon: float = 0.3,
+                 pi_lr: float = 5e-5, v_lr: float = 5e-5, epoch_n: int = 30, device: str = 'cpu'):
         super().__init__()
 
         self.state_dim = state_dim
@@ -39,12 +39,14 @@ class PPO(nn.Module):
 
         self.pi_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
             nn.Softmax(dim=-1)
         )
 
         self.v_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, 1)
         )
 
@@ -121,7 +123,7 @@ class PPO(nn.Module):
 
         return pi_loss, v_loss
 
-    def append_to_buffer(self, s, a, r, next_s, terminated):
+    def append_to_buffer(self, s, a, r, terminated):
         self.buffer.append(s, a, r, terminated)
 
     def clear_buffer(self):
