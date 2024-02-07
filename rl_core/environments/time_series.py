@@ -24,27 +24,28 @@ class TimeSeriesPipelineEnvironment(gym.Env):
     """
 
     """
-    metadata = {'name': 'time_series_env', 'render_modes': ['pipeline_plot']}
+    metadata = {'name': 'time_series_env', 'render_modes': ['none', 'pipeline_plot']}
 
-    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 5, max_timestamp: int = 20,
-                 render_mode: str = None):
+    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 10, max_timestamp: int = 20,
+                 metadata_dim=None, render_mode: str = None):
         self.max_number_of_nodes = max_number_of_nodes
         self.primitives = primitives if primitives else self._get_default_primitives()
+        self._models = OperationTypesRepository().suitable_operation(task_type=TaskTypesEnum.ts_forecasting)
         self.number_of_primitives = len(self.primitives)
 
         ## -- OBSERVATION --
         # TODO: Observation space. Can be removed
-        self.observation_space = spaces.Dict(
-            {
-                "pipeline_structure": spaces.Graph(
-                    node_space=spaces.Box(low=0, high=self.max_number_of_nodes, shape=(1,)),
-                    edge_space=spaces.Box(
-                        low=0, high=self.max_number_of_nodes,
-                        shape=(self.max_number_of_nodes, self.max_number_of_nodes)
-                    ),
-                )
-            }
-        )
+        # self.observation_space = spaces.Dict(
+        #     {
+        #         "pipeline_structure": spaces.Graph(
+        #             node_space=spaces.Box(low=0, high=self.max_number_of_nodes, shape=(1,)),
+        #             edge_space=spaces.Box(
+        #                 low=0, high=self.max_number_of_nodes,
+        #                 shape=(self.max_number_of_nodes, self.max_number_of_nodes)
+        #             ),
+        #         )
+        #     }
+        # )
 
         ## -- ACTIONS --
         actions_dim = 0
@@ -70,16 +71,20 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             self._action_to_connecting[i] = pairs[i - actions_dim]
 
         actions_dim += len(self._action_to_connecting)
+        self.action_dim = actions_dim
         self.action_space = spaces.Discrete(actions_dim)
 
         assert render_mode is None or render_mode in self.metadata['render_modes']
         self.render_mode = render_mode
 
-        self._pipeline = None
-        self._nodes = None
-        self._edges_structure = None
-        self._nodes_structure = None
-        self._current_position = None
+        self._pipeline = Pipeline()
+        self._nodes = []
+        self._nodes_structure = np.zeros((self.max_number_of_nodes,), dtype=int)
+        self._edges_structure = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
+        self._current_position = 0
+
+        self.state_dim = 546  # TODO: Make it automatically
+
         self._metric = None
         self._is_valid = None
 
@@ -88,7 +93,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._predict_input = None
         self._meta_data = None
 
-        self.max_timestamp = max_timestamp # TODO: Requires to automatize
+        self.max_timestamp = max_timestamp  # TODO: Requires to automatize
         self.timestamp = 0
 
     def _get_obs(self):
@@ -96,7 +101,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         edge_structure = np.ravel(self._edges_structure)
 
         graph_structure = np.concatenate((node_structure, edge_structure))
-        obs = np.concatenate((self._meta_data, graph_structure))
+        obs = np.concatenate((graph_structure, self._meta_data))
 
         return obs
 
@@ -117,6 +122,16 @@ class TimeSeriesPipelineEnvironment(gym.Env):
     def get_available_actions(self):
         return print(self._special_action, self._action_to_add_node, self._action_to_connecting)
 
+    def get_action_code(self, action):
+        if action in self._special_action.keys():
+            return self._special_action[action]
+
+        elif action in self._action_to_add_node.keys():
+            return self._action_to_add_node[action]
+
+        elif action in self._action_to_connecting.keys():
+            return self._action_to_connecting[action]
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
@@ -125,36 +140,51 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._nodes_structure = np.zeros((self.max_number_of_nodes,), dtype=int)
         self._edges_structure = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
         self._current_position = 0
+        self._metric = None
+        self.timestamp = 0
 
         observation = self._get_obs()
         info = self._get_info()
 
-        return observation, info
+        return observation
 
     def step(self, action: int, mode: str = 'train'):
         assert action in self.action_space
 
         if action in self._special_action.keys():
-            self._metric = self._run_validating_fitting_and_evaluating()
+            if len(self._nodes) == 0:
+                terminated = True
+                truncated = False
+                observation = self._get_obs()
+                info = self._get_info()
+                reward = -100
 
-            terminated = True
-            truncated = False
-            observation = self._get_obs()
-            info = self._get_info()
-            reward = self._metric
+            else:
+                self._metric = self._run_validating_fitting_and_evaluating()
+
+                terminated = True
+                truncated = False
+                observation = self._get_obs()
+                info = self._get_info()
+                reward = self._metric
 
         else:
             if action in self._action_to_add_node.keys():
-                self._apply_action_to_add_node()
+                reward = self._apply_action_to_add_node(action)
 
             elif action in self._action_to_connecting.keys():
-                self._apply_action_to_connecting()
+                reward = self._apply_action_to_connecting(action)
 
             terminated = False
-            truncated = True if self.timestamp >= self.max_timestamp else False
+
+            if self.timestamp >= self.max_timestamp:
+                truncated = True
+                reward += -100
+
+            else:
+                truncated = False
 
             self.timestamp += 1
-            reward = -0.01
 
             observation = self._get_obs()
             info = self._get_info()
@@ -175,8 +205,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         return len(self._nodes) < self.max_number_of_nodes
 
     def _is_nodes_exist(self, node_from, node_to):
-        node_from_exist = len(self._nodes) >= node_from
-        node_to_exist = len(self._nodes) >= node_to
+        node_from_exist = self._nodes_structure[node_from] != 0
+        node_to_exist = self._nodes_structure[node_to] != 0
 
         return node_from_exist and node_to_exist
 
@@ -199,7 +229,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         return reward
 
-    def _apply_action_to_add_node(self):
+    def _apply_action_to_add_node(self, action):
         if self._is_possible_to_add_new_node():
             primitive = self._action_to_add_node[action]
             self._nodes.append(PipelineNode(primitive))
@@ -207,16 +237,30 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             self._current_position += 1
             self._pipeline.add_node(self._nodes[-1])
 
-        return self
+            if primitive in self._models:
+                reward = -0.5
 
-    def _apply_action_to_connecting(self):
+            else:
+                reward = -1.0
+
+        else:
+            # Mistake
+            reward = -10.0
+
+        return reward
+
+    def _apply_action_to_connecting(self, action):
         node_from, node_to = self._action_to_connecting[action]
 
         if self._is_nodes_exist(node_from, node_to):
             self._pipeline.connect_nodes(node_parent=self._nodes[node_from], node_child=self._nodes[node_to])
             self._edges_structure[node_from][node_to] = 1
+            reward = -1.5
+        else:
+            # Mistake
+            reward = -10.0
 
-        return self
+        return reward
 
     def load_data(
             self,
@@ -233,8 +277,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         return self
 
     @staticmethod
-    def get_reward_by_metric(m, m_min=-1000, m_max=0):
-        return (-1 * m - m_min) / (m_max - m_min)
+    def get_reward_by_metric(m, m_min=-10000, m_max=0):
+        return ((-1 * m - m_min) / (m_max - m_min)) * 100
 
 
 if __name__ == '__main__':
@@ -252,7 +296,7 @@ if __name__ == '__main__':
     dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
     train_data, test_data, predict_input, meta_data = dataloader.get_data()
 
-    env = TimeSeriesPipelineEnvironment(render_mode='pipeline_plot')
+    env = TimeSeriesPipelineEnvironment(render_mode='pipeline_plot', metadata_dim=125)
     env.load_data(train_data, test_data, predict_input, meta_data)
     terminated = False
 

@@ -1,9 +1,12 @@
 import os
 
+import numpy as np
 from sklearn.model_selection import train_test_split
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from meta_automl.utils import project_root
+from rl_core.agent.ppo import PPO
 from rl_core.dataloader import DataLoader_TS
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 
@@ -30,29 +33,29 @@ def define_data_for_experiment():
     return dataloader
 
 
-def define_agent():
-
-
 if __name__ == '__main__':
     number_of_nodes_in_pipeline = 10
-    n_episodes = 1000
+    n_episodes = 5000
 
     dataloader = define_data_for_experiment()
-    env = TimeSeriesPipelineEnvironment(render_mode='pipeline_plot')
-    state_dim, action_dim = env.state_dim, env.action_dim               # TODO: Fixed shape for agent
-    hidden_dim = 1024
-    agent = define_agent()
+    env = TimeSeriesPipelineEnvironment(render_mode='none', metadata_dim=0)
+    state_dim, action_dim = env.state_dim, env.action_dim                               # TODO: Fixed shape for agent
+    hidden_dim = 2048
+    agent = PPO(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
 
-    tb_writer =
+    log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs'
+    tb_writer = SummaryWriter(log_dir=log_dir)
 
     # -- Starting experiment --
 
     total_rewards = []
     total_metrics = []
 
-    for episode in tqdm(range(1, n_episodes + 1)):
+    for episode in range(1, n_episodes + 1):
+        print(f'-- Starting {episode} episode --')
         train_data, test_data, predict_input, meta_data = dataloader.get_data()
-        env.load_data(train_data, test_data, predict_input)
+        env.load_data(train_data, test_data, predict_input, meta_data)
+        print(f'{dataloader.dataset_name}')
         state = env.reset()
 
         done = False
@@ -62,23 +65,36 @@ if __name__ == '__main__':
         while not done:
             action = agent.act(state)
 
+            print(f'{action}:{env.get_action_code(action)}', end=' -> ')
+
             next_state, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
             done = terminated or truncated
 
+            agent.append_to_buffer(state, action, reward, done)
             state = next_state
+
+        print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {episode_reward}')
+        print(f'-- Finishing {episode} episode --')
+        print('')
+        total_rewards.append(episode_reward)
+        metric_value = info['metric'] if info['metric'] else 100000
+        total_metrics.append(metric_value)
 
         loss_1, loss_2 = agent.update()
 
         tb_writer.add_scalar('loss 1', loss_1, episode)
         tb_writer.add_scalar('loss_2', loss_2, episode)
 
+        if episode % 100 == 0:
+            agent.clear_buffer()
+
         if episode % 5 == 0:
             message = f'Average return reward per 5 episode'
-            tb_writer.add_scalar(message, avg_return, episode)
+            tb_writer.add_scalar(message, np.mean(total_rewards), episode)
 
-            message = f'Average pipelines metric per 5}'
-            tb_writer.add_scalar(message, avg_metric, episode)
+            message = f'Average pipelines metric per 5 episode'
+            tb_writer.add_scalar(message, np.mean(total_metrics), episode)
 
     # -- Saving Agent ---
     name = f'{env.metadata["name"]}_{state_dim}_{agent.metadata["name"]}_{hidden_dim}_{n_episodes}'
