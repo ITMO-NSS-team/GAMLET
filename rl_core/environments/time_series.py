@@ -181,6 +181,9 @@ class TimeSeriesPipelineEnvironment(gym.Env):
                 truncated = True
                 reward += -100
 
+                if not self._is_there_are_connections_in_pipeline():
+                    reward += -50
+
             else:
                 truncated = False
 
@@ -279,6 +282,11 @@ class TimeSeriesPipelineEnvironment(gym.Env):
     @staticmethod
     def get_reward_by_metric(m, m_min=-10000, m_max=0):
         return ((-1 * m - m_min) / (m_max - m_min)) * 100
+
+    def _is_there_are_connections_in_pipeline(self):
+        matrix_with_no_connection = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
+
+        return np.array_equal(self._edges_structure, matrix_with_no_connection)
 
 
 if __name__ == '__main__':
