@@ -2,6 +2,7 @@ import os
 from itertools import product, combinations
 from typing import Optional
 
+import matplotlib.pyplot as plt
 import gymnasium as gym
 import numpy as np
 import pygame
@@ -18,6 +19,8 @@ from sklearn.model_selection import train_test_split
 
 from meta_automl.utils import project_root
 from rl_core.dataloader import DataLoader, DataLoader_TS
+
+PLOT_PRED = False
 
 
 class TimeSeriesPipelineEnvironment(gym.Env):
@@ -90,7 +93,6 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         self._train_data = None
         self._test_data = None
-        self._predict_input = None
         self._meta_data = None
 
         self.max_timestamp = max_timestamp  # TODO: Requires to automatize
@@ -217,8 +219,14 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         try:
             self._pipeline.fit(self._train_data)
 
-            y_pred = self._pipeline.predict(self._predict_input).predict
+            y_pred = self._pipeline.predict(self._test_data).predict
             y_true = self._test_data.target
+
+            if PLOT_PRED:
+                plt.plot(range(0, len(self._train_data.target)), self._train_data.target)
+                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_pred)), y_pred)
+                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_true)), y_true)
+                plt.show()
 
             metric = mean_absolute_error(y_true, y_pred)
 
@@ -269,12 +277,10 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             self,
             train_data: Optional[InputData],
             test_data: Optional[InputData],
-            predict_input: Optional[InputData],
             meta_data: Optional[np.ndarray]
     ):
         self._train_data = train_data
         self._test_data = test_data
-        self._predict_input = predict_input
         self._meta_data = meta_data
 
         return self
@@ -293,7 +299,7 @@ if __name__ == '__main__':
     data_folder_path = os.path.join(str(project_root()), 'MetaFEDOT\\data\\knowledge_base_time_series_0\\datasets\\')
     dataset_names = [name for name in os.listdir(data_folder_path)]
 
-    train, test = train_test_split(dataset_names, test_size=3)
+    train, test = train_test_split(dataset_names, test_size=3, random_state=42)
 
     train_datasets = {}
     for dataset in train:
@@ -302,10 +308,10 @@ if __name__ == '__main__':
     path_to_meta_data = os.path.join(str(project_root()),
                                      'MetaFEDOT\\data\\knowledge_base_time_series_0\\meta_features_ts.csv')
     dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
-    train_data, test_data, predict_input, meta_data = dataloader.get_data()
+    train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_W343')
 
     env = TimeSeriesPipelineEnvironment(render_mode='pipeline_plot', metadata_dim=125)
-    env.load_data(train_data, test_data, predict_input, meta_data)
+    env.load_data(train_data, test_data, meta_data)
     terminated = False
 
     total_reward = 0

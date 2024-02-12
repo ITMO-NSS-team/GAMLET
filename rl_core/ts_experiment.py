@@ -53,8 +53,8 @@ if __name__ == '__main__':
 
     for episode in range(1, n_episodes + 1):
         print(f'-- Starting {episode} episode --')
-        train_data, test_data, predict_input, meta_data = dataloader.get_data()
-        env.load_data(train_data, test_data, predict_input, meta_data)
+        train_data, test_data, meta_data = dataloader.get_data()
+        env.load_data(train_data, test_data, meta_data)
         print(f'{dataloader.dataset_name}')
         state = env.reset()
 
@@ -81,10 +81,14 @@ if __name__ == '__main__':
         metric_value = info['metric'] if info['metric'] else 100000
         total_metrics.append(metric_value)
 
-        loss_1, loss_2 = agent.update()
+        loss_1, loss_2, kl_div = agent.update()
 
         tb_writer.add_scalar('loss 1', loss_1, episode)
         tb_writer.add_scalar('loss_2', loss_2, episode)
+        tb_writer.add_scalar('kl_divergence', kl_div, episode)
+
+        tb_writer.add_scalar('reward', episode_reward, episode)
+        tb_writer.add_scalar('metric', metric_value, episode)
 
         if episode % 100 == 0:
             agent.clear_buffer()

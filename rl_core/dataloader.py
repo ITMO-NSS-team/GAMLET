@@ -43,6 +43,8 @@ class DataLoader_TS(DataLoader):
     def get_data(self, dataset_name: str = None):
         if dataset_name is None:
             self.dataset_name = random.choice(self.dataset_names)
+        else:
+            self.dataset_name = dataset_name
 
         path = self.datasets[self.dataset_name]
         ts_type = self.dataset_name[3]
@@ -56,30 +58,31 @@ class DataLoader_TS(DataLoader):
         return self.load_data(path, meta_data)
 
     def load_data(self, path_to_dataset, meta_data):
-        # TODO: Rewrite getting train, test and pred_input. There are some mistakes in FEDOT
         task = Task(TaskTypesEnum.ts_forecasting, TsForecastingParams(self.forecast_length))
         data = pd.read_csv(path_to_dataset)['value'].values.reshape(-1, 1)
 
         X = data[:-self.forecast_length]
         y = data[-self.forecast_length:]
 
-        train_data = InputData(idx=np.arange(len(X)), features=X, target=X, task=task,
-                               data_type=DataTypesEnum.ts)
-
-        test_data = InputData(idx=np.arange(len(y)), features=y, target=y, task=task,
-                              data_type=DataTypesEnum.ts)
-
-        start_forecast = len(train_data.features)
-        end_forecast = start_forecast + self.forecast_length
-        predict_input = InputData(
-            idx=np.arange(start_forecast, end_forecast),
-            features=y,
-            target=None,
+        train_data = InputData(
+            idx=np.arange(len(X)),
+            features=np.ravel(X),
+            target=np.ravel(X),
             task=task,
             data_type=DataTypesEnum.ts
         )
 
-        return train_data, test_data, predict_input, meta_data
+        start_forecast = len(train_data.features)
+        end_forecast = start_forecast + self.forecast_length
+        test_data = InputData(
+            idx=np.arange(start_forecast, end_forecast),
+            features=np.ravel(X),
+            target=np.ravel(y),
+            task=task,
+            data_type=DataTypesEnum.ts
+        )
+
+        return train_data, test_data, meta_data
 
     def normilize_data(self, data):
         x = data.values  # returns a numpy array

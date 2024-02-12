@@ -30,8 +30,9 @@ class Buffer:
 class PPO(nn.Module):
     metadata = {'name': 'PPO'}
 
-    def __init__(self, state_dim, action_dim, hidden_dim: int = 128, gamma: float = 0.95, batch_size: int = 128, epsilon: float = 0.3,
-                 pi_lr: float = 5e-5, v_lr: float = 5e-5, epoch_n: int = 30, device: str = 'cpu'):
+    def __init__(self, state_dim, action_dim, hidden_dim: int = 128, gamma: float = 0.9, batch_size: int = 128,
+                 epsilon: float = 0.2, tau: float = 1.0,
+                 pi_lr: float = 3e-4, v_lr: float = 3e-4, epoch_n: int = 30, device: str = 'cpu'):
         super().__init__()
 
         self.state_dim = state_dim
@@ -39,20 +40,23 @@ class PPO(nn.Module):
 
         self.pi_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim * 2), nn.ReLU(),
+            nn.Linear(hidden_dim * 2, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
             nn.Softmax(dim=-1)
         )
 
         self.v_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim * 2), nn.ReLU(),
+            nn.Linear(hidden_dim * 2, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, 1)
         )
 
         self.gamma = gamma
         self.batch_size = batch_size
         self.epsilon = epsilon
+        self.tau = tau
 
         self.pi_optimizer = torch.optim.Adam(self.pi_model.parameters(), lr=pi_lr)
         self.v_optimizer = torch.optim.Adam(self.v_model.parameters(), lr=v_lr)
@@ -106,12 +110,14 @@ class PPO(nn.Module):
                 b_pi_out = self.pi_model(b_states)
                 b_dist = Categorical(probs=b_pi_out)
                 b_new_log_probs = b_dist.log_prob(b_actions)
+                entropy = b_dist.entropy().mean()
+                entropy_penalty = - self.tau * entropy
 
                 b_ratio = torch.exp(b_new_log_probs - b_old_log_probs)
                 pi_loss_1 = b_ratio * b_advantage.detach()
                 pi_loss_2 = torch.clamp(b_ratio, 1 - self.epsilon, 1 + self.epsilon) * b_advantage.detach()
 
-                pi_loss = -torch.mean(torch.min(pi_loss_1, pi_loss_2))
+                pi_loss = -torch.mean(torch.min(pi_loss_1, pi_loss_2)) + entropy_penalty
                 pi_loss.backward()
                 self.pi_optimizer.step()
                 self.pi_optimizer.zero_grad()
@@ -121,7 +127,9 @@ class PPO(nn.Module):
                 self.v_optimizer.step()
                 self.v_optimizer.zero_grad()
 
-        return pi_loss, v_loss
+                kl_div = torch.mean((b_ratio - 1) - b_ratio).detach().cpu().numpy()
+
+        return pi_loss, v_loss, kl_div
 
     def append_to_buffer(self, s, a, r, terminated):
         self.buffer.append(s, a, r, terminated)
