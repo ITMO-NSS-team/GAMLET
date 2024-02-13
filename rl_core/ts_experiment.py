@@ -76,7 +76,9 @@ if __name__ == '__main__':
             agent.append_to_buffer(state, action, reward, done, mask)
             state = next_state
 
-        info['pipeline'].show()
+        if info['pipeline'].nodes != []:
+            info['pipeline'].show()
+
         print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {episode_reward}')
         print(f'-- Finishing {episode} episode --')
         print('')

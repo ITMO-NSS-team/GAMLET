@@ -332,7 +332,7 @@ if __name__ == '__main__':
     state = env.reset()
 
     while not terminated:
-        print(env.get_available_actions())
+        env.print_available_actions()
         action = int(input())
         new_state, reward, terminated, truncated, info = env.step(action)
         print(f'{reward}, {info}')
