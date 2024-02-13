@@ -11,21 +11,24 @@ class Buffer:
         self.actions = []
         self.rewards = []
         self.dones = []
+        self.masks = []
 
-    def append(self, state, action, reward, done):
+    def append(self, state, action, reward, done, mask):
         self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
         self.dones.append(done)
+        self.masks.append(mask)
 
     def clear(self):
         self.states = []
         self.actions = []
         self.rewards = []
         self.dones = []
+        self.masks = []
 
     def get_arrays(self):
-        return self.states, self.actions, self.rewards, self.dones
+        return self.states, self.actions, self.rewards, self.dones, self.masks
 
 class PPO(nn.Module):
     metadata = {'name': 'PPO'}
@@ -66,17 +69,20 @@ class PPO(nn.Module):
 
         self.buffer = Buffer()
 
-    def act(self, state):
+    def act(self, state, mask):
         state_tensor = torch.FloatTensor(state).to(self.device)
         pi_out = self.pi_model(state_tensor.unsqueeze(0))
 
-        dist = Categorical(probs=pi_out)
+        mask = torch.from_numpy(mask).to(self.device)
+        pi_masked = mask * pi_out / torch.sum(mask * pi_out)
+
+        dist = Categorical(probs=pi_masked)
         action = dist.sample()
 
         return action.squeeze(0).cpu().numpy().item()
 
     def update(self):
-        states, actions, rewards, dones = self.buffer.get_arrays()
+        states, actions, rewards, dones, masks = self.buffer.get_arrays()
         rewards, dones = map(np.array, [rewards, dones])
 
         rewards, dones = rewards.reshape(-1, 1), dones.reshape(-1, 1)
@@ -86,13 +92,16 @@ class PPO(nn.Module):
         for t in range(rewards.shape[0] - 2, -1, -1):
             returns[t] = rewards[t] + (1 - dones[t]) * self.gamma * returns[t+1]
 
-        states, actions, returns = map(torch.FloatTensor, map(np.array, [states, actions, returns]))
+        states, actions, returns, masks = map(torch.FloatTensor, map(np.array, [states, actions, returns, masks]))
         states = states.to(self.device)
         actions = actions.to(self.device)
         returns = returns.to(self.device)
+        masks = masks.to(self.device)
 
         pi_out = self.pi_model(states)
-        dist = Categorical(probs=pi_out)
+        pi_masked = masks * pi_out / torch.sum(masks * pi_out)
+
+        dist = Categorical(probs=pi_masked)
         old_log_probs = dist.log_prob(actions).detach()
 
         for epoch in range(self.epoch_n):
@@ -103,12 +112,15 @@ class PPO(nn.Module):
                 b_states = states[b_idxs]
                 b_actions = actions[b_idxs]
                 b_returns = returns[b_idxs]
+                b_masks = masks[b_idxs]
                 b_old_log_probs = old_log_probs[b_idxs]
 
                 b_advantage = b_returns - self.v_model(b_states)
 
                 b_pi_out = self.pi_model(b_states)
-                b_dist = Categorical(probs=b_pi_out)
+                b_pi_masked = b_masks * b_pi_out / torch.sum(b_masks * b_pi_out)
+
+                b_dist = Categorical(probs=b_pi_masked)
                 b_new_log_probs = b_dist.log_prob(b_actions)
                 entropy = b_dist.entropy().mean()
                 entropy_penalty = - self.tau * entropy
@@ -131,8 +143,8 @@ class PPO(nn.Module):
 
         return pi_loss, v_loss, kl_div
 
-    def append_to_buffer(self, s, a, r, terminated):
-        self.buffer.append(s, a, r, terminated)
+    def append_to_buffer(self, s, a, r, terminated, mask):
+        self.buffer.append(s, a, r, terminated, mask)
 
     def clear_buffer(self):
         self.buffer.clear()

@@ -57,23 +57,26 @@ if __name__ == '__main__':
         env.load_data(train_data, test_data, meta_data)
         print(f'{dataloader.dataset_name}')
         state = env.reset()
+        mask = env.get_available_actions()
 
         done = False
         episode_reward = 0
         episode_metric = 0
 
         while not done:
-            action = agent.act(state)
+            action = agent.act(state, mask)
 
             print(f'{action}:{env.get_action_code(action)}', end=' -> ')
 
             next_state, reward, terminated, truncated, info = env.step(action)
+            mask = env.get_available_actions()
             episode_reward += reward
             done = terminated or truncated
 
-            agent.append_to_buffer(state, action, reward, done)
+            agent.append_to_buffer(state, action, reward, done, mask)
             state = next_state
 
+        info['pipeline'].show()
         print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {episode_reward}')
         print(f'-- Finishing {episode} episode --')
         print('')

@@ -121,8 +121,20 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             'is_valid': self._is_valid,
         }
 
-    def get_available_actions(self):
+    def print_available_actions(self):
         return print(self._special_action, self._action_to_add_node, self._action_to_connecting)
+
+    def get_available_actions(self):
+        for action_idx in self._special_action.keys():
+            self._available_actions[action_idx] = True
+
+        for action_idx in self._action_to_add_node.keys():
+            self._available_actions[action_idx] = True
+
+        for action_idx, nodes in self._action_to_connecting.items():
+            self._available_actions[action_idx] = self._is_nodes_exist(node_from=nodes[0], node_to=nodes[1])
+
+        return self._available_actions
 
     def get_action_code(self, action):
         if action in self._special_action.keys():
@@ -142,6 +154,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._nodes_structure = np.zeros((self.max_number_of_nodes,), dtype=int)
         self._edges_structure = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
         self._current_position = 0
+        self._available_actions = np.zeros((self.action_dim,), dtype=bool)
         self._metric = None
         self.timestamp = 0
 
