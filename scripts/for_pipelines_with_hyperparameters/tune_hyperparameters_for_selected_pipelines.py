@@ -1,11 +1,15 @@
+"""This script vary hyperparameters of a pipeline operations, train and evaluate the pipeline.
+To use this script you need to have a file with selected pipelines for each dataset to train the pipelines onto.
+This script saves it state to file defined in `processed_models_file` argument of `main` function.
+"""
+
 import logging
 import pickle
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple
-
-import fire
+import logging
 import numpy as np
 import optuna
 import pandas as pd
@@ -19,7 +23,7 @@ from fedot.core.repository.tasks import Task, TaskTypesEnum
 from golem.core.tuning.optuna_tuner import OptunaTuner as OptunaTuner_
 from tqdm import tqdm
 
-logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
+logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
 
 
 class CustomDataProducer:
@@ -58,16 +62,16 @@ class TunerBuilder(TunerBuilder_):
 
 
 class OptunaTuner(OptunaTuner_):
-    """Overrides `tune` method to return optuna `study` object."""
+    """Overrides `tune` method to accept `direction` argument and to return optuna `study` object."""
 
-    def tune(self, graph, show_progress: bool = True):
+    def tune(self, graph, direction: str, show_progress: bool = True):
         graph = self.adapter.adapt(graph)
         predefined_objective = partial(self.objective, graph=graph)
         is_multi_objective = self.objectives_number > 1
 
         self.init_check(graph)
 
-        study = optuna.create_study(directions=["minimize"] * self.objectives_number)
+        study = optuna.create_study(directions=[direction] * self.objectives_number)
 
         init_parameters, has_parameters_to_optimize = self._get_initial_point(graph)
         if not has_parameters_to_optimize:
@@ -141,14 +145,17 @@ def tune_hyperparameters(
 ) -> None:
     if metric == "roc_auc":
         metric = ClassificationMetricsEnum.ROCAUC
+        direction = "minimize"
     elif metric == "logloss":
         metric = ClassificationMetricsEnum.logloss
+        direction = "maximize"
     else:
         raise ValueError(f"Uknown metric {metric}")
 
     tuner = OptunaTuner
 
-    n_jobs = -1
+    # It is safer to use a single job, though it is slower.
+    n_jobs = 1
 
     task = Task(TaskTypesEnum.classification)
 
@@ -161,7 +168,7 @@ def tune_hyperparameters(
         .build(trains, tests)
     )
 
-    _, study = pipeline_tuner.tune(pipeline)
+    _, study = pipeline_tuner.tune(pipeline, direction)
     with open(study_file, "wb") as f:
         pickle.dump(study, f)
 
@@ -171,10 +178,18 @@ def main(
     selected_graphs_file: str,
     folds_directory: str,
     save_directory: str,
+    processed_models_file: str,
     iterations: int = 50,
 ):
     df = pd.read_csv(knowledge_base_file)
-    model_filenames = df["model_path"].apply(lambda x: x.split("\\")[-1])  # Since knowledgebase is made on Windows
+    # Since knowledgebase is made on Windows.
+    model_filenames = df["model_path"].apply(lambda x: x.split("\\")[-1])
+
+    try:
+        with open(processed_models_file, "rb") as f:
+            processed_models = pickle.load(f)
+    except FileNotFoundError:
+        processed_models = []
 
     with open(selected_graphs_file, "rb") as f:
         selected_graphs = pickle.load(f)
@@ -191,7 +206,13 @@ def main(
 
     for dataset_id, model_files in tqdm(selected_graphs.items()):
         for model_file in model_files:
+            # Fix since file was made on MacOS
+            model_file = model_file.replace("/Users/", "/home/")
             model_filename = Path(model_file).name
+
+            key_to_check = f"{dataset_id}/{model_filename.split('.json')[0]}"
+            if key_to_check in processed_models:
+                continue
 
             indices = model_filenames == model_filename  # Preliminary check shows that the names are unique.
             record = df[indices]
@@ -207,9 +228,6 @@ def main(
             fold_id = record.fold_id
             fitness_metric = record.fitness_metric
 
-            if fitness_metric == "logloss":  # TODO: currently not supported due to hard-coded direction in optuna
-                continue
-
             study_directory = save_directory.joinpath(dataset_id)
             if not study_directory.exists():
                 study_directory.mkdir(parents=True, exist_ok=True)
@@ -217,11 +235,7 @@ def main(
             study_file = study_directory.joinpath(model_filename.replace(".json", ".pickle"))
             # Skip already processed model.
             if study_file.exists():
-                with open(study_file, "rb") as f:
-                    study = pickle.load(f)
-                if len(study.trials) == 50:
-                    print("The model is already processed")
-                    continue
+                continue
 
             train_x_filename = f"train_{dataset_name}_fold{fold_id}.npy"
             test_x_filename = f"test_{dataset_name}_fold{fold_id}.npy"
@@ -238,7 +252,20 @@ def main(
             pipeline = Pipeline().load(model_file)
 
             tune_hyperparameters(pipeline, trains, tests, fitness_metric, study_file, iterations)
+            processed_models.append(key_to_check)
+            with open(processed_models_file, "wb") as f:
+                pickle.dump(processed_models, f)
+
 
 
 if __name__ == "__main__":
-    fire.Fire(tune_hyperparameters)
+    # DEFINE YOUR PATHS HERE
+    main(
+        knowledge_base_file="/home/cherniak/itmo_job/GAMLET/data/knowledge_base_1_v2/knowledge_base.csv",
+        selected_graphs_file="/home/cherniak/itmo_job/GAMLET/surrogate_hyperparams/collect_dataset/sorted_selected_graphs.pickle",
+        folds_directory="/home/cherniak/itmo_job/datasets_folds",
+        save_directory="/home/cherniak/itmo_job/graphs_with_hyperparameters",
+        processed_models_file="/home/cherniak/itmo_job/GAMLET/surrogate_hyperparams/collect_dataset/processed_models.pickle",
+        iterations=50,
+    )
+
