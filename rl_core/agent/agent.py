@@ -72,11 +72,12 @@ class ActorCriticModel(nn.Module):
             nn.Linear(hidden_dims[-1], output_dim),
         ).to(self.device)
 
-    def forward(self, state):
+    def forward(self, state, mask):
         state = self.net(state.to(self.device))
 
         action_probs = self.actor_head(state)
-        dist = Categorical(action_probs)
+        masked_probs = mask * action_probs / torch.sum(mask * action_probs)
+        dist = Categorical(masked_probs)
         action = dist.sample()
 
         q_values = self.critic_head(state)

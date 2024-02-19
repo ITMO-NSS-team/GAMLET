@@ -3,7 +3,6 @@ import os
 import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
 
 from meta_automl.utils import project_root
 from rl_core.agent.ppo import PPO
@@ -63,10 +62,10 @@ if __name__ == '__main__':
         episode_reward = 0
         episode_metric = 0
 
+        print('[', end='')
         while not done:
             action = agent.act(state, mask)
-
-            print(f'{action}:{env.get_action_code(action)}', end=' -> ')
+            print(f'{action}', end=', ')
 
             next_state, reward, terminated, truncated, info = env.step(action)
             mask = env.get_available_actions()
@@ -76,26 +75,28 @@ if __name__ == '__main__':
             agent.append_to_buffer(state, action, reward, done, mask)
             state = next_state
 
-        if info['pipeline'].nodes != []:
-            info['pipeline'].show()
+        print(']', end='')
+
+        # if info['pipeline'].nodes != []:
+        #     info['pipeline'].show()
 
         print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {episode_reward}')
+        print(f'{info["validation_rules"]}')
         print(f'-- Finishing {episode} episode --')
         print('')
         total_rewards.append(episode_reward)
         metric_value = info['metric'] if info['metric'] else 100000
         total_metrics.append(metric_value)
 
-        loss_1, loss_2, kl_div = agent.update()
+        loss_1, loss_2 = agent.update()
 
-        tb_writer.add_scalar('loss 1', loss_1, episode)
+        tb_writer.add_scalar('loss_1', loss_1, episode)
         tb_writer.add_scalar('loss_2', loss_2, episode)
-        tb_writer.add_scalar('kl_divergence', kl_div, episode)
 
         tb_writer.add_scalar('reward', episode_reward, episode)
         tb_writer.add_scalar('metric', metric_value, episode)
 
-        if episode % 100 == 0:
+        if episode % 50 == 0:
             agent.clear_buffer()
 
         if episode % 5 == 0:

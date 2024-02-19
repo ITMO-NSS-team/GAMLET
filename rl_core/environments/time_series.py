@@ -1,24 +1,22 @@
 import os
-from itertools import product, combinations
+from itertools import product
 from typing import Optional
 
-import matplotlib.pyplot as plt
 import gymnasium as gym
+import matplotlib.pyplot as plt
 import numpy as np
-import pygame
 from fedot.core.data.data import InputData
 from fedot.core.pipelines.node import PipelineNode
 from fedot.core.pipelines.pipeline import Pipeline
-from gymnasium import spaces
-
+from fedot.core.pipelines.verification import verify_pipeline
 from fedot.core.repository.operation_types_repository import OperationTypesRepository
-from fedot.core.repository.dataset_types import DataTypesEnum
-from fedot.core.repository.tasks import Task, TaskTypesEnum
+from fedot.core.repository.tasks import TaskTypesEnum
+from gymnasium import spaces
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 
 from meta_automl.utils import project_root
-from rl_core.dataloader import DataLoader, DataLoader_TS
+from rl_core.dataloader import DataLoader_TS
 
 PLOT_PRED = False
 
@@ -29,7 +27,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
     """
     metadata = {'name': 'time_series_env', 'render_modes': ['none', 'pipeline_plot']}
 
-    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 10, max_timestamp: int = 20,
+    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 8, max_timestamp: int = 20,
                  metadata_dim=None, render_mode: str = None):
         self.max_number_of_nodes = max_number_of_nodes
         self.primitives = primitives if primitives else self._get_default_primitives()
@@ -85,8 +83,10 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._nodes_structure = np.zeros((self.max_number_of_nodes,), dtype=int)
         self._edges_structure = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
         self._current_position = 0
+        self._available_actions = None
+        self._rules = {}
 
-        self.state_dim = 546  # TODO: Make it automatically
+        self.state_dim = 446  # TODO: Make it automatically
 
         self._metric = None
         self._is_valid = None
@@ -95,10 +95,12 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._test_data = None
         self._meta_data = None
 
-        self.max_timestamp = max_timestamp  # TODO: Requires to automatize
+        # self.max_timestamp = max_timestamp  # TODO: Requires to automatize
         self.timestamp = 0
+        self._total_reward = 0
 
-    def _get_obs(self):
+    def _get_obs(self) -> np.ndarray:
+        """ Returns current environment's observation """
         node_structure = np.ravel(self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1))
         edge_structure = np.ravel(self._edges_structure)
 
@@ -107,36 +109,61 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         return obs
 
-    def _apply_one_hot_encoding(self, vector, num_classes=3):
-        return np.squeeze(np.eye(num_classes)[vector.reshape(-1)])
-
     def _get_info(self):
+        """ Return additional information in environment """
         return {
             'pipeline': self._pipeline,
             'meta_data': self._meta_data,
             'nodes_structure': self._nodes_structure,
             'edge_structure': self._edges_structure,
+            'reward': self._total_reward,
             'metric': self._metric,
             'number_of_nodes': len(self._nodes),
             'is_valid': self._is_valid,
+            'validation_rules': self._rules,
         }
 
     def print_available_actions(self):
-        return print(self._special_action, self._action_to_add_node, self._action_to_connecting)
+        """ Show all possible actions """
+        available_actions = self.get_available_actions()
 
-    def get_available_actions(self):
+        all_actions = {}
+
+        for d in (self._special_action, self._action_to_add_node, self._action_to_connecting):
+            all_actions.update(d)
+
+        out = {}
+        for (k, v), m in zip(all_actions.items(), available_actions):
+            if m:
+                out[k] = v
+
+        return print(out)
+
+    def get_available_actions(self) -> np.ndarray:
+        """ Returns available actions in the current environment's state in binary mask """
+        self._available_actions = np.zeros((self.action_dim,), dtype=bool)
+
+        # Special actions available always
         for action_idx in self._special_action.keys():
             self._available_actions[action_idx] = True
 
+        # Adding nodes is available before the free space runs out
         for action_idx in self._action_to_add_node.keys():
-            self._available_actions[action_idx] = True
+            if self._is_possible_to_add_new_node():
+                self._available_actions[action_idx] = True
 
+        # Adding connections between nodes is available:
+        # If these nodes exist and are no connected
         for action_idx, nodes in self._action_to_connecting.items():
-            self._available_actions[action_idx] = self._is_nodes_exist(node_from=nodes[0], node_to=nodes[1])
+            is_nodes_exists = self._is_nodes_exist(node_from=nodes[0], node_to=nodes[1])
+            is_nodes_connected = self._is_nodes_connected(node_a=nodes[0], node_b=nodes[1])
+
+            self._available_actions[action_idx] = is_nodes_exists and not is_nodes_connected
 
         return self._available_actions
 
-    def get_action_code(self, action):
+    def get_action_code(self, action: int) -> str:
+        """ Returns primitive name by action """
         if action in self._special_action.keys():
             return self._special_action[action]
 
@@ -146,7 +173,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         elif action in self._action_to_connecting.keys():
             return self._action_to_connecting[action]
 
-    def reset(self, seed=None, options=None):
+    def reset(self, seed: int = None, options: list = None) -> np.ndarray:
+        """ Reset environment to initial state """
         super().reset(seed=seed)
 
         self._pipeline = Pipeline()
@@ -155,59 +183,62 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._edges_structure = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
         self._current_position = 0
         self._available_actions = np.zeros((self.action_dim,), dtype=bool)
+        self._rules = {}
         self._metric = None
         self.timestamp = 0
+        self._total_reward = 0
 
         observation = self._get_obs()
-        info = self._get_info()
 
         return observation
 
-    def step(self, action: int, mode: str = 'train'):
+    def step(self, action: int, mode: str = 'train') -> (np.ndarray, int, bool, bool, dict):
+        """ Apply action to environemnt
+
+            Returns:
+                - observation
+                - reward
+                - terminated
+                - truncated
+                - info
+        """
+
         assert action in self.action_space
+        reward = -5
 
+        # Checks if action is from special actions (e.g. eof - End of Pipeline)
         if action in self._special_action.keys():
-            if len(self._nodes) == 0:
-                terminated = True
-                truncated = False
-                observation = self._get_obs()
-                info = self._get_info()
-                reward = -100
-
-            else:
-                self._metric = self._run_validating_fitting_and_evaluating()
-
-                terminated = True
-                truncated = False
-                observation = self._get_obs()
-                info = self._get_info()
-                reward = self._metric
-
-        else:
-            if action in self._action_to_add_node.keys():
-                reward = self._apply_action_to_add_node(action)
-
-            elif action in self._action_to_connecting.keys():
-                reward = self._apply_action_to_connecting(action)
-
-            terminated = False
-
-            if self.timestamp >= self.max_timestamp:
-                truncated = True
-                reward += -100
-
-                if not self._is_there_are_connections_in_pipeline():
-                    reward += -50
-
-            else:
-                truncated = False
-
-            self.timestamp += 1
+            terminated, truncated, reward = self._apply_eop_action()
 
             observation = self._get_obs()
             info = self._get_info()
 
-            self.render()
+        else:
+            terminated = False
+            truncated = False
+
+            # Checks if agent exceeded time limits
+            # if self.timestamp >= self.max_timestamp:
+            #     truncated = True
+            #     reward += -200
+            #     self._rules['valid'] = False
+            #     self._rules['time_limit'] = True
+            #
+            # else:
+
+            # Checks if action is for adding node
+            if action in self._action_to_add_node.keys():
+                self._apply_action_to_add_node(action)
+
+            # Checks if action is for connecting nodes
+            elif action in self._action_to_connecting.keys():
+                self._apply_action_to_connecting(action)
+
+            self.timestamp += 1
+            observation = self._get_obs()
+            info = self._get_info()
+
+        self._total_reward += reward
 
         return observation, reward, terminated, truncated, info
 
@@ -215,12 +246,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         if self.render_mode == 'pipeline_plot' and len(self._nodes) > 0:
             self._pipeline.show()
 
-    @staticmethod
-    def _get_default_primitives():
-        return OperationTypesRepository('all').suitable_operation(task_type=TaskTypesEnum.ts_forecasting)
-
     def _is_possible_to_add_new_node(self):
-        return len(self._nodes) < self.max_number_of_nodes
+        return len(self._nodes) < len(self._nodes_structure)
 
     def _is_nodes_exist(self, node_from, node_to):
         node_from_exist = self._nodes_structure[node_from] != 0
@@ -228,18 +255,151 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         return node_from_exist and node_to_exist
 
+    def _is_nodes_connected(self, node_a, node_b):
+        connection_ab = self._edges_structure[node_a][node_b]
+        connection_ba = self._edges_structure[node_b][node_a]
+
+        return connection_ab or connection_ba
+
+    def _return_detached_nodes(self) -> list:
+        """ Detached node is a node without any connection in pipeline.
+            The function checks the pipeline for finding it,
+            returns a logical answer and the number of such nodes.
+        """
+        detached_nodes = []
+
+        for i, _ in enumerate(self._nodes):
+            if not (self._edges_structure[:, i].any() or self._edges_structure[i, :].any()):
+                detached_nodes.append(i)
+
+        return detached_nodes
+
+    def _is_pipeline_without_connections(self) -> bool:
+        """ Returns `True` if the Pipeline does not contain edges between nodes and `False` in the other case """
+        empty_connection_pipeline = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
+
+        return np.array_equal(self._edges_structure, empty_connection_pipeline)
+
+    def _is_pipeline_single_model(self) -> bool:
+        """ Returns `True` if the Pipeline is a single node structure """
+        return len(self._nodes) == 1
+
+    def _is_single_node_is_operation(self):
+        return self._nodes[0] not in self._models
+
+    def _return_inputs_node(self) -> list:
+        """ Input node is a node from which the Pipeline starts. There may be several input nodes in the pipeline.
+            The function returns input nodes.
+        """
+        input_nodes = []
+
+        for i, _ in enumerate(self._nodes):
+            if not self._edges_structure[:, i].any() and self._edges_structure[i, :].any():
+                input_nodes.append(i)
+
+        return input_nodes
+
+    def _return_output_node(self) -> list:
+        """ Output node is a node where the Pipeline ends. There should always be one output node.
+            The function returns list of output nodes.
+        """
+        output_nodes = []
+
+        for i, _ in enumerate(self._nodes):
+            if self._edges_structure[:, i].any() and not self._edges_structure[i, :].any():
+                output_nodes.append(i)
+
+        return output_nodes
+    def _apply_eop_action(self):
+        """ Applying End of Pipeline actions and prepare the Pipeline for fitting and validating """
+
+        # Checking if the agent decides to use this action in start
+        if len(self._nodes) == 0:
+            terminated = True
+            truncated = False
+            reward = -300
+
+        else:
+            reward = 0
+            self._rules['valid'] = True
+            self._rules['single_node_pipeline'] = self._is_pipeline_single_model()
+
+            if self._rules['single_node_pipeline'] and self._is_single_node_is_operation():
+                self._rules['valid'] = False
+                reward += -50
+
+            self._rules['without_connections'] = self._is_pipeline_without_connections()
+            if not self._rules['single_node_pipeline'] and self._rules['without_connections']:
+                self._rules['valid'] = False
+                reward += -50
+
+            self._rules['detached_nodes'] = self._return_detached_nodes()
+            num_detached_nodes = len(self._rules['detached_nodes'])
+            if not self._rules['single_node_pipeline'] and num_detached_nodes > 0:
+                self._rules['valid'] = False
+                reward += -25 * num_detached_nodes
+
+            self._rules['input_nodes'] = self._return_inputs_node()
+            num_input_nodes = len(self._rules['input_nodes'])
+            if not self._rules['single_node_pipeline'] and num_input_nodes < 1:
+                self._rules['valid'] = False
+                reward += -10 * num_input_nodes
+
+            self._rules['output_nodes'] = self._return_output_node()
+            num_output_nodes = len(self._rules['output_nodes'])
+            if not self._rules['single_node_pipeline'] and (num_output_nodes != 1):
+                self._rules['valid'] = False
+                reward += -50 * num_output_nodes
+
+            if self._pipeline.depth != -1:
+                self._rules['golem_rules'] = verify_pipeline(self._pipeline, task_type=self._train_data.task.task_type, raise_on_failure=False)
+
+                if not self._rules['golem_rules']:
+                    self._rules['valid'] = False
+                    reward += -50
+            else:
+                self._rules['valid'] = False
+                reward += -200
+
+            if self._rules['valid']:
+                self._metric = self._run_validating_fitting_and_evaluating()
+                reward += self._metric
+
+            terminated = True
+            truncated = False
+
+        return terminated, truncated, reward
+
+    def _apply_action_to_add_node(self, action):
+        """ Applying action from _action_to_add_node """
+        primitive = self._action_to_add_node[action]
+        self._nodes.append(PipelineNode(primitive))
+        self._nodes_structure[self._current_position] = action
+        self._current_position += 1
+        self._pipeline.add_node(self._nodes[-1])
+
+    def _apply_action_to_connecting(self, action):
+        """ Applying connection between `node_from` with `node_to` """
+        reward = 0
+        node_from, node_to = self._action_to_connecting[action]
+        self._pipeline.connect_nodes(node_parent=self._nodes[node_from], node_child=self._nodes[node_to])
+        self._edges_structure[node_from][node_to] = 1
+
+        return reward
+
     def _run_validating_fitting_and_evaluating(self):
+        """ Trying to fit the pipeline """
         try:
             self._pipeline.fit(self._train_data)
 
             y_pred = self._pipeline.predict(self._test_data).predict
             y_true = self._test_data.target
 
-            if PLOT_PRED:
-                plt.plot(range(0, len(self._train_data.target)), self._train_data.target)
-                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_pred)), y_pred)
-                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_true)), y_true)
-                plt.show()
+            self._pipeline.show()
+            plt.plot(range(0, len(self._train_data.target)), self._train_data.target)
+            plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_pred)), y_pred)
+            plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_true)), y_true)
+            plt.show()
 
             metric = mean_absolute_error(y_true, y_pred)
 
@@ -253,59 +413,25 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         return reward
 
-    def _apply_action_to_add_node(self, action):
-        if self._is_possible_to_add_new_node():
-            primitive = self._action_to_add_node[action]
-            self._nodes.append(PipelineNode(primitive))
-            self._nodes_structure[self._current_position] = action
-            self._current_position += 1
-            self._pipeline.add_node(self._nodes[-1])
-
-            if primitive in self._models:
-                reward = -0.5
-
-            else:
-                reward = -1.0
-
-        else:
-            # Mistake
-            reward = -10.0
-
-        return reward
-
-    def _apply_action_to_connecting(self, action):
-        node_from, node_to = self._action_to_connecting[action]
-
-        if self._is_nodes_exist(node_from, node_to):
-            self._pipeline.connect_nodes(node_parent=self._nodes[node_from], node_child=self._nodes[node_to])
-            self._edges_structure[node_from][node_to] = 1
-            reward = -1.5
-        else:
-            # Mistake
-            reward = -10.0
-
-        return reward
-
-    def load_data(
-            self,
-            train_data: Optional[InputData],
-            test_data: Optional[InputData],
-            meta_data: Optional[np.ndarray]
-    ):
-        self._train_data = train_data
-        self._test_data = test_data
-        self._meta_data = meta_data
+    def load_data(self, train: Optional[InputData], test: Optional[InputData], meta: Optional[np.ndarray]):
+        self._train_data = train
+        self._test_data = test
+        self._meta_data = meta
 
         return self
 
     @staticmethod
+    def _get_default_primitives():
+        return OperationTypesRepository('all').suitable_operation(task_type=TaskTypesEnum.ts_forecasting)
+
+    @staticmethod
+    def _apply_one_hot_encoding(vector: np.ndarray, num_classes: int = 3) -> np.ndarray:
+        """ Applying One Hot Encoding to vector with current number of classes """
+        return np.squeeze(np.eye(num_classes)[vector.reshape(-1)])
+
+    @staticmethod
     def get_reward_by_metric(m, m_min=-10000, m_max=0):
-        return ((-1 * m - m_min) / (m_max - m_min)) * 100
-
-    def _is_there_are_connections_in_pipeline(self):
-        matrix_with_no_connection = np.zeros((self.max_number_of_nodes, self.max_number_of_nodes), dtype=int)
-
-        return np.array_equal(self._edges_structure, matrix_with_no_connection)
+        return ((-1 * m - m_min) / (m_max - m_min)) * 150
 
 
 if __name__ == '__main__':
@@ -321,7 +447,7 @@ if __name__ == '__main__':
     path_to_meta_data = os.path.join(str(project_root()),
                                      'MetaFEDOT\\data\\knowledge_base_time_series_0\\meta_features_ts.csv')
     dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
-    train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_W343')
+    train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_Y6057')
 
     env = TimeSeriesPipelineEnvironment(render_mode='pipeline_plot', metadata_dim=125)
     env.load_data(train_data, test_data, meta_data)
@@ -331,9 +457,13 @@ if __name__ == '__main__':
 
     state = env.reset()
 
-    while not terminated:
-        env.print_available_actions()
-        action = int(input())
+    # while not terminated:
+    for action in [2, 23, 25, 7, 26, 11, 35, 39, 29, 55, 44, 64, 61, 74, 29, 57, 68, 47, 38, 53]:
+        # env.print_available_actions()
+        # action = int(input())
         new_state, reward, terminated, truncated, info = env.step(action)
-        print(f'{reward}, {info}')
+        # print(f'reward {reward} \ninfo: {info}')
         total_reward += reward
+
+    print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {total_reward}')
+    print(f'{info["validation_rules"]}')
