@@ -4,7 +4,7 @@ thegolem==0.4.0
 openml==0.14.1
 pymfe==0.4.2
 pyyaml==6.0.1
-fedot-ind @ git+https://github.com/aimclub/Fedot.Industrial
+fedot-ind @ git+https://github.com/aimclub/Fedot.Industrial@gamlet-compatible
 --find-links https://download.pytorch.org/whl/torch_stable.html
 torch==2.0.0+cpu
 torch_geometric==2.3.0
