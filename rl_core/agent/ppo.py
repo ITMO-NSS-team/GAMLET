@@ -1,8 +1,12 @@
+import math
+from typing import Optional
+
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.distributions import Categorical
-
+from torch.distributions.categorical import Categorical
+from torch import einsum
+from einops import reduce
 
 class Buffer:
     def __init__(self):
@@ -29,12 +33,64 @@ class Buffer:
     def get_arrays(self):
         return self.states, self.actions, self.rewards, self.dones, self.masks
 
+    def get_size(self):
+        states_size = self.convert_size(self.states.__sizeof__())
+        actions_size = self.convert_size(self.actions.__sizeof__())
+        rewards_size = self.convert_size(self.rewards.__sizeof__())
+        dones_size = self.convert_size(self.dones.__sizeof__())
+        masks_size = self.convert_size(self.masks.__sizeof__())
+
+        return f'states: {states_size}, actions: {actions_size}, rewards: {rewards_size}, dones: {dones_size}, masks: {masks_size}'
+
+    @staticmethod
+    def convert_size(size_bytes):
+        if size_bytes == 0:
+            return "0B"
+        size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+        i = int(math.floor(math.log(size_bytes, 1024)))
+        p = math.pow(1024, i)
+        s = round(size_bytes / p, 2)
+
+        return "%s %s" % (s, size_name[i])
+
+
+class CategoricalMasked(Categorical):
+    def __init__(self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None):
+        self.mask = mask
+        self.batch, self.nb_action = logits.size()
+
+        if mask is None:
+            super(CategoricalMasked, self).__init__(logits=logits)
+        else:
+            self.mask_value = torch.tensor(
+                torch.finfo(logits.dtype).min, dtype=logits.dtype
+            )
+
+            logits = torch.where(self.mask, logits, self.mask_value)
+
+            super(CategoricalMasked, self).__init__(logits=logits)
+
+    def entropy(self):
+        if self.mask is None:
+            return super().entropy()
+
+        p_log_p = einsum("ij,ij->ij", self.logits, self.probs)
+
+        p_log_p = torch.where(
+            self.mask,
+            p_log_p,
+            torch.tensor(0, dtype=p_log_p.dtype, device=p_log_p.device)
+        )
+
+        return -reduce(p_log_p, "b a -> b", "sum", b=self.batch, a=self.nb_action)
+
+
 class PPO(nn.Module):
     metadata = {'name': 'PPO'}
 
-    def __init__(self, state_dim, action_dim, hidden_dim: int = 128, gamma: float = 0.95, batch_size: int = 128,
-                 epsilon: float = 0.1, tau: float = 0.01,
-                 pi_lr: float = 1e-4, v_lr: float = 3e-4, epoch_n: int = 30, device: str = 'cpu'):
+    def __init__(self, state_dim, action_dim, hidden_dim: int = 256, gamma: float = 0.15, batch_size: int = 1024,
+                 epsilon: float = 0.15, tau: float = 0.25,
+                 pi_lr: float = 1e-2, v_lr: float = 3e-4, epoch_n: int = 10, device: str = 'cpu'):
         super().__init__()
 
         self.state_dim = state_dim
@@ -46,14 +102,14 @@ class PPO(nn.Module):
             nn.Linear(hidden_dim * 2, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
             nn.Softmax(dim=-1)
-        )
+        ).to(device)
 
         self.v_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim * 2), nn.ReLU(),
             nn.Linear(hidden_dim * 2, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, 1)
-        )
+        ).to(device)
 
         self.gamma = gamma
         self.batch_size = batch_size
@@ -72,10 +128,10 @@ class PPO(nn.Module):
         state_tensor = torch.FloatTensor(state).to(self.device)
         pi_out = self.pi_model(state_tensor.unsqueeze(0))
 
-        mask = torch.from_numpy(mask).to(self.device)
-        pi_masked = mask * pi_out / torch.sum(mask * pi_out)
-
-        dist = Categorical(probs=pi_masked)
+        mask = torch.from_numpy(mask).to(torch.bool).to(self.device)
+        # pi_masked = mask * pi_out / torch.sum(mask * pi_out)
+        # dist = Categorical(probs=pi_masked)
+        dist = CategoricalMasked(logits=pi_out, mask=mask)
         action = dist.sample()
 
         return action.squeeze(0).cpu().numpy().item()
@@ -98,9 +154,8 @@ class PPO(nn.Module):
         masks = masks.to(self.device)
 
         pi_out = self.pi_model(states)
-        pi_masked = masks * pi_out / torch.sum(masks * pi_out)
+        dist = CategoricalMasked(logits=pi_out, mask=masks.to(torch.bool))
 
-        dist = Categorical(probs=pi_masked)
         old_log_probs = dist.log_prob(actions).detach()
 
         for epoch in range(self.epoch_n):
@@ -117,12 +172,13 @@ class PPO(nn.Module):
                 b_advantage = b_returns - self.v_model(b_states)
 
                 b_pi_out = self.pi_model(b_states)
-                b_pi_masked = b_masks * b_pi_out / torch.sum(b_masks * b_pi_out)
+                b_dist = CategoricalMasked(logits=b_pi_out, mask=b_masks.to(torch.bool))
 
-                b_dist = Categorical(probs=b_pi_masked)
                 b_new_log_probs = b_dist.log_prob(b_actions)
                 entropy = b_dist.entropy().mean()
                 entropy_penalty = - self.tau * entropy
+
+                kld = torch.sum(b_dist.probs.T[masks] * (b_new_log_probs[masks] / b_old_log_probs[masks]), axis=1).detach().cpu().to(torch.float64).numpy().mean()
 
                 b_ratio = torch.exp(b_new_log_probs - b_old_log_probs)
                 pi_loss_1 = b_ratio * b_advantage.detach()
@@ -138,7 +194,7 @@ class PPO(nn.Module):
                 self.v_optimizer.step()
                 self.v_optimizer.zero_grad()
 
-        return pi_loss, v_loss
+        return pi_loss, v_loss, kld
 
     def append_to_buffer(self, s, a, r, terminated, mask):
         self.buffer.append(s, a, r, terminated, mask)
