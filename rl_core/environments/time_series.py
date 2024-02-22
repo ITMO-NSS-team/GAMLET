@@ -86,7 +86,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._available_actions = None
         self._rules = {}
 
-        self.state_dim = 446  # TODO: Make it automatically
+        self.state_dim = 438  # TODO: Make it automatically
 
         self._metric = None
         self._is_valid = None
@@ -365,6 +365,10 @@ class TimeSeriesPipelineEnvironment(gym.Env):
                 self._metric = self._run_validating_fitting_and_evaluating()
                 reward += self._metric
 
+                # Compensation of fines
+                if self._is_valid:
+                    reward += - self._total_reward
+
             terminated = True
             truncated = False
 
@@ -458,11 +462,12 @@ if __name__ == '__main__':
     state = env.reset()
 
     # while not terminated:
-    for action in [2, 23, 25, 7, 26, 11, 35, 39, 29, 55, 44, 64, 61, 74, 29, 57, 68, 47, 38, 53]:
+    for action in [16, 19, 30, 0]:
         # env.print_available_actions()
         # action = int(input())
         new_state, reward, terminated, truncated, info = env.step(action)
-        # print(f'reward {reward} \ninfo: {info}')
+        print(f'reward {reward} \ninfo: {info}')
+        info['pipeline'].show()
         total_reward += reward
 
     print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {total_reward}')
