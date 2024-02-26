@@ -25,7 +25,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
     """
 
     """
-    metadata = {'name': 'time_series_env', 'render_modes': ['none', 'pipeline_plot']}
+    metadata = {'name': 'time_series_env', 'render_modes': ['none', 'pipeline_plot', 'pipeline_and_predict_plot']}
 
     def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 8, max_timestamp: int = 20,
                  metadata_dim=None, render_mode: str = None):
@@ -105,7 +105,11 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         edge_structure = np.ravel(self._edges_structure)
 
         graph_structure = np.concatenate((node_structure, edge_structure))
-        obs = np.concatenate((graph_structure, self._meta_data))
+
+        if self._meta_data:
+            obs = np.concatenate((graph_structure, self._meta_data))
+        else:
+            obs = graph_structure
 
         return obs
 
@@ -399,11 +403,12 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             y_pred = self._pipeline.predict(self._test_data).predict
             y_true = self._test_data.target
 
-            self._pipeline.show()
-            plt.plot(range(0, len(self._train_data.target)), self._train_data.target)
-            plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_pred)), y_pred)
-            plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_true)), y_true)
-            plt.show()
+            if self.render_mode == 'pipeline_and_predict_plot':
+                self._pipeline.show()
+                plt.plot(range(0, len(self._train_data.target)), self._train_data.target)
+                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_pred)), y_pred)
+                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_true)), y_true)
+                plt.show()
 
             metric = mean_absolute_error(y_true, y_pred)
 
