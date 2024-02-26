@@ -88,9 +88,9 @@ class CategoricalMasked(Categorical):
 class PPO(nn.Module):
     metadata = {'name': 'PPO'}
 
-    def __init__(self, state_dim, action_dim, hidden_dim: int = 256, gamma: float = 0.15, batch_size: int = 1024,
-                 epsilon: float = 0.15, tau: float = 0.25,
-                 pi_lr: float = 1e-2, v_lr: float = 3e-4, epoch_n: int = 10, device: str = 'cpu'):
+    def __init__(self, state_dim, action_dim, hidden_dim: int = 256, gamma: float = 0.25, batch_size: int = 16,
+                 epsilon: float = 0.2, tau: float = 1,
+                 pi_lr: float = 1e-8, v_lr: float = 1e-8, epoch_n: int = 10, device: str = 'cpu'):
         super().__init__()
 
         self.state_dim = state_dim
@@ -154,9 +154,12 @@ class PPO(nn.Module):
         masks = masks.to(self.device)
 
         pi_out = self.pi_model(states)
-        dist = CategoricalMasked(logits=pi_out, mask=masks.to(torch.bool))
 
-        old_log_probs = dist.log_prob(actions).detach()
+        full_dist = Categorical(logits=pi_out)
+        old_log_probs = full_dist.log_prob(actions).detach()
+
+        masked_dist = CategoricalMasked(logits=pi_out, mask=masks.to(torch.bool))
+        m_old_log_probs = masked_dist.log_prob(actions).detach()
 
         for epoch in range(self.epoch_n):
             idxs = np.random.permutation(returns.shape[0])
@@ -166,25 +169,31 @@ class PPO(nn.Module):
                 b_states = states[b_idxs]
                 b_actions = actions[b_idxs]
                 b_returns = returns[b_idxs]
-                b_masks = masks[b_idxs]
                 b_old_log_probs = old_log_probs[b_idxs]
+                b_masks = masks[b_idxs]
+                b_m_old_log_probs = m_old_log_probs[b_idxs]
 
                 b_advantage = b_returns - self.v_model(b_states)
 
                 b_pi_out = self.pi_model(b_states)
-                b_dist = CategoricalMasked(logits=b_pi_out, mask=b_masks.to(torch.bool))
 
-                b_new_log_probs = b_dist.log_prob(b_actions)
-                entropy = b_dist.entropy().mean()
+                b_full_dist = Categorical(logits=b_pi_out)
+                b_new_log_probs = b_full_dist.log_prob(b_actions)
+
+                b_masked_dist = CategoricalMasked(logits=b_pi_out, mask=b_masks.to(torch.bool))
+                b_m_new_log_probs = b_masked_dist.log_prob(b_actions)
+
+                entropy = b_masked_dist.entropy()
                 entropy_penalty = - self.tau * entropy
 
-                kld = torch.sum(b_dist.probs.T[masks] * (b_new_log_probs[masks] / b_old_log_probs[masks]), axis=1).detach().cpu().to(torch.float64).numpy().mean()
+                # KL-Divergence
+                kld = torch.nn.functional.kl_div(b_new_log_probs, b_old_log_probs, log_target=True).detach().cpu().item()
 
                 b_ratio = torch.exp(b_new_log_probs - b_old_log_probs)
                 pi_loss_1 = b_ratio * b_advantage.detach()
                 pi_loss_2 = torch.clamp(b_ratio, 1 - self.epsilon, 1 + self.epsilon) * b_advantage.detach()
 
-                pi_loss = -torch.mean(torch.min(pi_loss_1, pi_loss_2)) + entropy_penalty
+                pi_loss = -torch.mean(torch.min(pi_loss_1, pi_loss_2) + entropy_penalty.detach())
                 pi_loss.backward()
                 self.pi_optimizer.step()
                 self.pi_optimizer.zero_grad()

@@ -29,18 +29,17 @@ def define_data_for_experiment():
 
     dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
 
-    return dataloader
+    return dataloader, train, test
 
 
 if __name__ == '__main__':
     number_of_nodes_in_pipeline = 10
-    n_episodes = 5000
+    n_episodes = 10000
 
-    dataloader = define_data_for_experiment()
+    dataloader, train_list, test_list = define_data_for_experiment()
     env = TimeSeriesPipelineEnvironment(render_mode='none', metadata_dim=0)
     state_dim, action_dim = env.state_dim, env.action_dim                               # TODO: Fixed shape for agent
-    hidden_dim = 2048
-    agent = PPO(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim, device='cuda')
+    agent = PPO(state_dim=state_dim, action_dim=action_dim, device='cuda')
 
     log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs'
     tb_writer = SummaryWriter(log_dir=log_dir)
@@ -52,7 +51,12 @@ if __name__ == '__main__':
 
     for episode in range(1, n_episodes + 1):
         print(f'-- Starting {episode} episode --')
-        train_data, test_data, meta_data = dataloader.get_data()
+
+        period = 50
+        if episode % period == 0 or episode == 1:
+            dataset = np.random.choice(train_list)
+
+        train_data, test_data, meta_data = dataloader.get_data(dataset)
         env.load_data(train_data, test_data, meta_data)
         print(f'{dataloader.dataset_name}')
         state = env.reset()
@@ -77,7 +81,7 @@ if __name__ == '__main__':
 
         print(']', end='')
 
-        if info['pipeline'].nodes:
+        if info['pipeline'].nodes and episode % 10 == 0:
             info['pipeline'].show()
 
         print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {episode_reward}')
@@ -90,6 +94,7 @@ if __name__ == '__main__':
 
         print('-- Starting agent update --')
         loss_1, loss_2, kld = agent.update()
+        print(f'Q loss {loss_1} - V loss {loss_2} - KL Div {kld}')
 
         print('-- Update tensorboard --')
         tb_writer.add_scalar('loss_1', loss_1, episode)
@@ -107,7 +112,7 @@ if __name__ == '__main__':
             message = f'Average metric per {period} episode'
             tb_writer.add_scalar(message, np.mean(total_metrics), episode)
 
-        if episode % 250 == 0:
+        if episode % 256 == 0:
             print('-- Buffer was cleaned --')
             agent.clear_buffer()
 

@@ -285,7 +285,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         return len(self._nodes) == 1
 
     def _is_single_node_is_operation(self):
-        return self._nodes[0] not in self._models
+        return self._nodes[0].name not in self._models
 
     def _return_inputs_node(self) -> list:
         """ Input node is a node from which the Pipeline starts. There may be several input nodes in the pipeline.
@@ -317,7 +317,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         if len(self._nodes) == 0:
             terminated = True
             truncated = False
-            reward = -300
+            reward = -500
 
         else:
             reward = 0
@@ -337,7 +337,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             num_detached_nodes = len(self._rules['detached_nodes'])
             if not self._rules['single_node_pipeline'] and num_detached_nodes > 0:
                 self._rules['valid'] = False
-                reward += -25 * num_detached_nodes
+                reward += -50 * num_detached_nodes
 
             self._rules['input_nodes'] = self._return_inputs_node()
             num_input_nodes = len(self._rules['input_nodes'])
@@ -461,10 +461,10 @@ if __name__ == '__main__':
 
     state = env.reset()
 
-    # while not terminated:
-    for action in [16, 19, 30, 0]:
-        # env.print_available_actions()
-        # action = int(input())
+    while not terminated:
+    # for action in [16, 19, 30, 0]:
+        env.print_available_actions()
+        action = int(input())
         new_state, reward, terminated, truncated, info = env.step(action)
         print(f'reward {reward} \ninfo: {info}')
         info['pipeline'].show()
