@@ -1,48 +1,27 @@
-import os
+import datetime
 
 import numpy as np
-from sklearn.model_selection import train_test_split
 from torch.utils.tensorboard import SummaryWriter
 
 from meta_automl.utils import project_root
 from rl_core.agent.ppo import PPO
-from rl_core.dataloader import DataLoader_TS
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
-
-
-def define_data_for_experiment():
-    data_folder_path = os.path.join(str(project_root()), 'MetaFEDOT\\data\\knowledge_base_time_series_0\\datasets\\')
-    dataset_names = [name for name in os.listdir(data_folder_path)]
-
-    train, test = train_test_split(dataset_names, test_size=3)
-
-    train_datasets = {}
-    for dataset in train:
-        train_datasets[dataset] = os.path.join(data_folder_path, f'{dataset}/data.csv')
-
-    test_datasets = {}
-    for dataset in test:
-        test_datasets[dataset] = os.path.join(data_folder_path, f'{dataset}/data.csv')
-
-    path_to_meta_data = os.path.join(str(project_root()),
-                                     'MetaFEDOT\\data\\knowledge_base_time_series_0\\meta_features_ts.csv')
-
-    dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
-
-    return dataloader, train, test
+from rl_core.utils import define_data_for_experiment
 
 
 if __name__ == '__main__':
-    number_of_nodes_in_pipeline = 10
-    n_episodes = 10000
+    number_of_nodes_in_pipeline = 3
+    n_episodes = 1000
 
     dataloader, train_list, test_list = define_data_for_experiment()
-    env = TimeSeriesPipelineEnvironment(render_mode='none', metadata_dim=0)
-    state_dim, action_dim = env.state_dim, env.action_dim                               # TODO: Fixed shape for agent
+    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=number_of_nodes_in_pipeline, render_mode='none', metadata_dim=126)
+    state_dim, action_dim = env.state_dim, env.action_dim
     agent = PPO(state_dim=state_dim, action_dim=action_dim, device='cuda')
 
-    log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs'
+    time = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+    log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/ppo/{number_of_nodes_in_pipeline}/{time}'
     tb_writer = SummaryWriter(log_dir=log_dir)
+    agent.create_log_report(log_dir)
 
     # -- Starting experiment --
 
@@ -52,15 +31,11 @@ if __name__ == '__main__':
     for episode in range(1, n_episodes + 1):
         print(f'-- Starting {episode} episode --')
 
-        period = 50
-        if episode % period == 0 or episode == 1:
-            dataset = np.random.choice(train_list)
-
-        train_data, test_data, meta_data = dataloader.get_data(dataset)
+        train_data, test_data, meta_data = dataloader.get_data()
         env.load_data(train_data, test_data, meta_data)
         print(f'{dataloader.dataset_name}')
         state = env.reset()
-        mask = env.get_available_actions()
+        mask = env.get_available_actions_mask()
 
         done = False
         episode_reward = 0
@@ -72,7 +47,7 @@ if __name__ == '__main__':
             print(f'{action}', end=', ')
 
             next_state, reward, terminated, truncated, info = env.step(action)
-            mask = env.get_available_actions()
+            mask = env.get_available_actions_mask()
             episode_reward += reward
             done = terminated or truncated
 
@@ -80,9 +55,6 @@ if __name__ == '__main__':
             state = next_state
 
         print(']', end='')
-
-        if info['pipeline'].nodes and episode % 10 == 0:
-            info['pipeline'].show()
 
         print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {episode_reward}')
         print(f'{info["validation_rules"]}')
@@ -104,21 +76,23 @@ if __name__ == '__main__':
         tb_writer.add_scalar('reward', episode_reward, episode)
         tb_writer.add_scalar('metric', metric_value, episode)
 
-        period = 25
+        period = 20
         if episode % period == 0:
-            message = f'Average reward per {period} episode'
+            message = f'Mean reward per {period} episode'
             tb_writer.add_scalar(message, np.mean(total_rewards), episode)
 
-            message = f'Average metric per {period} episode'
+            message = f'Mean reward per last {period} episode'
+            tb_writer.add_scalar(message, np.mean(total_rewards[-period:]), episode)
+
+            message = f'Mean metric per {period} episode'
             tb_writer.add_scalar(message, np.mean(total_metrics), episode)
 
-        if episode % 256 == 0:
-            print('-- Buffer was cleaned --')
-            agent.clear_buffer()
+            message = f'Mean metric per last {period} episode'
+            tb_writer.add_scalar(message, np.mean(total_metrics[-period:]), episode)
 
         print(f'-- Finishing {episode} episode --\n')
 
     # -- Saving Agent ---
-    name = f'{env.metadata["name"]}_{state_dim}_{agent.metadata["name"]}_{hidden_dim}_{n_episodes}'
+    name = f'{env.metadata["name"]}_{state_dim}_{agent.metadata["name"]}_{agent.hidden_dim}_{n_episodes}'
     path = f'{project_root()}/MetaFEDOT/rl_core/agent/pretrained/{name}'
     agent.save(path)
