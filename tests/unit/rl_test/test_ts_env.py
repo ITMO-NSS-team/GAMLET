@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
@@ -35,6 +36,8 @@ from tests.unit.rl_test.utils import get_time_series
 #       29: 'diff_filter',
 #       30: 'exog_ts'
 #  }
+
+
 @pytest.mark.parametrize('trajectory',
     [
         [2, 0], [9, 0], [11, 0], [12, 0], [13, 0], [14, 0],                                 # Single node pipelines
@@ -45,7 +48,7 @@ from tests.unit.rl_test.utils import get_time_series
 def test_correct_pipelines(trajectory):
     train_data, test_data = get_time_series()
 
-    env = TimeSeriesPipelineEnvironment(metadata_dim=125)
+    env = TimeSeriesPipelineEnvironment(metadata_dim=None)
     env.load_data(train_data, test_data, meta=None)
 
     total_reward = 0
@@ -58,3 +61,33 @@ def test_correct_pipelines(trajectory):
 
     assert total_reward > 0
     assert info['validation_rules']['valid'] is True
+
+
+@pytest.mark.parametrize('max_number_of_nodes', [i for i in range(1, 25)])
+def test_max_number_of_actions_in_pipelines(max_number_of_nodes):
+    train_data, test_data = get_time_series()
+
+    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=max_number_of_nodes, metadata_dim=0)
+    env.load_data(train_data, test_data, meta=None)
+    env.reset()
+
+    done = False
+    action_number = 0
+
+    while not done:
+        available_actions = env.get_available_actions()
+
+        if len(available_actions) == 1:
+            action = np.random.choice(available_actions)
+        else:
+            action = np.random.choice(available_actions)
+
+            while action == 0:
+                action = np.random.choice(available_actions)
+
+        _, _, terminated, truncated, info = env.step(action)
+        action_number += 1
+
+        done = terminated or truncated
+
+    assert action_number == env.max_number_of_actions
