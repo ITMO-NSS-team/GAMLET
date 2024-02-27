@@ -27,26 +27,12 @@ class TimeSeriesPipelineEnvironment(gym.Env):
     """
     metadata = {'name': 'time_series_env', 'render_modes': ['none', 'pipeline_plot', 'pipeline_and_predict_plot']}
 
-    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 8, max_timestamp: int = 20,
-                 metadata_dim=None, render_mode: str = None):
+    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 8, metadata_dim=None,
+                 render_mode: str = None):
         self.max_number_of_nodes = max_number_of_nodes
         self.primitives = primitives if primitives else self._get_default_primitives()
         self._models = OperationTypesRepository().suitable_operation(task_type=TaskTypesEnum.ts_forecasting)
         self.number_of_primitives = len(self.primitives)
-
-        ## -- OBSERVATION --
-        # TODO: Observation space. Can be removed
-        # self.observation_space = spaces.Dict(
-        #     {
-        #         "pipeline_structure": spaces.Graph(
-        #             node_space=spaces.Box(low=0, high=self.max_number_of_nodes, shape=(1,)),
-        #             edge_space=spaces.Box(
-        #                 low=0, high=self.max_number_of_nodes,
-        #                 shape=(self.max_number_of_nodes, self.max_number_of_nodes)
-        #             ),
-        #         )
-        #     }
-        # )
 
         ## -- ACTIONS --
         actions_dim = 0
@@ -75,8 +61,9 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self.action_dim = actions_dim
         self.action_space = spaces.Discrete(actions_dim)
 
-        assert render_mode is None or render_mode in self.metadata['render_modes']
-        self.render_mode = render_mode
+        self.max_number_of_actions = self._get_maximum_number_of_actions_in_environment()
+
+        # -- STATE --
 
         self._pipeline = Pipeline()
         self._nodes = []
@@ -86,7 +73,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._available_actions = None
         self._rules = {}
 
-        self.state_dim = 438  # TODO: Make it automatically
+        self.metadata_dim = metadata_dim
+        self.state_dim = self._get_state_dim()
 
         self._metric = None
         self._is_valid = None
@@ -95,18 +83,22 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._test_data = None
         self._meta_data = None
 
-        # self.max_timestamp = max_timestamp  # TODO: Requires to automatize
-        self.timestamp = 0
+        # -- REWARD --
+
+        self.env_step = 0
         self._total_reward = 0
+
+        self.max_reward = 200
+        self.min_reward = -200
+
+        assert render_mode is None or render_mode in self.metadata['render_modes']
+        self.render_mode = render_mode
 
     def _get_obs(self) -> np.ndarray:
         """ Returns current environment's observation """
-        node_structure = np.ravel(self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1))
-        edge_structure = np.ravel(self._edges_structure)
+        graph_structure = self._get_graph_structure()
 
-        graph_structure = np.concatenate((node_structure, edge_structure))
-
-        if self._meta_data:
+        if self._meta_data is not None:
             obs = np.concatenate((graph_structure, self._meta_data))
         else:
             obs = graph_structure
@@ -127,34 +119,19 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             'validation_rules': self._rules,
         }
 
-    def print_available_actions(self):
-        """ Show all possible actions """
-        available_actions = self.get_available_actions()
-
-        all_actions = {}
-
-        for d in (self._special_action, self._action_to_add_node, self._action_to_connecting):
-            all_actions.update(d)
-
-        out = {}
-        for (k, v), m in zip(all_actions.items(), available_actions):
-            if m:
-                out[k] = v
-
-        return print(out)
-
-    def get_available_actions(self) -> np.ndarray:
+    def get_available_actions_mask(self) -> np.ndarray:
         """ Returns available actions in the current environment's state in binary mask """
-        self._available_actions = np.zeros((self.action_dim,), dtype=bool)
+        self._available_actions_mask = np.zeros((self.action_dim,), dtype=bool)
 
-        # Special actions available always
-        for action_idx in self._special_action.keys():
-            self._available_actions[action_idx] = True
+        # Special actions available always except the first action
+        if self.env_step != 0:
+            for action_idx in self._special_action.keys():
+                self._available_actions_mask[action_idx] = True
 
         # Adding nodes is available before the free space runs out
         for action_idx in self._action_to_add_node.keys():
             if self._is_possible_to_add_new_node():
-                self._available_actions[action_idx] = True
+                self._available_actions_mask[action_idx] = True
 
         # Adding connections between nodes is available:
         # If these nodes exist and are no connected
@@ -162,9 +139,36 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             is_nodes_exists = self._is_nodes_exist(node_from=nodes[0], node_to=nodes[1])
             is_nodes_connected = self._is_nodes_connected(node_a=nodes[0], node_b=nodes[1])
 
-            self._available_actions[action_idx] = is_nodes_exists and not is_nodes_connected
+            self._available_actions_mask[action_idx] = is_nodes_exists and not is_nodes_connected
 
-        return self._available_actions
+        return self._available_actions_mask
+
+    def _get_available_actions(self) -> dict:
+        all_actions = {}
+
+        for d in (self._special_action, self._action_to_add_node, self._action_to_connecting):
+            all_actions.update(d)
+
+        mask = self.get_available_actions_mask()
+
+        all_actions = {}
+
+        for d in (self._special_action, self._action_to_add_node, self._action_to_connecting):
+            all_actions.update(d)
+
+        out = {}
+        for (k, v), m in zip(all_actions.items(), mask):
+            if m:
+                out[k] = v
+
+        return out
+
+    def get_available_actions(self) -> np.ndarray:
+        return np.fromiter(self._get_available_actions().keys(), dtype=int)
+
+    def print_available_actions(self):
+        """ Show all possible actions """
+        return print(self._get_available_actions())
 
     def get_action_code(self, action: int) -> str:
         """ Returns primitive name by action """
@@ -188,8 +192,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._current_position = 0
         self._available_actions = np.zeros((self.action_dim,), dtype=bool)
         self._rules = {}
-        self._metric = None
-        self.timestamp = 0
+        self._metric = 10000
+        self.env_step = 0
         self._total_reward = 0
 
         observation = self._get_obs()
@@ -208,7 +212,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         """
 
         assert action in self.action_space
-        reward = -5
+
 
         # Checks if action is from special actions (e.g. eof - End of Pipeline)
         if action in self._special_action.keys():
@@ -221,15 +225,6 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             terminated = False
             truncated = False
 
-            # Checks if agent exceeded time limits
-            # if self.timestamp >= self.max_timestamp:
-            #     truncated = True
-            #     reward += -200
-            #     self._rules['valid'] = False
-            #     self._rules['time_limit'] = True
-            #
-            # else:
-
             # Checks if action is for adding node
             if action in self._action_to_add_node.keys():
                 self._apply_action_to_add_node(action)
@@ -238,9 +233,10 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             elif action in self._action_to_connecting.keys():
                 self._apply_action_to_connecting(action)
 
-            self.timestamp += 1
+            self.env_step += 1
             observation = self._get_obs()
             info = self._get_info()
+            reward = 0
 
         self._total_reward += reward
 
@@ -288,8 +284,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         """ Returns `True` if the Pipeline is a single node structure """
         return len(self._nodes) == 1
 
-    def _is_single_node_is_operation(self):
-        return self._nodes[0].name not in self._models
+    def _is_node_operation(self, node):
+        return node.name not in self._models
 
     def _return_inputs_node(self) -> list:
         """ Input node is a node from which the Pipeline starts. There may be several input nodes in the pipeline.
@@ -314,71 +310,92 @@ class TimeSeriesPipelineEnvironment(gym.Env):
                 output_nodes.append(i)
 
         return output_nodes
+
     def _apply_eop_action(self):
         """ Applying End of Pipeline actions and prepare the Pipeline for fitting and validating """
+        terminated = True
+        truncated = False
+        reward = 0
+        self._rules['valid'] = True
 
-        # Checking if the agent decides to use this action in start
-        if len(self._nodes) == 0:
-            terminated = True
-            truncated = False
-            reward = -500
+        # Single node pipeline
+        self._rules['single_node_pipeline'] = self._is_pipeline_single_model()
+        if self._rules['single_node_pipeline'] and self._is_node_operation(self._nodes[0]):
+            self._rules['valid'] = False
+            self._rules['invalid_single_node_pipeline'] = True
+
+            reward -= 10
 
         else:
-            reward = 0
             self._rules['valid'] = True
-            self._rules['single_node_pipeline'] = self._is_pipeline_single_model()
+            self._rules['invalid_single_node_pipeline'] = False
 
-            if self._rules['single_node_pipeline'] and self._is_single_node_is_operation():
+        # Pipeline with detached nodes
+        self._rules['detached_nodes'] = self._return_detached_nodes()
+        self._rules['number_of_detached_nodes'] = len(self._rules['detached_nodes'])
+        if not self._rules['single_node_pipeline'] and self._rules['number_of_detached_nodes'] > 0:
+            self._rules['valid'] = False
+
+            reward -= 10 * self._rules['number_of_detached_nodes']
+
+        else:
+            self._rules['valid'] = True
+            reward += 10
+
+        # Inputs nodes in pipeline
+        self._rules['input_nodes'] = self._return_inputs_node()
+        self._rules['number_of_input_nodes'] = len(self._rules['input_nodes'])
+        if not self._rules['single_node_pipeline'] and self._rules['number_of_input_nodes'] < 1:
+            self._rules['valid'] = False
+            reward -= 25
+
+        # Outputs nodes in pipeline
+        self._rules['output_nodes'] = self._return_output_node()
+        self._rules['number_of_output_nodes'] = len(self._rules['output_nodes'])
+        if not self._rules['single_node_pipeline'] and (self._rules['number_of_output_nodes'] != 1):
+            self._rules['valid'] = False
+            reward -= 25
+
+        # Output nodes is not data operation primitive
+        elif not self._rules['single_node_pipeline'] and (self._rules['number_of_output_nodes'] == 1):
+            node = self._nodes[self._rules['output_nodes'][0]]
+
+            if self._is_node_operation(node):
                 self._rules['valid'] = False
-                reward += -50
+                reward -= 10
 
-            self._rules['without_connections'] = self._is_pipeline_without_connections()
-            if not self._rules['single_node_pipeline'] and self._rules['without_connections']:
-                self._rules['valid'] = False
-                reward += -50
+            else:
+                self._rules['valid'] = True
+                reward += 10
 
-            self._rules['detached_nodes'] = self._return_detached_nodes()
-            num_detached_nodes = len(self._rules['detached_nodes'])
-            if not self._rules['single_node_pipeline'] and num_detached_nodes > 0:
-                self._rules['valid'] = False
-                reward += -50 * num_detached_nodes
+        # Checks GOLEM rules (troubles with the craziest pipelines)
+        if self._pipeline.depth != -1:
+            self._rules['golem_rules'] = verify_pipeline(self._pipeline, task_type=self._train_data.task.task_type,
+                                                         raise_on_failure=False)
 
-            self._rules['input_nodes'] = self._return_inputs_node()
-            num_input_nodes = len(self._rules['input_nodes'])
-            if not self._rules['single_node_pipeline'] and num_input_nodes < 1:
-                self._rules['valid'] = False
-                reward += -10 * num_input_nodes
+            if self._rules['golem_rules']:
+                self._rules['valid'] = True
+                reward += 50
 
-            self._rules['output_nodes'] = self._return_output_node()
-            num_output_nodes = len(self._rules['output_nodes'])
-            if not self._rules['single_node_pipeline'] and (num_output_nodes != 1):
-                self._rules['valid'] = False
-                reward += -50 * num_output_nodes
-
-            if self._pipeline.depth != -1:
-                self._rules['golem_rules'] = verify_pipeline(self._pipeline, task_type=self._train_data.task.task_type, raise_on_failure=False)
-
-                if not self._rules['golem_rules']:
-                    self._rules['valid'] = False
-                    reward += -50
             else:
                 self._rules['valid'] = False
-                reward += -200
+                reward -= 50
 
-            if self._rules['valid']:
-                self._metric = self._run_validating_fitting_and_evaluating()
-                reward += self._metric
+        else:
+            self._rules['golem_rules'] = False
+            self._rules['valid'] = False
+            reward -= 25
 
-                # Compensation of fines
-                if self._is_valid:
-                    reward += - self._total_reward
+        # Otherwise, if it is all fine, environment will try to fit and predict pipeline
+        if self._rules['valid']:
+            self._run_validating_fitting_and_evaluating()
 
-            terminated = True
-            truncated = False
+        if self._rules['valid']:
+            reward += self.get_reward_by_metric(self._metric)
 
         return terminated, truncated, reward
 
-    def _apply_action_to_add_node(self, action):
+    def _apply_action_to_add_node(self, action: int):
         """ Applying action from _action_to_add_node """
         primitive = self._action_to_add_node[action]
         self._nodes.append(PipelineNode(primitive))
@@ -386,41 +403,31 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._current_position += 1
         self._pipeline.add_node(self._nodes[-1])
 
-    def _apply_action_to_connecting(self, action):
+    def _apply_action_to_connecting(self, action: int):
         """ Applying connection between `node_from` with `node_to` """
-        reward = 0
         node_from, node_to = self._action_to_connecting[action]
         self._pipeline.connect_nodes(node_parent=self._nodes[node_from], node_child=self._nodes[node_to])
         self._edges_structure[node_from][node_to] = 1
 
-        return reward
-
     def _run_validating_fitting_and_evaluating(self):
         """ Trying to fit the pipeline """
+        # TODO: Update function to avoid - try ... except ... -
+
         try:
             self._pipeline.fit(self._train_data)
 
+        except:
+            self._rules['valid'] = False
+            self._rules['pipeline_fitting'] = False
+
+        try:
             y_pred = self._pipeline.predict(self._test_data).predict
             y_true = self._test_data.target
 
-            if self.render_mode == 'pipeline_and_predict_plot':
-                self._pipeline.show()
-                plt.plot(range(0, len(self._train_data.target)), self._train_data.target)
-                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_pred)), y_pred)
-                plt.plot(range(len(self._train_data.target), len(self._train_data.target) + len(y_true)), y_true)
-                plt.show()
-
-            metric = mean_absolute_error(y_true, y_pred)
-
-            self._is_valid = True
-
+            self._metric = mean_absolute_error(y_true, y_pred)
         except:
-            metric = 10000
-            self._is_valid = False
-
-        reward = self.get_reward_by_metric(metric)
-
-        return reward
+            self._rules['valid'] = False
+            self._rules['pipeline_predicting'] = False
 
     def load_data(self, train: Optional[InputData], test: Optional[InputData], meta: Optional[np.ndarray]):
         self._train_data = train
@@ -440,7 +447,22 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
     @staticmethod
     def get_reward_by_metric(m, m_min=-10000, m_max=0):
-        return ((-1 * m - m_min) / (m_max - m_min)) * 150
+        return ((-1 * m - m_min) / (m_max - m_min)) * 100
+
+    def _get_state_dim(self) -> int:
+        graph_structure = self._get_graph_structure()
+        graph_shape = graph_structure.shape[0]
+
+        return graph_shape + self.metadata_dim
+
+    def _get_graph_structure(self) -> np.ndarray:
+        node_structure = np.ravel(self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1))
+        edge_structure = np.ravel(self._edges_structure)
+
+        return np.concatenate((node_structure, edge_structure))
+
+    def _get_maximum_number_of_actions_in_environment(self) -> int:
+        return int((self.max_number_of_nodes * (self.max_number_of_nodes + 1)) / 2) + 1
 
 
 if __name__ == '__main__':
@@ -458,7 +480,7 @@ if __name__ == '__main__':
     dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
     train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_Y6057')
 
-    env = TimeSeriesPipelineEnvironment(render_mode='pipeline_plot', metadata_dim=125)
+    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=3, render_mode='pipeline_plot', metadata_dim=125)
     env.load_data(train_data, test_data, meta_data)
     terminated = False
 
@@ -467,13 +489,14 @@ if __name__ == '__main__':
     state = env.reset()
 
     while not terminated:
-    # for action in [16, 19, 30, 0]:
-        env.print_available_actions()
-        action = int(input())
-        new_state, reward, terminated, truncated, info = env.step(action)
-        print(f'reward {reward} \ninfo: {info}')
-        info['pipeline'].show()
-        total_reward += reward
+        # env.print_available_actions()
+        # action = int(input())
+
+        for action in [9, 27, 13, 34, 31, 32, 0]:
+            new_state, reward, terminated, truncated, info = env.step(action)
+            print(f'reward {reward} \ninfo: {info}')
+
+            total_reward += reward
 
     print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {total_reward}')
     print(f'{info["validation_rules"]}')
