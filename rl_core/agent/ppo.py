@@ -1,3 +1,4 @@
+import io
 import math
 from typing import Optional
 
@@ -7,6 +8,8 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 from torch import einsum
 from einops import reduce
+from torchinfo import summary
+
 
 class Buffer:
     def __init__(self):
@@ -88,33 +91,37 @@ class CategoricalMasked(Categorical):
 class PPO(nn.Module):
     metadata = {'name': 'PPO'}
 
-    def __init__(self, state_dim, action_dim, hidden_dim: int = 256, gamma: float = 0.25, batch_size: int = 16,
-                 epsilon: float = 0.2, tau: float = 1,
-                 pi_lr: float = 1e-8, v_lr: float = 1e-8, epoch_n: int = 10, device: str = 'cpu'):
+    def __init__(self,
+                 state_dim: int, action_dim: int, hidden_dim: int = 512,
+                 gamma: float = 0.95, epsilon: float = 0.2, tau: float = 2,
+                 batch_size: int = 8,  epoch_n: int = 5,
+                 pi_lr: float = 1e-2, v_lr: float = 1e-2, device: str = 'cpu'
+        ):
         super().__init__()
 
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.hidden_dim = hidden_dim
 
         self.pi_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim * 2), nn.ReLU(),
-            nn.Linear(hidden_dim * 2, hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
+            nn.Linear(hidden_dim, int(hidden_dim / 2)), nn.ReLU(),
+            nn.Linear(int(hidden_dim / 2), action_dim),
             nn.Softmax(dim=-1)
         ).to(device)
 
         self.v_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim * 2), nn.ReLU(),
-            nn.Linear(hidden_dim * 2, hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, int(hidden_dim / 2)), nn.ReLU(),
+            nn.Linear(int(hidden_dim / 2), 1)
         ).to(device)
 
         self.gamma = gamma
         self.batch_size = batch_size
         self.epsilon = epsilon
         self.tau = tau
+        self.pi_lr = pi_lr
+        self.v_lr = v_lr
 
         self.pi_optimizer = torch.optim.Adam(self.pi_model.parameters(), lr=pi_lr)
         self.v_optimizer = torch.optim.Adam(self.v_model.parameters(), lr=v_lr)
@@ -129,8 +136,6 @@ class PPO(nn.Module):
         pi_out = self.pi_model(state_tensor.unsqueeze(0))
 
         mask = torch.from_numpy(mask).to(torch.bool).to(self.device)
-        # pi_masked = mask * pi_out / torch.sum(mask * pi_out)
-        # dist = Categorical(probs=pi_masked)
         dist = CategoricalMasked(logits=pi_out, mask=mask)
         action = dist.sample()
 
@@ -183,17 +188,17 @@ class PPO(nn.Module):
                 b_masked_dist = CategoricalMasked(logits=b_pi_out, mask=b_masks.to(torch.bool))
                 b_m_new_log_probs = b_masked_dist.log_prob(b_actions)
 
-                entropy = b_masked_dist.entropy()
-                entropy_penalty = - self.tau * entropy
+                entropy = b_masked_dist.entropy().mean()
+                entropy_penalty = -self.tau * entropy
 
                 # KL-Divergence
-                kld = torch.nn.functional.kl_div(b_new_log_probs, b_old_log_probs, log_target=True).detach().cpu().item()
+                kld = torch.nn.functional.kl_div(b_m_new_log_probs, b_m_old_log_probs, log_target=True).detach().cpu().item()
 
                 b_ratio = torch.exp(b_new_log_probs - b_old_log_probs)
                 pi_loss_1 = b_ratio * b_advantage.detach()
                 pi_loss_2 = torch.clamp(b_ratio, 1 - self.epsilon, 1 + self.epsilon) * b_advantage.detach()
 
-                pi_loss = -torch.mean(torch.min(pi_loss_1, pi_loss_2) + entropy_penalty.detach())
+                pi_loss = -torch.mean(torch.min(pi_loss_1, pi_loss_2)) + entropy_penalty
                 pi_loss.backward()
                 self.pi_optimizer.step()
                 self.pi_optimizer.zero_grad()
@@ -221,3 +226,28 @@ class PPO(nn.Module):
 
         self.pi_model.load_state_dict(torch.load(path + '_pi'))
         self.v_model.load_state_dict(torch.load(path + '_v'))
+
+    def create_log_report(self, log_dir):
+        with io.open(f'{log_dir}/params.log', 'w', encoding='utf-8') as file:
+            file.write('-- PARAMS --\n')
+            file.write(f'state_dim {self.state_dim}\n')
+            file.write(f'action_dim {self.action_dim}\n')
+            file.write(f'hidden_dim {self.hidden_dim}\n')
+            file.write('--\n')
+            file.write(f'gamma {self.gamma}\n')
+            file.write(f'epsilon {self.epsilon}\n')
+            file.write(f'tau {self.tau}\n')
+            file.write(f'epoch_n {self.epoch_n}\n')
+            file.write(f'batch_size {self.batch_size}\n')
+            file.write('--\n')
+            file.write(f'pi_lr {self.pi_lr}\n')
+            file.write(f'v_lr {self.v_lr}\n')
+            file.write(f'device {self.device}\n')
+            file.write('\n-- ARCHITECTURE --\n')
+            file.write('- PI MODEL -\n')
+            pi_model = str(summary(self.pi_model, (1, self.state_dim), verbose=0))
+            file.write(f'{pi_model}')
+            file.write('--\n')
+            file.write('- V MODEL -\n')
+            v_model = str(summary(self.v_model, (1, self.state_dim), verbose=0))
+            file.write(f'{v_model}')
