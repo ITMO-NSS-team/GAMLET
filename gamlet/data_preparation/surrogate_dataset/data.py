@@ -251,3 +251,40 @@ class PairDataset(SingleDataset):
         _, _, gr_data1, _, y1 = super().__getitem__(idx1)
         _, _, gr_data2, dset_data2, y2 = super().__getitem__(idx2)
         return gr_data1, gr_data2, dset_data2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
+    
+class KPipeDataset(SingleDataset):
+    """Dataset for surrogate model. Used to train on ranking objective.
+    Returns k number of pipelines for chosen dataset.
+    """
+    def __init__(self, indxs, data_pipe, data_dset, k = 3):
+        super().__init__(indxs, data_pipe, data_dset)
+        self.indxs["ind"] = list(range(len(self.indxs)))
+
+        self.task_pipe_dict = self.indxs.groupby("task_id")["ind"].apply(list).to_dict()
+        self.dateset_id_list = list(self.task_pipe_dict.keys())
+        self.k = k
+
+    def __len__(self):
+        return len(self.dateset_id_list)
+
+    def __getitem__(self, itask):
+        """
+        Args:
+            idx: index of data.
+        Returns:    
+            x_dset: vector of dataset meta-features.
+            x_pipe1: Data object of pipeline 1.
+            x_pipe2: Data object of pipeline 2.
+            y: 1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5.
+        """
+        task_id = self.dateset_id_list[itask]
+        comb_ids = self.task_pipe_dict[task_id]
+        idxs = sample(comb_ids, self.k)
+        
+        gr_data_list = []
+        for idx in idxs:
+            _, _, gr_data, _, y = super().__getitem__(idx)
+            gr_data_list.append((gr_data, y))
+        _, _, _, dset_data, _ = super().__getitem__(idxs[0])
+        return gr_data_list, dset_data
+    
