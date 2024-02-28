@@ -391,6 +391,9 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             self._run_validating_fitting_and_evaluating()
 
         if self._rules['valid']:
+            if self._metric > 10000:
+                self._metric = 10000
+
             reward += self.get_reward_by_metric(self._metric)
 
         return terminated, truncated, reward
@@ -453,7 +456,10 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         graph_structure = self._get_graph_structure()
         graph_shape = graph_structure.shape[0]
 
-        return graph_shape + self.metadata_dim
+        if self.metadata_dim:
+            return graph_shape + self.metadata_dim
+
+        return graph_shape
 
     def _get_graph_structure(self) -> np.ndarray:
         node_structure = np.ravel(self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1))
@@ -492,11 +498,12 @@ if __name__ == '__main__':
         # env.print_available_actions()
         # action = int(input())
 
-        for action in [9, 27, 13, 34, 31, 32, 0]:
+        for action in [5, 11, 33, 10, 34, 32, 0]:
             new_state, reward, terminated, truncated, info = env.step(action)
             print(f'reward {reward} \ninfo: {info}')
 
             total_reward += reward
 
+    info['pipeline'].show()
     print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {total_reward}')
     print(f'{info["validation_rules"]}')
