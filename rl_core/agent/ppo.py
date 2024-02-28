@@ -92,10 +92,10 @@ class PPO(nn.Module):
     metadata = {'name': 'PPO'}
 
     def __init__(self,
-                 state_dim: int, action_dim: int, hidden_dim: int = 512,
-                 gamma: float = 0.95, epsilon: float = 0.2, tau: float = 2,
-                 batch_size: int = 8,  epoch_n: int = 5,
-                 pi_lr: float = 1e-2, v_lr: float = 1e-2, device: str = 'cpu'
+                 state_dim: int, action_dim: int, hidden_dim: int = 256,
+                 gamma: float = 0.99, epsilon: float = 0.2, tau: float = 0.25,
+                 batch_size: int = 10,  epoch_n: int = 3,
+                 pi_lr: float = 3e-5, v_lr: float = 1e-2, device: str = 'cpu'
         ):
         super().__init__()
 
@@ -105,15 +105,25 @@ class PPO(nn.Module):
 
         self.pi_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, 2 * hidden_dim), nn.ReLU(),
+            nn.Linear(2 * hidden_dim, 2 * hidden_dim), nn.ReLU(),
+            nn.Linear(2 * hidden_dim, 2 * hidden_dim), nn.ReLU(),
+            nn.Linear(2 * hidden_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, int(hidden_dim / 2)), nn.ReLU(),
-            nn.Linear(int(hidden_dim / 2), action_dim),
+            nn.Linear(int(hidden_dim / 2), int(hidden_dim / 4)), nn.ReLU(),
+            nn.Linear(int(hidden_dim / 4), action_dim),
             nn.Softmax(dim=-1)
         ).to(device)
 
         self.v_model = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, 2 * hidden_dim), nn.ReLU(),
+            nn.Linear(2 * hidden_dim, 2 * hidden_dim), nn.ReLU(),
+            nn.Linear(2 * hidden_dim, 2 * hidden_dim), nn.ReLU(),
+            nn.Linear(2 * hidden_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, int(hidden_dim / 2)), nn.ReLU(),
-            nn.Linear(int(hidden_dim / 2), 1)
+            nn.Linear(int(hidden_dim / 2), int(hidden_dim / 4)), nn.ReLU(),
+            nn.Linear(int(hidden_dim / 4), 1),
         ).to(device)
 
         self.gamma = gamma
@@ -123,21 +133,24 @@ class PPO(nn.Module):
         self.pi_lr = pi_lr
         self.v_lr = v_lr
 
-        self.pi_optimizer = torch.optim.Adam(self.pi_model.parameters(), lr=pi_lr)
-        self.v_optimizer = torch.optim.Adam(self.v_model.parameters(), lr=v_lr)
+        self.pi_optimizer = torch.optim.AdamW(self.pi_model.parameters(), lr=pi_lr)
+        self.v_optimizer = torch.optim.AdamW(self.v_model.parameters(), lr=v_lr)
 
         self.epoch_n = epoch_n
         self.device = device
 
         self.buffer = Buffer()
 
-    def act(self, state, mask):
+    def act(self, state, mask, mode='probs'):
         state_tensor = torch.FloatTensor(state).to(self.device)
         pi_out = self.pi_model(state_tensor.unsqueeze(0))
 
         mask = torch.from_numpy(mask).to(torch.bool).to(self.device)
         dist = CategoricalMasked(logits=pi_out, mask=mask)
         action = dist.sample()
+
+        if mode == 'probs':
+            return action.squeeze(0).cpu().numpy().item(), torch.where(mask, dist.probs, 0)
 
         return action.squeeze(0).cpu().numpy().item()
 
