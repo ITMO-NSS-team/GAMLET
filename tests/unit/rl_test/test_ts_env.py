@@ -1,6 +1,10 @@
+from itertools import permutations
+from typing import io
+
 import numpy as np
 import pytest
 
+from meta_automl.utils import project_root
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from tests.unit.rl_test.utils import get_time_series
 
@@ -91,3 +95,28 @@ def test_max_number_of_actions_in_pipelines(max_number_of_nodes):
         done = terminated or truncated
 
     assert action_number == env.max_number_of_actions
+
+
+@pytest.mark.parametrize('trajectory',
+    [list(pair) for pair in permutations(range(1, 30), 2)]
+)
+def test_correct_pairs_pipelines(trajectory: list):
+    train_data, test_data = get_time_series()
+
+    env = TimeSeriesPipelineEnvironment(metadata_dim=None, max_number_of_nodes=2)
+    env.load_data(train_data, test_data, meta=None)
+
+    trajectory = trajectory + [31, 0]
+
+    total_reward = 0
+    env.reset()
+
+    for action in trajectory:
+        _, reward, _, _, info = env.step(action)
+        total_reward += reward
+
+    assert total_reward > 0
+    assert info['validation_rules']['valid'] is True
+
+    if info['validation_rules']['valid'] is True:
+        print(info["pipeline"].structure)
