@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
@@ -10,6 +11,9 @@ from rl_core.utils import define_data_for_experiment
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+plt.ioff()
+sns.set(font_scale=0.5)
 
 
 if __name__ == '__main__':
@@ -25,6 +29,7 @@ if __name__ == '__main__':
     log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/ppo/{number_of_nodes_in_pipeline}/{time}'
     tb_writer = SummaryWriter(log_dir=log_dir)
     agent.create_log_report(log_dir)
+    os.mkdir(f'{log_dir}/probs_heatmap')
 
     # -- Starting experiment --
 
@@ -33,7 +38,7 @@ if __name__ == '__main__':
 
     period = 20
     period_of_cleaning = 15
-    period_of_heatmap = 20
+    period_of_heatmap = 100
 
     for episode in range(1, n_episodes + 1):
         print(f'-- Starting {episode} episode --')
@@ -112,7 +117,6 @@ if __name__ == '__main__':
 
         actions_labels = [str(env.get_action_code(action)) for action in range(len(probs_matrix[:, 0]))]
 
-        sns.set(font_scale=0.5)
         fig = sns.heatmap(
             probs_matrix,
             annot=labels,
@@ -125,12 +129,13 @@ if __name__ == '__main__':
             annot_kws={"fontsize": 8}
         )
         plt.xlabel('Step')
-        plt.ylabel('Action', fontsize=4)
-        plt.figure(figsize=(24, 18))
-        plt.savefig(f'{log_dir}/probs_heatmap.png')
+        plt.ylabel('Action')
+        plt.savefig(f'{log_dir}/probs_heatmap/{episode}.png', format='png')
 
         if episode % period_of_heatmap == 0:
             plt.show()
+
+        plt.close()
 
         print(f'-- Finishing {episode} episode --\n')
 

@@ -87,7 +87,6 @@ class CategoricalMasked(Categorical):
 
         return -reduce(p_log_p, "b a -> b", "sum", b=self.batch, a=self.nb_action)
 
-
 class PPO(nn.Module):
     metadata = {'name': 'PPO'}
 
@@ -140,8 +139,9 @@ class PPO(nn.Module):
         self.device = device
 
         self.buffer = Buffer()
+        self.probs = None
 
-    def act(self, state, mask, mode='probs'):
+    def act(self, state, mask):
         state_tensor = torch.FloatTensor(state).to(self.device)
         pi_out = self.pi_model(state_tensor.unsqueeze(0))
 
@@ -149,8 +149,7 @@ class PPO(nn.Module):
         dist = CategoricalMasked(logits=pi_out, mask=mask)
         action = dist.sample()
 
-        if mode == 'probs':
-            return action.squeeze(0).cpu().numpy().item(), torch.where(mask, dist.probs, 0)
+        self.probs = torch.where(mask, dist.probs, 0)
 
         return action.squeeze(0).cpu().numpy().item()
 
