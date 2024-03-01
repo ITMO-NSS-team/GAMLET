@@ -1,16 +1,15 @@
 import datetime
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from torch.utils.tensorboard import SummaryWriter
 
 from meta_automl.utils import project_root
-from rl_core.agent.ppo import PPO
+from rl_core.agent.rppo import RPPO
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from rl_core.utils import define_data_for_experiment
-
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 plt.ioff()
 sns.set(font_scale=0.5)
@@ -23,10 +22,10 @@ if __name__ == '__main__':
     dataloader, train_list, test_list = define_data_for_experiment()
     env = TimeSeriesPipelineEnvironment(max_number_of_nodes=number_of_nodes_in_pipeline, render_mode='none', metadata_dim=126)
     state_dim, action_dim = env.state_dim, env.action_dim
-    agent = PPO(state_dim=state_dim, action_dim=action_dim, device='cuda')
+    agent = RPPO(state_dim=state_dim, action_dim=action_dim, device='cuda')
 
     time = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-    log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/ppo/{number_of_nodes_in_pipeline}/{time}'
+    log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/rppo/{number_of_nodes_in_pipeline}/{time}'
     tb_writer = SummaryWriter(log_dir=log_dir)
     agent.create_log_report(log_dir)
     os.mkdir(f'{log_dir}/probs_heatmap')
