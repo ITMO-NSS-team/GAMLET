@@ -1,5 +1,6 @@
 import json
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from collections import defaultdict
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -7,6 +8,8 @@ import torch.nn as nn
 from fedot.core.pipelines.tuning.search_space import PipelineSearchSpace
 from fedot.core.repository.operation_types_repository import OperationTypesRepository
 from torch_geometric.data import Data
+
+from meta_automl.data_preparation.surrogate_dataset.hetero import HeterogeneousData
 
 
 class FEDOTPipelineFeaturesExtractor:
@@ -196,3 +199,51 @@ class FEDOTPipelineFeaturesExtractor:
 
     def __call__(self, pipeline_json_string: str):
         return self._get_data(pipeline_json_string)
+
+
+class FEDOTPipelineFeaturesExtractor2(FEDOTPipelineFeaturesExtractor):
+    def __init__(
+        self,
+        operation_encoding: Optional[str] = "ordinal",
+    ):
+        super().__init__(operation_encoding, object())
+
+    def _operation2tensor(self, operation_name: str, operation_parameters: Dict[str, Any]) -> torch.Tensor:
+        op_vec = self._operation2vec(operation_name, operation_parameters)
+        return torch.FloatTensor(op_vec.reshape(1, -1))
+
+    def _operation2vec(self, operation_name: str, operation_parameters: Dict[str, Any]) -> np.ndarray:
+        name_vec = np.asarray([])
+        if self.operation_encoding is not None:
+            name_vec = self._operation_name2vec(operation_name)
+        parameters_vec = self._operation_parameters2vec(operation_name, operation_parameters)
+        return np.hstack((name_vec, parameters_vec))
+
+    def _get_data(self, pipeline_json_string: str) -> HeterogeneousData:
+        nodes = self._get_nodes_from_json_string(pipeline_json_string)
+        # Add artificial `dataset` node to make minimal graph length > 1 to avoid errors in pytorch_geometric.
+        nodes = self._append_dataset_node(nodes)
+
+        edge_index = self._get_edge_index_tensor(nodes)
+
+        operations_ids = self._get_operations_ids(nodes)
+        operations_names = self._get_operations_names(nodes, operations_ids)
+        operations_parameters = self._get_operations_parameters(nodes, operations_ids)
+
+        node_idxes_per_type = defaultdict(list)
+        for node_type, node_index in zip(operations_names, operations_ids):
+            node_idxes_per_type[node_type].append(node_index)
+
+        data_per_operation = defaultdict(list)
+        for op_n, op_ps in zip(operations_names, operations_parameters):
+            data_per_operation[op_n].append(self._operation2tensor(op_n, op_ps))
+
+        for op_n, op_ps in data_per_operation.items():
+            data_per_operation[op_n] = torch.vstack(op_ps)
+
+        data = HeterogeneousData(
+            edge_index=edge_index,
+            node_idxes_per_type=node_idxes_per_type,
+            **data_per_operation,
+        )
+        return data

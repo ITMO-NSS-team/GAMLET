@@ -10,7 +10,7 @@ import torch
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-from meta_automl.surrogate.hetero.dataset import HeteroPipelineAndDatasetFeaturesDataset
+from meta_automl.data_preparation.surrogate_dataset.hetero.dataset import HeteroPipelineAndDatasetFeaturesDataset, HeteroPipelineDataset
 
 from meta_automl.surrogate.hetero import surrogate_model
 from torch.utils.data import Dataset, DataLoader
@@ -19,56 +19,56 @@ import pickle
 import numpy as np
 
 torch.autograd.set_detect_anomaly(True)
-          
+
 def build_datasets(config: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset, Dict[str, Any]]:  # TODO: refactor
     # if config["model"]["model_parameters"]["dataset_encoder_type"] == "column":
     #     index_col = [0, 1]
     # else:
     #     index_col = 0
-    # config["dataset_params"]["root_path"], 
-    
+    # config["dataset_params"]["root_path"],
+
     print("Loading id2pipe")
     #  avoid repeated loading of mappings
-    with open("/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/id2pipeline_path.pickle", "rb") as f:
+    with open("/home/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/id2pipeline_path.pickle", "rb") as f:
         id2pipe = pickle.load(f)
     print("Loading id2dataset")
-    with open("/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/id2dataset_id.pickle", "rb") as f:
-        id2dataset = pickle.load(f)    
-    
+    with open("/home/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/id2dataset_id.pickle", "rb") as f:
+        id2dataset = pickle.load(f)
+
     print("Making train dataset")
-    train_dataset = HeteroPipelineAndDatasetFeaturesDataset(
-        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/train_task_pipe_comb.csv",
-        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/datasets.csv",
+    train_dataset = HeteroPipelineDataset( #HeteroPipelineAndDatasetFeaturesDataset(
+        "/home/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/train_task_pipe_comb.csv",
+        # "/home/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/datasets.csv",
         id2pipe,
         id2dataset,
         is_val=False,
     )
     print("Making test dataset")
-    val_dataset = HeteroPipelineAndDatasetFeaturesDataset(
-        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/test_task_pipe_comb.csv",
-        "/Users/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/datasets.csv",
+    val_dataset = HeteroPipelineDataset( #HeteroPipelineAndDatasetFeaturesDataset(
+        "/home/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/test_task_pipe_comb.csv",
+        # "/home/cherniak/itmo_job/GAMLET/data/no_meta_features_and_fedot_pipelines_raw/datasets.csv",
         id2pipe,
         id2dataset,
         is_val=True,
     )
     meta_data = {
-        "dim_dataset": train_dataset.dataset_metafeatures.shape[1],
+        # "dim_dataset": train_dataset.dataset_metafeatures.shape[1],
     }
     return train_dataset, val_dataset, val_dataset, meta_data
 
 def build_model(config: Dict[str, Any], meta_data: Dict[str, Any]) -> nn.Module: # TODO: implement
     model_class = getattr(surrogate_model, config["model"]["class"])
     # config["model"]["model_parameters"]["pipeline_encoder"]["in_size"] = meta_data["in_size"]
-    config["model"]["model_parameters"]["dataset_encoder"]["dim_dataset"] = meta_data["dim_dataset"]
+    # config["model"]["model_parameters"]["dataset_encoder"]["dim_dataset"] = meta_data["dim_dataset"]
     dim_feedforward = 2 * config["model"]["model_parameters"]["pipeline_encoder"]["d_model"]
     config["model"]["model_parameters"]["pipeline_encoder"]["dim_feedforward"] = dim_feedforward
     model = model_class(**{k: v for k, v in config["model"].items() if k != "class"})
     return model
-    
+
 def build_dataloaders(
-    train_dataset: Dataset, 
-    val_dataset: Dataset, 
-    test_dataset: Dataset, 
+    train_dataset: Dataset,
+    val_dataset: Dataset,
+    test_dataset: Dataset,
     config: Dict[str, Any],
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     train_loader = DataLoader(
@@ -99,7 +99,7 @@ def train_hetero_surrogate_model(config: Dict[str, Any]) -> List[Dict[str, float
     assert len(train_dataset) != 0
     assert len(val_dataset) != 0
     assert len(test_dataset) != 0
-    
+
     print("Making dataloaders")
     train_loader, val_loader, test_loader = build_dataloaders(train_dataset, val_dataset, test_dataset, config)
 
@@ -141,7 +141,7 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
     print("Making datasets")
     _, _, test_dataset, _ = build_datasets(config)
     assert len(test_dataset) != 0
-    
+
     print("Making dataloaders")
     test_loader = DataLoader(
         test_dataset,
@@ -149,8 +149,7 @@ def test_ranking(config: Dict[str, Any]) -> List[Dict[str, float]]:
         num_workers=0,  # Change to 1.
         collate_fn=test_dataset.collate_fn,
     )
-    
-    
+
     model_class = getattr(surrogate_model, config["model"].pop("name"))
     chpoint_dir = config["model_data"]["save_dir"] + "checkpoints/"
     model = model_class.load_from_checkpoint(

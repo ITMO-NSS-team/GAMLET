@@ -282,3 +282,153 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         loss = F.binary_cross_entropy_with_logits((pred1 - pred2) * self.temperature, y)
         self.log("train_loss", loss)
         return loss
+
+
+class RankingPipelineSurrogateModel(LightningModule):
+    """
+    Parameters:
+    -----------
+    model_parameters: Dict of model parameters. The parameters are: TODO.
+    lr: Learning rate.
+    """
+
+    def __init__(
+        self,
+        model_parameters: Dict[str, Any],
+        lr: float = 1e-3,
+        weight_decay: float = 1e-4,
+        temperature: float = 10,
+    ):
+        super().__init__()
+
+        if model_parameters["pipeline_encoder"]["type"] == "simple_graph_encoder":
+            config = model_parameters["pipeline_encoder"]
+            self.pipeline_encoder = SimpleGNNEncoder(**{k: v for k, v in config.items() if k != "type"})
+        elif model_parameters["pipeline_encoder"]["type"] == "graph_transformer":
+            config = model_parameters["pipeline_encoder"]
+            self.pipeline_encoder = GraphTransformer(**{k: v for k, v in config.items() if k != "type"})
+
+        self.final_model = nn.Sequential(
+            nn.BatchNorm1d(self.pipeline_encoder.out_dim),
+            nn.Linear(self.pipeline_encoder.out_dim, self.pipeline_encoder.out_dim),
+            nn.ReLU(),
+            nn.Linear(self.pipeline_encoder.out_dim, 1),
+        )
+
+        self.lr = lr
+        self.weight_decay = weight_decay
+        self.temperature = temperature
+
+        # Migration to pytorch_lightning > 1.9.5
+        self.validation_step_outputs = []
+        self.test_step_outputs = []
+        self.save_hyperparameters()  # TODO: is it required? We have config file.
+
+        self.K_TOP = 3
+
+    def forward(self, x_graph: Batch) -> Tensor:
+        """Computation method.
+
+        Parameters:
+        -----------
+        x_graph: Graph data.
+        x_dset: Dataset data.
+
+        Returns:
+        --------
+        A pipeline score.
+        """
+        z_pipeline = self.pipeline_encoder(x_graph)
+        return self.final_model(z_pipeline)
+
+    def training_step(self, batch: Tuple[Batch, Batch, Tensor], *args: Any, **kwargs: Any) -> Tensor:
+        """Training step.
+
+        Parameters:
+        -----------
+        batch: A tuple of:
+        * `x_pipe1`: First graph features.
+        * `x_pipe2`: Second graph features.
+        * `y_true`: Probability of first graph score being greater than seconda graph score.
+                    Equal to 0.5 if the graphs have equal score.
+
+        Returns:
+        --------
+        Loss value.
+        """
+        x_pipe1, x_pipe2, y = batch
+
+        pred1 = torch.squeeze(self.forward(x_pipe1))
+        pred2 = torch.squeeze(self.forward(x_pipe2))
+        loss = F.binary_cross_entropy_with_logits((pred1 - pred2) * self.temperature, y)
+        self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch: Tuple[Tensor, Batch, Tensor, Tensor], *args, **kwargs: Any) -> None:
+        """Validation step.
+
+        Parameters:
+        -----------
+        batch: A tuple of:
+        * `task_id`: Task ID (a.k.a dataset ID),
+        * `pipe_id`: Pipeline ID,
+        * `x_graph`: Graph data,
+        * `y_true`: Pipeline score.
+        """
+
+        task_id, pipe_id, x_graph, y_true = batch
+        y_pred = self.forward(x_graph)
+        y_pred = torch.squeeze(y_pred)
+        output = {
+            "task_id": task_id.cpu().numpy(),
+            "pipe_id": pipe_id.cpu().numpy(),
+            "y_pred": y_pred.detach().cpu().numpy(),
+            "y_true": y_true.detach().cpu().numpy(),
+        }
+        self.validation_step_outputs.append(output)
+
+    def test_step(self, batch: Tuple[Tensor, Batch, Tensor, Tensor], *args, **kwargs: Any) -> None:
+        """Test step.
+
+        Parameters:
+        -----------
+        batch: A tuple of:
+        * `task_id`: Task ID (a.k.a dataset ID),
+        * `pipe_id`: Pipeline ID,
+        * `x_graph`: Graph data,
+        * `y_true`: Pipeline score.
+        """
+        task_id, pipe_id, x_graph, y_true = batch
+        y_pred = self.forward(x_graph)
+        y_pred = torch.squeeze(y_pred)
+        output = {
+            "task_id": task_id.cpu().numpy(),
+            "pipe_id": pipe_id.cpu().numpy(),
+            "y_pred": y_pred.detach().cpu().numpy(),
+            "y_true": y_true.detach().cpu().numpy(),
+        }
+        self.test_step_outputs.append(output)
+
+    def on_validation_epoch_end(self) -> None:
+        """Calculate NDCG score over predicted during validation pipeline estimates."""
+        ndcg_mean = get_metrics(self.validation_step_outputs, self.K_TOP)["ndcg"]
+        print("val_ndcg = ", ndcg_mean)
+        self.log("val_ndcg", ndcg_mean)
+        self.validation_step_outputs.clear()
+
+    def on_test_epoch_end(self) -> None:
+        """Calculate NDCG score over predicted during testing pipeline estimates."""
+        metrics = get_metrics(self.test_step_outputs, self.K_TOP)
+        self.log("test_ndcg", metrics["ndcg"])
+        self.log("test_mrr", metrics["mrr"])
+        self.log("test_hits", metrics["hits"])
+        self.test_step_outputs.clear()
+
+    def configure_optimizers(self) -> optim.Optimizer:
+        optimizer = optim.AdamW(
+            list(self.pipeline_encoder.parameters())
+            + list(self.final_model.parameters()),
+            lr=self.lr,
+            weight_decay=self.weight_decay,
+        )
+        return optimizer
