@@ -72,22 +72,22 @@ class HeteroPipelineRankingSurrogateModel(RankingPipelineSurrogateModel):
         self, batch: Tuple[HeterogeneousBatch, HeterogeneousBatch, torch.Tensor], *args, **kwargs
     ) -> Tensor:
         pipe1, pipe2, y = batch
-        node_embedding1 = self.node_embedder.op_hyperparams_embedder(pipe1.x)
-        node_embedding2 = self.node_embedder.op_hyperparams_embedder(pipe2.x)
-        x_pipe1 = pipe1.to_pyg_batch(self.node_embedder.op_hyperparams_embedder.out_dim, node_embedding1)
-        x_pipe2 = pipe2.to_pyg_batch(self.node_embedder.op_hyperparams_embedder.out_dim, node_embedding2)
+        node_embedding1 = self.node_embedder(pipe1)
+        node_embedding2 = self.node_embedder(pipe2)
+        x_pipe1 = pipe1.to_pyg_batch(self.node_embedder.out_dim, node_embedding1)
+        x_pipe2 = pipe2.to_pyg_batch(self.node_embedder.out_dim, node_embedding2)
         return super().training_step((x_pipe1, x_pipe2, y), *args, **kwargs)
 
     def validation_step(self, batch: Tuple[Tensor, Tensor, HeterogeneousBatch, Tensor], *args, **kwargs: Any) -> None:
         task_id, pipe_id, pipe, y_true = batch
-        node_embedding = self.node_embedder.op_hyperparams_embedder(pipe.x)
-        x_pipe = pipe.to_pyg_batch(self.node_embedder.op_hyperparams_embedder.out_dim, node_embedding)
+        node_embedding = self.node_embedder(pipe)
+        x_pipe = pipe.to_pyg_batch(self.node_embedder.out_dim, node_embedding)
         return super().validation_step((task_id, pipe_id, x_pipe, y_true), *args, **kwargs)
 
     def test_step(self, batch: Tuple[Tensor, Tensor, HeterogeneousBatch, Tensor], *args, **kwargs: Any) -> None:
         task_id, pipe_id, pipe, y_true = batch
-        node_embedding = self.node_embedder.op_hyperparams_embedder(pipe.x)
-        x_pipe = pipe.to_pyg_batch(self.node_embedder.op_hyperparams_embedder.out_dim, node_embedding)
+        node_embedding = self.node_embedder(pipe)
+        x_pipe = pipe.to_pyg_batch(self.node_embedder.out_dim, node_embedding)
         return super().test_step((task_id, pipe_id, x_pipe, y_true), *args, **kwargs)
 
     def transfer_batch_to_device(self, batch: Any, device: torch.device, dataloader_idx: int) -> Any:
@@ -99,7 +99,8 @@ class HeteroPipelineRankingSurrogateModel(RankingPipelineSurrogateModel):
                 e.batch = e.batch.to(device)
                 e.edge_index = e.edge_index.to(device)
                 e.node_idxes_per_type = {k: v.to(device) for k, v in e.node_idxes_per_type.items()}
-                e.x = {k: v.to(device) for k, v in e.x.items()}
+                e.hparams = {k: v.to(device) for k, v in e.hparams.items()}
+                e.encoded_type = {k: v.to(device) for k, v in e.encoded_type.items()}
                 res.append(e)
             else:
                 raise TypeError(f"Uknown type f{type(e)}")

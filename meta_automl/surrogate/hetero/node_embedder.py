@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 import torch.nn as nn
 from meta_automl.surrogate.hetero import embedding_joiner, hyperparams_embedder, name_embedder
 from torch import Tensor
-
+from meta_automl.data_preparation.surrogate_dataset.hetero.data_types import HeterogeneousBatch
 
 class NodeEmbedder(nn.Module):
     def __init__(
@@ -35,20 +35,22 @@ class NodeEmbedder(nn.Module):
 
     def forward(
         self,
-        op_name: str,
-        op_name_vec: Optional[Tensor] = None,
-        op_hyperparams_vec: Optional[Tensor] = None,
-    ) -> Tensor:
+        x: HeterogeneousBatch,
+    ) -> Dict[str, Tensor]:
         """A single operation data is expected. Expected batch size is equal to 1."""
-        if self.emebedding_joiner is not None:
-            op_name_embedding: Tensor = self.op_name_embedder(op_name_vec)
-            op_hyperparams_embedding: Tensor = self.op_hyperparams_embedder({op_name: op_hyperparams_vec})[op_name]
-            embeddings: Tensor = self.emebedding_joiner(op_name_embedding, op_hyperparams_embedding)
-        elif self.op_name_embedder is not None:
-            embeddings: Tensor = self.op_name_embedder(op_name_vec)
-        else:
-            embeddings: Tensor = self.op_hyperparams_embedder({op_name: op_hyperparams_vec})[op_name]
+        hparams_embed: Dict[str, Tensor] = self.op_hyperparams_embedder(x.hparams)
+        type_embed: Dict[str, Tensor] = {k: self.op_name_embedder(v) for k, v in x.encoded_type.items()}
+        embeddings: Dict[str, Tensor] = self.emebedding_joiner(hparams_embed, type_embed)
         return embeddings
+        # if self.emebedding_joiner is not None:
+        #     op_name_embedding: Tensor = self.op_name_embedder(op_name_vec)
+        #     op_hyperparams_embedding: Tensor = self.op_hyperparams_embedder({op_name: op_hyperparams_vec})[op_name]
+        #     embeddings: Tensor = self.emebedding_joiner(op_name_embedding, op_hyperparams_embedding)
+        # elif self.op_name_embedder is not None:
+        #     embeddings: Tensor = self.op_name_embedder(op_name_vec)
+        # else:
+        #     embeddings: Tensor = self.op_hyperparams_embedder(x.hparams)
+        # return embeddings
 
 
 def build_node_embedder(model_parameters: Dict[str, Any]) -> NodeEmbedder:
@@ -67,8 +69,8 @@ def build_node_embedder(model_parameters: Dict[str, Any]) -> NodeEmbedder:
         config = model_parameters["embedding_joiner"]
         class_ = getattr(embedding_joiner, config["class"])
         emebedding_joiner = class_(
-            op_name_embedding_dim=op_name_embedder.out_dim, 
-            op_hyperparams_embedding_dim=op_name_embedder.out_dim, 
+            op_name_embedding_dim=op_name_embedder.out_dim,
+            op_hyperparams_embedding_dim=op_hyperparams_embedder.out_dim,
             **{k: v for k, v in config.items() if k != "class"},
         )
     return NodeEmbedder(op_hyperparams_embedder, op_name_embedder, emebedding_joiner)

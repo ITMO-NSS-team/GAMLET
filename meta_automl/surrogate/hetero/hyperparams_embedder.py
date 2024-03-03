@@ -44,14 +44,13 @@ class HyperparametersEmbedder(nn.Module):
         self.learnable = nn.ParameterDict(learnables)
 
     def forward(self, x: Dict[str, Tensor]) -> Dict[str, Tensor]:
-        """Expected batch size is equal to 1."""
         embeddings = {}
-        for op_name in x:
+        for op_name, op_params in x.items():
             if op_name in self.encoders:
-                embedding = self.encoders[op_name](x[op_name])
+                embedding = self.encoders[op_name](op_params)
                 embeddings[op_name] = embedding
             elif op_name in self.learnable:
-                embeddings[op_name] = self.learnable[op_name]
+                embeddings[op_name] = self.learnable[op_name].repeat(op_params.shape[0], 1)
             else:
                 raise ValueError(f"Not specified operation type: {op_name}.")
         return embeddings
@@ -69,7 +68,7 @@ class PretrainedHyperparametersEmbedder(HyperparametersEmbedder):
         super().__init__()
         self.trainable = trainable
         self.out_dim = out_dim
-        
+
         state_dict = torch.load(autoencoder_ckpt_path, map_location="cpu")["state_dict"]
 
         encoders = {}

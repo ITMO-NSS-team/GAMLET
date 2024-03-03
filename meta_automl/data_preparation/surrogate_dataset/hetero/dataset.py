@@ -111,7 +111,7 @@ class HeteroPipelineDataset(Dataset):
         id2pipe: Dict[int, Union[pathlib.PosixPath, str]],
         id2dataset: Dict[int, str],
         is_val: bool = False,
-        encode_type: Optional[Union[str, None]] = None,
+        encode_type: Optional[Union[str, None]] = "ordinal",
     ):
         self.task_pipe_comb = pd.read_csv(task_pipe_comb_file)
         self.groups = {k: v for k, v in self.task_pipe_comb.groupby("task_id")}
@@ -169,8 +169,8 @@ class HeteroPipelineDataset(Dataset):
 
     def _get_val_sample(self, idx) -> Tuple[int, int, HeterogeneousData, float]:
         sample = self.task_pipe_comb.iloc[idx]
-        task_id = sample.task_id
-        pipe_id = sample.pipeline_id
+        task_id = int(sample.task_id)
+        pipe_id = int(sample.pipeline_id)
         with open(self.id2pipe[pipe_id], "rb", os.O_NONBLOCK) as f:
             pipe_json_string = pickle.load(f)
         metric = sample.metric

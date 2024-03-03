@@ -7,29 +7,45 @@ from torch_geometric.data import Batch
 
 
 class HeterogeneousData:
-    def __init__(self, edge_index: Tensor, node_idxes_per_type: Dict[str, Sequence[int]], **kwargs):
+    def __init__(self, edge_index: Tensor, node_idxes_per_type: Dict[str, Sequence[int]], hparams: Dict[str, Tensor] = {}, encoded_type: Dict[str, Tensor] = {}):
         # kwargs should be like `a = torch.rand(2, 4), b = torch.rand(3, 9), ...`
         self.edge_index = edge_index
         self.node_idxes_per_type = {k: torch.LongTensor(v) for k, v in node_idxes_per_type.items()}
-        self.x = {}
+        self.hparams = {}
+        self.encoded_type = {}
         self.num_nodes = 0
-        for k, v in kwargs.items():
-            self.x[k] = v
-            self.num_nodes += v.shape[0]
+        keys = set(list(hparams.keys()) + list(encoded_type.keys()))
+        for k in keys:
+            num_nodes = None
+            try:
+                self.hparams[k] = hparams[k]
+                num_nodes = hparams[k].shape[0]
+            except KeyError:
+                pass
+            try:
+                self.encoded_type[k] = encoded_type[k]
+                num_nodes = encoded_type[k].shape[0]
+            except KeyError:
+                pass
+            self.num_nodes += num_nodes
 
 
 class HeterogeneousBatch:
     def __init__(self):
-        self.batch: Tensor = None  # Store data as [[graph_index, node_index]...]
-        self.edge_index: Tensor = None  # Store data as [[from1, from2, ...], [to1, to2, ...]]
+        self.batch: Tensor = None
+        self.edge_index: Tensor = None
         self.node_idxes_per_type: Dict[str, Tensor] = None
+        self.hparams: Dict[str, Tensor] = None
+        self.encoded_type: Dict[str, Tensor] = None
+        self.num_nodes: int = None
 
     @staticmethod
     def from_heterogeneous_data_list(data_list: Sequence[HeterogeneousData]) -> "HeterogeneousBatch":
         total_nodes = 0
         batch = []
         edge_index = []
-        x = defaultdict(list)
+        hparams = defaultdict(list)
+        encoded_type = defaultdict(list)
         node_idxes_per_type = defaultdict(list)
 
         for i, data in enumerate(data_list):
@@ -42,14 +58,17 @@ class HeterogeneousBatch:
             edge_index.append(data_edge_index)
             total_nodes += data.num_nodes
 
-            for k, v in data.x.items():
-                x[k].append(v)
+            for k, v in data.hparams.items():
+                hparams[k].append(v)
+            for k, v in data.encoded_type.items():
+                encoded_type[k].append(v)
 
         my_batch = HeterogeneousBatch()
         my_batch.batch = torch.LongTensor(batch)
         my_batch.node_idxes_per_type = {k: torch.LongTensor(v) for k, v in node_idxes_per_type.items()}
         my_batch.edge_index = torch.hstack(edge_index)
-        my_batch.x = {k: torch.vstack(v) for k, v in x.items()}
+        my_batch.hparams = {k: torch.vstack(v) for k, v in hparams.items()}
+        my_batch.encoded_type = {k: torch.vstack(v) for k, v in encoded_type.items()}
         my_batch.num_nodes = total_nodes
         return my_batch
 
@@ -61,5 +80,14 @@ class HeterogeneousBatch:
         pyg_batch = Batch(x=x, batch=self.batch, edge_index=self.edge_index)
         return pyg_batch
 
-    def __getitem__(self, key: str) -> Tensor:
-        return self.x[key]
+    def __getitem__(self, key: str) -> Dict[str, Tensor]:
+        res = {}
+        try:
+            res["encoded_type"] = self.encoded_type[key]
+        except KeyError:
+            pass
+        try:
+            res["hparams"] = self.hparams[key]
+        except KeyError:
+            pass
+        return res
