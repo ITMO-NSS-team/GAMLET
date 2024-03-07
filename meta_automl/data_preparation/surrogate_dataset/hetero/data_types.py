@@ -3,7 +3,7 @@ from typing import Dict, Sequence
 
 import torch
 from torch import Tensor
-from torch_geometric.data import Batch
+from torch_geometric.data import Batch, Data
 
 
 class HeterogeneousData:
@@ -33,6 +33,7 @@ class HeterogeneousData:
 class HeterogeneousBatch:
     def __init__(self):
         self.batch: Tensor = None
+        self.ptr: Tensor = None
         self.edge_index: Tensor = None
         self.node_idxes_per_type: Dict[str, Tensor] = None
         self.hparams: Dict[str, Tensor] = None
@@ -43,6 +44,7 @@ class HeterogeneousBatch:
     def from_heterogeneous_data_list(data_list: Sequence[HeterogeneousData]) -> "HeterogeneousBatch":
         total_nodes = 0
         batch = []
+        ptr = [0]
         edge_index = []
         hparams = defaultdict(list)
         encoded_type = defaultdict(list)
@@ -50,7 +52,7 @@ class HeterogeneousBatch:
 
         for i, data in enumerate(data_list):
             batch.extend([i for _ in range(data.num_nodes)])
-
+            ptr.append(ptr[-1] + data.num_nodes)
             for node_type, node_index in data.node_idxes_per_type.items():
                 node_idxes_per_type[node_type].extend(node_index + total_nodes)
 
@@ -65,6 +67,7 @@ class HeterogeneousBatch:
 
         my_batch = HeterogeneousBatch()
         my_batch.batch = torch.LongTensor(batch)
+        my_batch.ptr = torch.LongTensor(ptr)
         my_batch.node_idxes_per_type = {k: torch.LongTensor(v) for k, v in node_idxes_per_type.items()}
         my_batch.edge_index = torch.hstack(edge_index)
         my_batch.hparams = {k: torch.vstack(v) for k, v in hparams.items()}
@@ -77,8 +80,26 @@ class HeterogeneousBatch:
         for node_type, node_data in transformed.items():
             idxes = self.node_idxes_per_type[node_type]
             x[idxes] = node_data
-        pyg_batch = Batch(x=x, batch=self.batch, edge_index=self.edge_index)
+        pyg_batch = Batch(x=x, batch=self.batch, edge_index=self.edge_index, ptr=self.ptr)
+        # pyg_batch_ = Batch(x=x, batch=self.batch, edge_index=self.edge_index)
+        # data_list = [self._get_sample(pyg_batch_, i) for i in self.batch.unique()]
+        # pyg_batch = Batch.from_data_list(data_list)
         return pyg_batch
+
+    # @staticmethod
+    # def _get_sample(batch: Batch, index: int) -> Data:
+    #     with torch.no_grad():
+    #         idxes = torch.where(batch.batch == index)
+    #         p_min = idxes[0].min()
+    #         p_max = idxes[0].max()
+    #         s1 = batch.edge_index >= p_min
+    #         s2 = batch.edge_index <= p_max
+    #         s = s1 * s2
+    #         edge_index = batch.edge_index[s].reshape(2, -1)
+    #         edge_index -= p_min
+    #     x = batch.x[idxes]
+    #     data = Data(x=x, edge_index=edge_index)
+    #     return data
 
     def __getitem__(self, key: str) -> Dict[str, Tensor]:
         res = {}
