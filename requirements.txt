@@ -11,7 +11,8 @@ torch_geometric==2.3.0
 --find-links https://data.pyg.org/whl/torch-2.0.0+cpu.html
 torch_scatter
 pytorch-lightning==2.0.5
-giotto-tda==0.6.0
+giotto_tda==0.6.0
+ripser==0.6.4
 
 # variable versions
 einops
