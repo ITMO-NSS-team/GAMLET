@@ -13,7 +13,7 @@ from gamlet.components.meta_features_extractors import DatasetMetaFeatures, Meta
 from gamlet.data_preparation.dataset import TimeSeriesData, TimeSeriesDataset
 from gamlet.data_preparation.file_system import get_project_root
 
-TS_FEATURES_COUNT = 184
+TS_FEATURES_COUNT = 123
 
 
 class TimeSeriesFeaturesExtractor(MetaFeaturesExtractor):
