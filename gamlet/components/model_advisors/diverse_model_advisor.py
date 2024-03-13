@@ -51,10 +51,10 @@ class DiverseModelAdvisor(DatasetSimilarityModelAdvisor):
 
         dataset_models = self._get_all_models_for_datasets(similar_dataset_ids)
 
-        first_model = dataset_models[0]
+        first_model = list(filter(lambda x: x is not None, dataset_models))[0]
         diverse_dataset_advice = [first_model]
         for model in dataset_models[1:]:
-            if self.distance_func(first_model.predictor, model.predictor) >= minimal_distance:
+            if model is not None and self.distance_func(first_model.predictor, model.predictor) >= minimal_distance:
                 diverse_dataset_advice.append(model)
 
         diverse_dataset_advice = self._sort_models_by_fitness(diverse_dataset_advice, n_best_to_advise)
