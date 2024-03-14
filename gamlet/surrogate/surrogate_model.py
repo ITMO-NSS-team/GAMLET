@@ -11,6 +11,7 @@ from pytorch_lightning import LightningModule
 from sklearn.metrics import ndcg_score
 from torch import Tensor
 from torch_geometric.data import Batch
+from diffsort import DiffSortNet
 
 from gamlet.surrogate.encoders import ColumnDatasetEncoder, GraphTransformer, MLPDatasetEncoder, SimpleGNNEncoder
 
@@ -288,6 +289,55 @@ class RankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         pred1 = torch.squeeze(self.forward(x_pipe1, dset_data))
         pred2 = torch.squeeze(self.forward(x_pipe2, dset_data))
         loss = F.binary_cross_entropy_with_logits((pred1 - pred2) * self.temperature, y)
+        # loss = self.loss(pred1, pred2, y)
+        self.log("train_loss", loss)
+        return loss
+
+
+class KRankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
+    """Surrogate model to evaluate a pipeline on the given dataset.
+
+    The model is trained to rank between k pipelines.
+    The loss is calculated as the ranknet loss.
+
+    Parameters:
+    -----------
+    model_parameters: Dict of model parameters. The parameters are: TODO.
+    loss_name: Loss name from torch.nn.functional. Default: `None`.
+        If the parameter is `None`, one should implement `self.loss` method in a subclass.
+    lr: Learning rate.
+    """
+    def __init__(self, model_parameters: Dict[str, Any]):
+        super().__init__(model_parameters)
+        if model_parameters["sorter"] == "diffsort":
+            self.sorter = DiffSortNet(**{k: v for k, v in model_parameters["sorter_parameters"].items()})
+
+
+    def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
+        """Training step.
+
+        Parameters:
+        -----------
+        batch: A tuple of:
+        * `task_id`: Task ID (a.k.a dataset ID),
+        * `pipe_id`: Pipeline ID,
+        * `x_graph`: Graph data,
+        * `x_dset`: Dataset data,
+        * `y_true`: Pipeline score.
+
+        Returns:
+        --------
+        Loss value.
+        """
+
+        pipes, dset_data, y_scores = batch
+        perm_ground_truth = F.one_hot(torch.argsort(Tensor(y_scores))).transpose(-2, -1).float()
+        preds = []
+        for pipe in pipes:
+            preds.append(torch.squeeze(self.forward(pipe, dset_data)))
+        preds = Tensor(preds)
+        _, perm_pred = self.sorter(preds)
+        loss = F.binary_cross_entropy_with_logits(perm_pred, perm_ground_truth)
         # loss = self.loss(pred1, pred2, y)
         self.log("train_loss", loss)
         return loss

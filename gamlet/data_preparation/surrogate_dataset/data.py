@@ -268,23 +268,16 @@ class KPipeDataset(SingleDataset):
         return len(self.dateset_id_list)
 
     def __getitem__(self, itask):
-        """
-        Args:
-            idx: index of data.
-        Returns:    
-            x_dset: vector of dataset meta-features.
-            x_pipe1: Data object of pipeline 1.
-            x_pipe2: Data object of pipeline 2.
-            y: 1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5.
-        """
         task_id = self.dateset_id_list[itask]
         comb_ids = self.task_pipe_dict[task_id]
-        idxs = sample(comb_ids, self.k)
+        idxs = sample(comb_ids, self.k) #FIX IF LARGER THAN POPULATION
         
         gr_data_list = []
+        y_score_list = []
         for idx in idxs:
             _, _, gr_data, _, y = super().__getitem__(idx)
-            gr_data_list.append((gr_data, y))
+            y_score_list.append(y)
+            gr_data_list.append(gr_data)
         _, _, _, dset_data, _ = super().__getitem__(idxs[0])
-        return gr_data_list, dset_data
+        return gr_data_list, dset_data, y_score_list
     

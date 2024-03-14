@@ -19,7 +19,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.loader import DataLoader
 
-from gamlet.data_preparation.surrogate_dataset import GraphDataset, PairDataset, SingleDataset
+from gamlet.data_preparation.surrogate_dataset import GraphDataset, PairDataset, SingleDataset, KPipeDataset
 from gamlet.surrogate import surrogate_model
 
 
@@ -46,7 +46,7 @@ def get_files(path, index_col=0):
     return datasets, task_pipe_comb, pipelines, splits
 
 
-def create_torch_dsets(datasets, task_pipe_comb, pipelines, task_sets, splits=None, is_pair=False):
+def create_torch_dsets(datasets, task_pipe_comb, pipelines, task_sets, splits=None, is_pair=False, num_pipes=2):
     """Loading preprocessed data and creating Dataset objects for model training
     Parameters:
     -----------
@@ -54,7 +54,14 @@ def create_torch_dsets(datasets, task_pipe_comb, pipelines, task_sets, splits=No
     """
 
     train_task_set, val_task_set, test_task_set = task_sets
-    if is_pair:
+    if num_pipes > 2:
+        train_dataset = KPipeDataset(
+            task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
+            GraphDataset(pipelines),
+            datasets,
+            k = num_pipes
+        )
+    elif is_pair:
         train_dataset = PairDataset(
             task_pipe_comb[task_pipe_comb.task_id.isin(train_task_set)].reset_index(drop=True),
             GraphDataset(pipelines),
@@ -181,7 +188,10 @@ def _create_data_loaders(train_dataset, val_dataset, test_dataset, config):
 def _parse_dataset_config(config):
     dataset_configs = {}
     dataset_configs["is_pair"] = False
-
+    dataset_configs["num_pipes"] = 3
+    if config["model"]["name"] == "KRankingPipelineDatasetSurrogateModel":
+        dataset_configs["num_pipes"] = config["model"]["model_parameters"]["num_pipes"]
+        
     if config["model"]["name"] == "RankingPipelineDatasetSurrogateModel":
         dataset_configs["is_pair"] = True
 
@@ -219,7 +229,7 @@ def setup_loaders(config: Dict[str, Any]):
     tasks_in_file = set(datasets.index.get_level_values(0))
     task_sets = train_val_test_split(splits, tasks_in_file, is_folded=config["dataset_params"]["is_folded"])
     train_dataset, val_dataset, test_dataset, meta_data = create_torch_dsets(
-        datasets, task_pipe_comb, pipelines, task_sets, splits=splits, is_pair=dataset_configs["is_pair"]
+        datasets, task_pipe_comb, pipelines, task_sets, splits=splits, is_pair=dataset_configs["is_pair"], num_pipes=dataset_configs["num_pipes"]
     )
     assert len(train_dataset) != 0
     assert len(val_dataset) != 0

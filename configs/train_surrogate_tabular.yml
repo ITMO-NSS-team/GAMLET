@@ -3,7 +3,7 @@ batch_size: 256
 
 num_dataloader_workers: 32
 model:
-  name: "RankingPipelineDatasetSurrogateModel"
+  name: "KRankingPipelineDatasetSurrogateModel"
   model_parameters:
     in_size: null  # The parameter is inferred
     num_class: 1
@@ -26,6 +26,11 @@ model:
     weight_decay: 0.01
     lr: 0.0001
     temperature: 5
+    num_pipes: 3
+    sorter: "diffsort"
+    sorter_parameters:
+      sorting_network_type: "odd_even" # "odd_even" or "bitonic"
+      size: 3
   
 dataset_params:
   root_path: "./data/pymfe_meta_features_and_fedot_pipelines/all"

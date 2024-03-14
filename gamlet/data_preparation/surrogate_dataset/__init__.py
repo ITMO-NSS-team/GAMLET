@@ -1,4 +1,4 @@
-from .data import GraphDataset, PairDataset, SingleDataset
+from .data import GraphDataset, PairDataset, SingleDataset, KPipeDataset
 from .dataset_generate import (
     KnowledgeBaseToDataset,
     dataset_from_id_without_data_loading,
