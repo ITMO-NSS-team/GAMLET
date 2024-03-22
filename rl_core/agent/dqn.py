@@ -32,7 +32,7 @@ class Qfunction(nn.Module):
 class DQN:
     metadata = {'name': 'DQN'}
 
-    def __init__(self, state_dim, action_dim, hidden_dim=512, gamma=0.99, lr=1e-4, batch_size=64, eps_decrease=1e-6, eps_min=1e-3, device='cuda'):
+    def __init__(self, state_dim, action_dim, hidden_dim=512, gamma=0.01, lr=1e-4, batch_size=64, eps_decrease=1e-6, eps_min=1e-3, device='cuda'):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.hidden_dim = hidden_dim
@@ -46,6 +46,8 @@ class DQN:
         self.device = device
         self.memory = []
         self.optimizer = torch.optim.Adam(self.q_function.parameters(), lr=lr)
+
+        self.probs = None
 
     def get_action(self, state, mask):
         state = torch.tensor(state, dtype=torch.float32).to(self.device)
@@ -62,6 +64,7 @@ class DQN:
         return action
 
     def fit(self, state, action, reward, done, masks, next_state):
+        loss_ = np.nan
         self.memory.append([state, action, reward, int(done), masks, next_state])
 
         if len(self.memory) > self.batch_size:
@@ -86,7 +89,12 @@ class DQN:
             if self.eps > self.eps_min:
                 self.eps -= self.eps_decrease
 
-            return loss
+                if self.eps < 0:
+                    self.eps = self.eps_min
+
+            loss_ = loss.detach().cpu().item()
+
+        return loss_
 
     def save(self, path: str):
         self.q_function.save(path)
