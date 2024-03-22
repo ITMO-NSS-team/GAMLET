@@ -3,7 +3,6 @@ from itertools import product
 from typing import Optional
 
 import gymnasium as gym
-import matplotlib.pyplot as plt
 import numpy as np
 from fedot.core.data.data import InputData
 from fedot.core.pipelines.node import PipelineNode
@@ -77,11 +76,18 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self.state_dim = self._get_state_dim()
 
         self._metric = None
-        self._is_valid = None
 
         self._train_data = None
         self._test_data = None
         self._meta_data = None
+
+        self.observation_space = spaces.Dict(
+            {
+                'meta': spaces.Box(low=0, high=1, shape=(self.metadata_dim,)),
+                'nodes': spaces.Box(low=0, high=1, shape=(self._nodes_structure.shape[0], len(self.primitives) + 1), dtype=np.int8),
+                'edges': spaces.Box(low=0, high=1, shape=self._edges_structure.shape, dtype=np.int8),
+            }
+        )
 
         # -- REWARD --
 
@@ -96,12 +102,22 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
     def _get_obs(self) -> np.ndarray:
         """ Returns current environment's observation """
-        graph_structure = self._get_graph_structure()
+        # graph_structure = self._get_graph_structure()
 
-        if self._meta_data is not None:
-            obs = np.concatenate((graph_structure, self._meta_data))
-        else:
-            obs = graph_structure
+        node_structure = self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1)
+        edge_structure = self._edges_structure
+
+        # if self._meta_data is not None:
+        #     obs = np.concatenate((graph_structure, self._meta_data))
+        # else:
+        #     obs = graph_structure
+        #
+
+        obs = {
+            'meta': self._meta_data,
+            'nodes': node_structure,
+            'edges': edge_structure
+        }
 
         return obs
 
@@ -115,9 +131,11 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             'reward': self._total_reward,
             'metric': self._metric,
             'number_of_nodes': len(self._nodes),
-            'is_valid': self._is_valid,
             'validation_rules': self._rules,
         }
+
+    def valid_action_mask(self):
+        return self.get_available_actions_mask()
 
     def get_available_actions_mask(self) -> np.ndarray:
         """ Returns available actions in the current environment's state in binary mask """
@@ -181,7 +199,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         elif action in self._action_to_connecting.keys():
             return self._action_to_connecting[action]
 
-    def reset(self, seed: int = None, options: list = None) -> np.ndarray:
+    def reset(self, seed: int = None, options: list = None, **kwargs) -> np.ndarray:
         """ Reset environment to initial state """
         super().reset(seed=seed)
 
@@ -197,8 +215,9 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._total_reward = 0
 
         observation = self._get_obs()
+        info = self._get_info()
 
-        return observation
+        return observation, info
 
     def step(self, action: int, mode: str = 'train') -> (np.ndarray, int, bool, bool, dict):
         """ Apply action to environemnt
@@ -213,7 +232,6 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         assert action in self.action_space
 
-
         # Checks if action is from special actions (e.g. eof - End of Pipeline)
         if action in self._special_action.keys():
             terminated, truncated, reward = self._apply_eop_action()
@@ -224,6 +242,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         else:
             terminated = False
             truncated = False
+            reward = 0
 
             # Checks if action is for adding node
             if action in self._action_to_add_node.keys():
@@ -233,12 +252,16 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             elif action in self._action_to_connecting.keys():
                 self._apply_action_to_connecting(action)
 
+            if self._pipeline.depth != -1:
+                reward -= 5
+
             self.env_step += 1
             observation = self._get_obs()
             info = self._get_info()
-            reward = 0
 
         self._total_reward += reward
+
+        self.render()
 
         return observation, reward, terminated, truncated, info
 
@@ -395,6 +418,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
                 self._metric = 10000
 
             reward += self.get_reward_by_metric(self._metric)
+            self._total_reward += reward
 
         return terminated, truncated, reward
 
@@ -481,12 +505,15 @@ if __name__ == '__main__':
     for dataset in train:
         train_datasets[dataset] = os.path.join(data_folder_path, f'{dataset}/data.csv')
 
-    path_to_meta_data = os.path.join(str(project_root()),
-                                     'MetaFEDOT\\data\\knowledge_base_time_series_0\\meta_features_ts.csv')
-    dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
-    train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_Y6057')
+    path_to_meta_data = os.path.join(
+        str(project_root()),
+        'MetaFEDOT\\data\\knowledge_base_time_series_0\\meta_features_ts.csv'
+    )
 
-    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=3, render_mode='pipeline_plot', metadata_dim=125)
+    dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
+    train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_Q5278')
+
+    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=8, render_mode='pipeline_plot', metadata_dim=125)
     env.load_data(train_data, test_data, meta_data)
     terminated = False
 
@@ -495,14 +522,15 @@ if __name__ == '__main__':
     state = env.reset()
 
     while not terminated:
-        # env.print_available_actions()
-        # action = int(input())
+        env.print_available_actions()
+        action = int(input())
 
-        for action in [5, 11, 33, 10, 34, 32, 0]:
-            new_state, reward, terminated, truncated, info = env.step(action)
-            print(f'reward {reward} \ninfo: {info}')
+        new_state, reward, terminated, truncated, info = env.step(action)
+        print(f'reward {reward} \ninfo: {info}')
 
-            total_reward += reward
+        print(env._pipeline.depth)
+
+        total_reward += reward
 
     info['pipeline'].show()
     print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {total_reward}')
