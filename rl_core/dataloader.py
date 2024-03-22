@@ -38,7 +38,7 @@ class DataLoader_TS(DataLoader):
         self.forecast_length = None
         self.forecast_length_mapping = {'D': 14, 'W': 13, 'M': 18, 'Q': 8, 'Y': 6}
         self.meta_data = pd.read_csv(path_to_meta_data, index_col=0) if path_to_meta_data else None
-        self.meta_data = self.normilize_data(self.meta_data).transpose()
+        self.meta_data = self.normilize_data(self.meta_data).transpose() if path_to_meta_data else None
 
     def get_data(self, dataset_name: str = None):
         if dataset_name is None:
