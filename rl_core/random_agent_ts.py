@@ -11,20 +11,24 @@ from rl_core.utils import define_data_for_experiment
 
 if __name__ == '__main__':
     for number_of_nodes_in_pipeline in range(2, 11):
-        n_episodes = 1000
+        n_episodes = 2000
 
         dataloader, _, _ = define_data_for_experiment()
         env = TimeSeriesPipelineEnvironment(render_mode='none', metadata_dim=126)
         state_dim, action_dim = env.state_dim, env.action_dim
 
-        time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/random_action/{number_of_nodes_in_pipeline}/{time}'
+        # time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/random_action/{number_of_nodes_in_pipeline}/random_agent'
         tb_writer = SummaryWriter(log_dir=log_dir)
 
         # -- Starting experiment --
 
         total_rewards = []
         total_metrics = []
+
+        period = 20
+        period_of_cleaning = 15
+        period_of_heatmap = 100
 
         for episode in range(1, n_episodes + 1):
             print(f'-- Starting {episode} episode --')
@@ -62,7 +66,6 @@ if __name__ == '__main__':
             tb_writer.add_scalar('reward', episode_reward, episode)
             tb_writer.add_scalar('metric', metric_value, episode)
 
-            period = 20
             if episode % period == 0:
                 message = f'Mean reward per {period} episode'
                 tb_writer.add_scalar(message, np.mean(total_rewards), episode)
