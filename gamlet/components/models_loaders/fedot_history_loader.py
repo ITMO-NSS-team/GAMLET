@@ -28,7 +28,7 @@ def extract_best_models_from_history(
                 best_individuals.insert(0, individual)
 
         best_individuals = list({ind.graph.descriptive_id: ind for ind in best_individuals}.values())
-        best_individuals = best_individuals[:n_best_models_to_load - 1]
+        best_individuals = best_individuals[:n_best_models_to_load]
 
         node_params_repo = DefaultOperationParamsRepository()
         for individual in best_individuals:
