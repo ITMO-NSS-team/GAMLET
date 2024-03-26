@@ -5,7 +5,6 @@ import warnings
 from functools import partial
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
-import numpy as np
 import pandas as pd
 from pymfe.mfe import MFE
 from tqdm import tqdm
