@@ -134,3 +134,8 @@ data/cache
 .idea/
 .run/
 .vscode/
+
+# logs
+logs/
+
+data/pymfe_meta_features_and_fedot_pipelines/

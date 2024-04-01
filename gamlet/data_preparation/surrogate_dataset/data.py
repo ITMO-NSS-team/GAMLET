@@ -1,5 +1,6 @@
 import os
-from random import sample
+from random import sample, choices
+import numpy as np
 
 import torch
 import torch_geometric.utils as utils
@@ -251,12 +252,14 @@ class PairDataset(SingleDataset):
         _, _, gr_data1, _, y1 = super().__getitem__(idx1)
         _, _, gr_data2, dset_data2, y2 = super().__getitem__(idx2)
         return gr_data1, gr_data2, dset_data2, (1.0 if y1 > y2 else 0.0 if y1 < y2 else 0.5)
-    
+
+
 class KPipeDataset(SingleDataset):
     """Dataset for surrogate model. Used to train on ranking objective.
     Returns k number of pipelines for chosen dataset.
     """
-    def __init__(self, indxs, data_pipe, data_dset, k = 3):
+
+    def __init__(self, indxs, data_pipe, data_dset, k=3):
         super().__init__(indxs, data_pipe, data_dset)
         self.indxs["ind"] = list(range(len(self.indxs)))
 
@@ -270,14 +273,16 @@ class KPipeDataset(SingleDataset):
     def __getitem__(self, itask):
         task_id = self.dateset_id_list[itask]
         comb_ids = self.task_pipe_dict[task_id]
-        idxs = sample(comb_ids, self.k) #FIX IF LARGER THAN POPULATION
-        
+        idxs = choices(comb_ids, k=self.k)
+
         gr_data_list = []
         y_score_list = []
         for idx in idxs:
             _, _, gr_data, _, y = super().__getitem__(idx)
             y_score_list.append(y)
+            gr_data.x = gr_data.x.float()
             gr_data_list.append(gr_data)
-        _, _, _, dset_data, _ = super().__getitem__(idxs[0])
-        return gr_data_list, dset_data, y_score_list
-    
+        order_list = np.argsort(y_score_list).tolist()
+
+        _, _, _, dset_data, _ = super().__getitem__(idxs[0])  # нужно ли еще раз вызывать?
+        return *gr_data_list, dset_data, torch.tensor(order_list, dtype=torch.long)

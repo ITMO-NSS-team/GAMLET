@@ -313,7 +313,7 @@ class KRankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
             self.sorter = DiffSortNet(**{k: v for k, v in model_parameters["sorter_parameters"].items()})
 
 
-    def training_step(self, batch: Tuple[Tensor, Batch, Tensor, Batch, Tensor], *args, **kwargs: Any) -> Tensor:
+    def training_step(self, batch, *args, **kwargs: Any) -> Tensor:
         """Training step.
 
         Parameters:
@@ -329,15 +329,13 @@ class KRankingPipelineDatasetSurrogateModel(PipelineDatasetSurrogateModel):
         --------
         Loss value.
         """
-
-        pipes, dset_data, y_scores = batch
-        perm_ground_truth = F.one_hot(torch.argsort(Tensor(y_scores))).transpose(-2, -1).float()
+        pipes = batch[:-2]
+        dset_data = batch[-2] 
+        target = batch[-1]
         preds = []
         for pipe in pipes:
-            preds.append(torch.squeeze(self.forward(pipe, dset_data)))
-        preds = Tensor(preds)
-        _, perm_pred = self.sorter(preds)
-        loss = F.binary_cross_entropy_with_logits(perm_pred, perm_ground_truth)
-        # loss = self.loss(pred1, pred2, y)
+            preds.append(torch.squeeze(self.forward(pipe, dset_data)).view(-1,1))
+        _, perm_pred = self.sorter(torch.cat(preds, dim=1))
+        loss = F.cross_entropy(perm_pred, target)
         self.log("train_loss", loss)
         return loss
