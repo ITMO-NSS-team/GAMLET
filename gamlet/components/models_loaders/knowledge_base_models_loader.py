@@ -43,11 +43,7 @@ def process_record(df, cached_datasets, knowledge_base_path, fitness_metric: str
         metric_value = row[fitness_metric]
         # fitness = SingleObjFitness(metric_value)
         metadata = dict(row)
-        models.append(EvaluatedModel(predictor,
-                                     metric_value,
-                                     fitness_metric,
-                                     cached_datasets[row['dataset_id']],
-                                     metadata))
+        models.append(EvaluatedModel(predictor, {'fitness': metric_value}, row['dataset_cache'], metadata))
     return models
 
 

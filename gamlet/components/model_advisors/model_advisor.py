@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union, Callable
+
+from golem.core.optimisers.fitness import SingleObjFitness
 
 from gamlet.data_preparation.dataset import DatasetIDType
 from gamlet.data_preparation.evaluated_model import EvaluatedModel
@@ -85,8 +87,16 @@ class DatasetSimilarityModelAdvisor(ModelAdvisor):
 
     @staticmethod
     def _sort_models_by_fitness(models: Sequence[EvaluatedModel],
-                                n_best_to_advise: Union[int, None]) -> List[EvaluatedModel]:
+                                n_best_to_advise: Union[int, None],
+                                model_to_fitness: Optional[Callable[[EvaluatedModel], SingleObjFitness]] = None
+                                ) -> List[EvaluatedModel]:
+        def model_to_fitness_default(model: EvaluatedModel) -> SingleObjFitness:
+            return next(iter(model.metrics.values()))
+
+        if model_to_fitness is None:
+            model_to_fitness = model_to_fitness_default
+
         if n_best_to_advise is not None:
-            models = list(sorted(models, key=lambda m: m.fitness, reverse=True))
+            models = list(sorted(models, key=model_to_fitness, reverse=True))
             models = models[: n_best_to_advise]
         return models

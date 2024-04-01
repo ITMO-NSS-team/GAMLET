@@ -11,7 +11,6 @@ PredictorType = Any
 @dataclass
 class EvaluatedModel:
     predictor: PredictorType
-    fitness: Fitness
-    fitness_metric_name: Union[str, Sequence[str]]
+    metrics: Dict[str, Fitness]
     dataset: DatasetBase
     metadata: Dict[str, Any] = field(default_factory=dict)

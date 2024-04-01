@@ -45,7 +45,7 @@ def get_n_best_fedot_performers(dataset: DatasetBase,
     for pipeline in tqdm(pipelines, desc='Evaluating pipelines'):
         fitness = evaluate_classification_fedot_pipeline(pipeline, input_data)
         fitnesses.append(fitness)
-        models.append(EvaluatedModel(pipeline, fitness, metric_name, dataset))
+        models.append(EvaluatedModel(pipeline, {metric_name: fitness}, dataset))
 
     best_models = [models.pop(np.argmax(fitnesses)) for _ in range(min(n_best, len(pipelines)))]
     return best_models

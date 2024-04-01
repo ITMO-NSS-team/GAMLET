@@ -28,7 +28,8 @@ class DatasetModelsFitnessScaler:
         for dataset_repr, dataset_models in zip(dataset_representations, models):
             scaler = self.scaler_class()
             self.scalers[dataset_repr] = scaler
-            fitness_values_array = [model.fitness.values for model in dataset_models]
+            fitness_values_array = [list(map(lambda fitness: fitness.value, model.metrics.values())) for model in
+                                    dataset_models]
             scaler.fit(fitness_values_array)
         return self
 
@@ -38,12 +39,11 @@ class DatasetModelsFitnessScaler:
         dataset_representations = map(repr, datasets)
         for dataset_repr, dataset_models in zip(dataset_representations, new_models):
             scaler = self.scalers[dataset_repr]
-            fitness_values_array = [model.fitness.values for model in dataset_models]
+            fitness_values_array = [list(map(lambda fitness: fitness.value, model.metrics.values())) for model in
+                                    dataset_models]
             fitness_values_array = scaler.transform(fitness_values_array)
-            for model, fitness_values in zip(dataset_models, fitness_values_array):
-                fitness = copy(model.fitness)
-                fitness.values = fitness_values
-                model.fitness = fitness
+            for model_n, model in enumerate(dataset_models):
+                model.metrics = dict(zip(model.metrics.keys(), fitness_values_array[model_n]))
         return new_models
 
     def fit_transform(self,

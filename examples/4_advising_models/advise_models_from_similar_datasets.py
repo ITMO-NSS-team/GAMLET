@@ -30,8 +30,9 @@ def main():
         PipelineBuilder().add_node('normalization').add_node('logit').build(),
         PipelineBuilder().add_node('rf').add_node('logit').build()
     ]
-    best_models_train = [[EvaluatedModel(pipeline, SingleObjFitness(1), 'some_metric_name', OpenMLDataset(dataset_id))]
-                         for dataset_id, pipeline in zip(did_train, best_pipelines)]
+    best_models_train = [
+        [EvaluatedModel(pipeline, {'some_metric_name': SingleObjFitness(1)}, OpenMLDataset(dataset_id))]
+        for dataset_id, pipeline in zip(did_train, best_pipelines)]
 
     # Train the component that calculates similarity between datasets
     assessor = KNeighborsSimilarityAssessor(n_neighbors=2).fit(mf_train, did_train)

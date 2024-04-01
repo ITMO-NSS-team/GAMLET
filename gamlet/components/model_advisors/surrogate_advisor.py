@@ -22,20 +22,20 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
     """
 
     def __init__(
-        self,
-        surrogate_model: nn.Module,
+            self,
+            surrogate_model: nn.Module,
     ):
         self.surrogate_model = surrogate_model
         self.surrogate_model.eval()
         self.device = next(self.surrogate_model.parameters()).device
 
     def _predict_single(
-        self,
-        dataset: DatasetBase,
-        dataset_features: Data,
-        pipelines: List[Pipeline],
-        pipelines_features: List[Data],
-        k: int,
+            self,
+            dataset: DatasetBase,
+            dataset_features: Data,
+            pipelines: List[Pipeline],
+            pipelines_features: List[Data],
+            k: int,
     ) -> List[EvaluatedModel]:
         """Select optimal pipelines for given dataset.
 
@@ -72,16 +72,17 @@ class SurrogateGNNModelAdvisor(ModelAdvisor):
         k = min(len(indx), k)
         best_models = []
         for i in indx[-k:][::-1]:
-            best_models.append(EvaluatedModel(pipelines[i], SingleObjFitness(scores[i]), "surrogate_fitness", dataset))
+            best_models.append(
+                EvaluatedModel(pipelines[i], {'surrogate_fitness': SingleObjFitness(scores[i])}, dataset))
         return best_models
 
     def predict(
-        self,
-        pipelines: List[Pipeline],
-        datasets: List[DatasetBase],
-        pipelines_features: List[Data],
-        datasets_features: List[Data],
-        k: int = 5,
+            self,
+            pipelines: List[Pipeline],
+            datasets: List[DatasetBase],
+            pipelines_features: List[Data],
+            datasets_features: List[Data],
+            k: int = 5,
     ) -> List[List[EvaluatedModel]]:
         """Select optimal pipelines for given list of datasets.
 

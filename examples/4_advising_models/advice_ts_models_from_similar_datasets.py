@@ -30,7 +30,7 @@ def dataset_to_models(d_id):
         for ind in gen:
             if ind.fitness.value < best_fitness:
                 pipeline = adapter.restore(ind.graph)
-                best_model = EvaluatedModel(pipeline, ind.fitness.value, history.objective.metric_names[0],
+                best_model = EvaluatedModel(pipeline, {history.objective.metric_names[0]: ind.fitness.value},
                                             TimeSeriesDataset(d_id))
                 best_fitness = ind.fitness.value
     return [best_model]

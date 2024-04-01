@@ -40,7 +40,9 @@ def extract_best_models_from_history(
             else:
                 fitness = individual.fitness or SingleObjFitness()
                 metric_names = history.objective.metric_names
-            model = EvaluatedModel(pipeline, fitness, metric_names, dataset)
+
+            metrics = dict(zip(metric_names, map(SingleObjFitness, fitness.values)))
+            model = EvaluatedModel(pipeline, metrics, dataset)
             best_individuals_accum.append(model)
 
     return best_individuals_accum
