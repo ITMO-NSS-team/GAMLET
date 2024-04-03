@@ -31,7 +31,7 @@ class DataLoader:
         return train_data, test_data
 
 
-class DataLoader_TS(DataLoader):
+class TimeSeriesDataLoader(DataLoader):
     def __init__(self, datasets: dict, forecast_length: dict = None, path_to_meta_data: str = None):
         super().__init__(datasets)
         self.dataset_name = None
