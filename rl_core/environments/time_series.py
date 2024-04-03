@@ -15,7 +15,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 
 from meta_automl.utils import project_root
-from rl_core.dataloader import DataLoader_TS
+from rl_core.dataloader import TimeSeriesDataLoader
 
 PLOT_PRED = False
 
@@ -26,9 +26,10 @@ class TimeSeriesPipelineEnvironment(gym.Env):
     """
     metadata = {'name': 'time_series_env', 'render_modes': ['none', 'pipeline_plot', 'pipeline_and_predict_plot']}
 
-    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 8, metadata_dim=None,
+    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 10, using_number_of_nodes: int = 10, metadata_dim=None, is_use_dataloader=False,
                  render_mode: str = None):
         self.max_number_of_nodes = max_number_of_nodes
+        self.using_number_of_nodes = using_number_of_nodes
         self.primitives = primitives if primitives else self._get_default_primitives()
         self._models = OperationTypesRepository().suitable_operation(task_type=TaskTypesEnum.ts_forecasting)
         self.number_of_primitives = len(self.primitives)
@@ -60,7 +61,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self.action_dim = actions_dim
         self.action_space = spaces.Discrete(actions_dim)
 
-        self.max_number_of_actions = self._get_maximum_number_of_actions_in_environment()
+        self.max_number_of_actions = self._get_maximum_number_of_actions_in_environment(self.max_number_of_nodes)
 
         # -- STATE --
 
@@ -76,7 +77,11 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self.state_dim = self._get_state_dim()
 
         self._metric = None
+        self.y_pred = None
+        self.y_true = None
 
+        self.is_use_dataloader = is_use_dataloader
+        self._dataloader = None
         self._train_data = None
         self._test_data = None
         self._meta_data = None
@@ -132,6 +137,8 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             'metric': self._metric,
             'number_of_nodes': len(self._nodes),
             'validation_rules': self._rules,
+            'y_pred': self.y_pred,
+            'y_true': self.y_true,
         }
 
     def valid_action_mask(self):
@@ -146,18 +153,20 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             for action_idx in self._special_action.keys():
                 self._available_actions_mask[action_idx] = True
 
-        # Adding nodes is available before the free space runs out
-        for action_idx in self._action_to_add_node.keys():
-            if self._is_possible_to_add_new_node():
-                self._available_actions_mask[action_idx] = True
+        if self.env_step < self.using_number_of_nodes:
+            # Adding nodes is available before the free space runs out
+            for action_idx in self._action_to_add_node.keys():
+                if self._is_possible_to_add_new_node():
+                    self._available_actions_mask[action_idx] = True
 
-        # Adding connections between nodes is available:
-        # If these nodes exist and are no connected
-        for action_idx, nodes in self._action_to_connecting.items():
-            is_nodes_exists = self._is_nodes_exist(node_from=nodes[0], node_to=nodes[1])
-            is_nodes_connected = self._is_nodes_connected(node_a=nodes[0], node_b=nodes[1])
+        if self.env_step != self._get_maximum_number_of_actions_in_environment(self.using_number_of_nodes):
+            # Adding connections between nodes is available:
+            # If these nodes exist and are no connected
+            for action_idx, nodes in self._action_to_connecting.items():
+                is_nodes_exists = self._is_nodes_exist(node_from=nodes[0], node_to=nodes[1])
+                is_nodes_connected = self._is_nodes_connected(node_a=nodes[0], node_b=nodes[1])
 
-            self._available_actions_mask[action_idx] = is_nodes_exists and not is_nodes_connected
+                self._available_actions_mask[action_idx] = is_nodes_exists and not is_nodes_connected
 
         return self._available_actions_mask
 
@@ -199,7 +208,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         elif action in self._action_to_connecting.keys():
             return self._action_to_connecting[action]
 
-    def reset(self, seed: int = None, options: list = None, **kwargs) -> np.ndarray:
+    def reset(self, seed: int = None, options: list = None, **kwargs) -> (np.ndarray, dict):
         """ Reset environment to initial state """
         super().reset(seed=seed)
 
@@ -213,6 +222,12 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._metric = 10000
         self.env_step = 0
         self._total_reward = 0
+
+        self.y_pred = None
+        self.y_true = None
+
+        if self.is_use_dataloader and self._dataloader:
+            self._train_data, self._test_data, self._meta_data = self._dataloader.get_data()
 
         observation = self._get_obs()
         info = self._get_info()
@@ -448,13 +463,16 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             self._rules['pipeline_fitting'] = False
 
         try:
-            y_pred = self._pipeline.predict(self._test_data).predict
-            y_true = self._test_data.target
+            self.y_pred = self._pipeline.predict(self._test_data).predict
+            self.y_true = self._test_data.target
 
-            self._metric = mean_absolute_error(y_true, y_pred)
+            self._metric = mean_absolute_error(self.y_pred, self.y_true)
         except:
             self._rules['valid'] = False
             self._rules['pipeline_predicting'] = False
+
+    def load_dataloader(self, dataloader: TimeSeriesDataLoader):
+        self._dataloader = dataloader
 
     def load_data(self, train: Optional[InputData], test: Optional[InputData], meta: Optional[np.ndarray]):
         self._train_data = train
@@ -491,8 +509,9 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         return np.concatenate((node_structure, edge_structure))
 
-    def _get_maximum_number_of_actions_in_environment(self) -> int:
-        return int((self.max_number_of_nodes * (self.max_number_of_nodes + 1)) / 2) + 1
+    @staticmethod
+    def _get_maximum_number_of_actions_in_environment(number_of_nodes) -> int:
+        return int((number_of_nodes * (number_of_nodes + 1)) / 2) + 1
 
 
 if __name__ == '__main__':
@@ -510,10 +529,10 @@ if __name__ == '__main__':
         'MetaFEDOT\\data\\knowledge_base_time_series_0\\meta_features_ts.csv'
     )
 
-    dataloader = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
+    dataloader = TimeSeriesDataLoader(train_datasets, path_to_meta_data=path_to_meta_data)
     train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_Q5278')
 
-    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=8, render_mode='pipeline_plot', metadata_dim=125)
+    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=10, using_number_of_nodes=2, render_mode='pipeline_plot', metadata_dim=125)
     env.load_data(train_data, test_data, meta_data)
     terminated = False
 
