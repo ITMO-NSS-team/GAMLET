@@ -7,7 +7,54 @@ import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 from torchinfo import summary
 
-from rl_core.agent.ppo import CategoricalMasked, Buffer
+from rl_core.agent.ppo import CategoricalMasked
+
+class Buffer:
+    def __init__(self):
+        super().__init__()
+        self.states = []
+        self.actions = []
+        self.rewards = []
+        self.dones = []
+        self.masks = []
+
+        # Policy LSTM (hidden, cell)
+        self.pi_hidden_states = []
+        self.pi_cells_states = []
+
+        # Value LSTM (hidden, cell)
+        self.v_hidden_states = []
+        self.v_cells_states = []
+
+    def append(self, state, action, reward, done, mask):
+        self.states.append(state)
+        self.actions.append(action)
+        self.rewards.append(reward)
+        self.dones.append(done)
+        self.masks.append(mask)
+
+    def append_pi_lstm(self, h):
+        self.pi_hidden_states.append(h[0].squeeze(0).squeeze(0).cpu())
+        self.pi_cells_states.append(h[1].squeeze(0).squeeze(0).cpu())
+
+    def append_v_lstm(self, h):
+        self.v_hidden_states.append(h[0].squeeze(0).squeeze(0).cpu())
+        self.v_cells_states.append(h[1].squeeze(0).squeeze(0).cpu())
+
+    def get_arrays(self):
+        return self.states, self.actions, self.rewards, self.dones, self.masks, \
+            (self.pi_hidden_states, self.pi_cells_states), (self.v_hidden_states, self.v_cells_states)
+
+    def clear(self):
+        self.states = []
+        self.actions = []
+        self.rewards = []
+        self.dones = []
+        self.masks = []
+        self.pi_hidden_states = []
+        self.pi_cells_states = []
+        self.v_hidden_states = []
+        self.v_cells_states = []
 
 
 class PolicyModel(nn.Module):
@@ -119,6 +166,7 @@ class RPPO:
         self.buffer.clear()
 
     def act(self, state, mask):
+        # Policy
         state_tensor = torch.FloatTensor(state).to(self.device)
         mask = torch.from_numpy(mask).to(torch.bool).to(self.device)
 
@@ -129,12 +177,17 @@ class RPPO:
         action = dist.sample()
 
         self.probs = torch.where(mask, dist.probs, 0)
+        self.buffer.append_pi_lstm(self.pi_model.h_cell)
+
+        # Value
+        _ = self.v_model(state_tensor.unsqueeze(0))
+        self.buffer.append_v_lstm(self.v_model.h_cell)
 
         return action.squeeze(0).cpu().numpy().item()
 
     def update(self):
         # TODO: Save history of hiddens in memory and use to train
-        states, actions, rewards, dones, masks = self.buffer.get_arrays()
+        states, actions, rewards, dones, masks, (h_pi_in, h_pi_out), (h_v_in, h_v_out) = self.buffer.get_arrays()
         rewards, dones = map(np.array, [rewards, dones])
 
         rewards, dones = rewards.reshape(-1, 1), dones.reshape(-1, 1)
@@ -150,8 +203,12 @@ class RPPO:
         returns = returns.to(self.device)
         masks = masks.to(self.device)
 
-        with torch.no_grad():
-            pi_out = self.pi_model(states)
+        h_pi_in = torch.stack(h_pi_in).to(self.device)
+        h_pi_out = torch.stack(h_pi_out).to(self.device)
+        h_v_in = torch.stack(h_v_in).to(self.device)
+        h_v_out = torch.stack(h_v_out).to(self.device)
+
+        pi_out = self.pi_model(states)
 
         full_dist = Categorical(logits=pi_out)
         old_log_probs = full_dist.log_prob(actions).detach()
@@ -170,9 +227,13 @@ class RPPO:
                 b_old_log_probs = old_log_probs[b_idxs]
                 b_masks = masks[b_idxs]
                 b_m_old_log_probs = m_old_log_probs[b_idxs]
+                b_h_pi_in, b_h_pi_out = h_pi_in[b_idxs], h_pi_out[b_idxs]
+                b_h_v_in, b_h_v_out = h_v_in[b_idxs], h_v_out[b_idxs]
 
+                self.v_model.h_cell = (b_h_v_in.unsqueeze(0), b_h_v_out.unsqueeze(0))
                 b_advantage = b_returns - self.v_model(b_states)
 
+                self.pi_model.h_cell = (b_h_pi_in.unsqueeze(0), b_h_pi_out.unsqueeze(0))
                 b_pi_out = self.pi_model(b_states)
 
                 b_full_dist = Categorical(logits=b_pi_out)
