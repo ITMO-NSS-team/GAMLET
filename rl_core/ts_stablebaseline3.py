@@ -1,4 +1,10 @@
-import gym
+import random
+
+import torch
+from wandb.integration.sb3 import WandbCallback
+
+import wandb
+import gymnasium as gym
 import numpy as np
 from sb3_contrib import MaskablePPO
 
@@ -6,7 +12,7 @@ from sb3_contrib.common.maskable.policies import MaskableMultiInputActorCriticPo
 from sb3_contrib.common.wrappers import ActionMasker
 
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
-from rl_core.utils import define_data_for_experiment
+from rl_core.utils import define_data_for_experiment, OFFLINE_TRAJECTORIES
 
 
 def mask_fn(env: gym.Env) -> np.ndarray:
@@ -14,21 +20,58 @@ def mask_fn(env: gym.Env) -> np.ndarray:
 
 
 if __name__ == '__main__':
+    config = {
+        'agent': 'MaskablePPO',
+        'policy_type': 'MaskableMultiInputActorCriticPolicy',
+        'total_timesteps': 300000,
+        'env_name': 'TimeSeriesPipelineEnvironment',
+        'environment': 'TimeSeries',
+        'max_number_of_nodes_in_pipeline': 10,
+        'using_number_of_nodes': 5,
+        'metadata_dim': 126,
+        'gamma': 0.25,
+        'ent_coef': 0.15,
+    }
+
+    run = wandb.init(project='sb3_ts_pyramid', config=config, sync_tensorboard=True, monitor_gym=False, save_code=True)
+
     env = TimeSeriesPipelineEnvironment(
-        max_number_of_nodes=4,
+        max_number_of_nodes=config['max_number_of_nodes_in_pipeline'],
+        using_number_of_nodes=config['using_number_of_nodes'],
         render_mode='none',
-        metadata_dim=126
+        metadata_dim=config['metadata_dim'],
+        is_use_dataloader=True
     )
 
+    # Define data for experiment
     dataloader_train, dataloader_test, train_list, test_list = define_data_for_experiment()
-    train_data, test_data, meta_data = dataloader_train.get_data()
-    env.load_data(train_data, test_data, meta_data)
+    # Load Dataloader
+    env.load_dataloader(dataloader_train)
 
     env = ActionMasker(env, mask_fn)
 
-    model = MaskablePPO(MaskableMultiInputActorCriticPolicy, env, ent_coef=.1, verbose=1)
-    model.learn(total_timesteps=250000)
+    model = MaskablePPO(
+        MaskableMultiInputActorCriticPolicy,
+        env,
+        n_steps=4096,
+        gamma=config['gamma'],
+        ent_coef=config['ent_coef'],
+        verbose=1,
+        tensorboard_log=f'agent/tensorboard_logs/sb3_mppo/{run.id}',
+    )
 
+    # model.load('agent/pretrained/sb3_mppo/bzcdva6o/model.zip')
+
+    model.learn(
+        total_timesteps=config['total_timesteps'],
+        callback=WandbCallback(
+            gradient_save_freq=100,
+            model_save_path=f'agent/pretrained/sb3_mppo/{run.id}',
+            verbose=1
+        )
+    )
+
+    # Validation
     train_data, test_data, meta_data = dataloader_train.get_data()
     env.load_data(train_data, test_data, meta_data)
 
