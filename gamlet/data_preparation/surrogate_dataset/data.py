@@ -277,12 +277,13 @@ class KPipeDataset(SingleDataset):
 
         gr_data_list = []
         y_score_list = []
+        dset_data = None
         for idx in idxs:
-            _, _, gr_data, _, y = super().__getitem__(idx)
+            _, _, gr_data, dt_data, y = super().__getitem__(idx)
             y_score_list.append(y)
             gr_data.x = gr_data.x.float()
             gr_data_list.append(gr_data)
+            dset_data = dt_data
         order_list = np.argsort(y_score_list).tolist()
-
-        _, _, _, dset_data, _ = super().__getitem__(idxs[0])  # нужно ли еще раз вызывать?
+        
         return *gr_data_list, dset_data, torch.tensor(order_list, dtype=torch.long)
