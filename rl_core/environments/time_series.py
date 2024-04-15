@@ -107,22 +107,23 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
     def _get_obs(self) -> np.ndarray:
         """ Returns current environment's observation """
-        # graph_structure = self._get_graph_structure()
+        graph_structure = self._get_graph_structure()
 
-        node_structure = self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1)
-        edge_structure = self._edges_structure
+        # node_structure = self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1)
+        # edge_structure = self._edges_structure
 
-        # if self._meta_data is not None:
-        #     obs = np.concatenate((graph_structure, self._meta_data))
-        # else:
-        #     obs = graph_structure
-        #
+        if self._meta_data is not None:
+            obs = np.concatenate((graph_structure, self._meta_data))
+        else:
+            obs = graph_structure
 
-        obs = {
-            'meta': self._meta_data,
-            'nodes': node_structure,
-            'edges': edge_structure
-        }
+
+        # For sb3 models
+        # obs = {
+        #     'meta': self._meta_data,
+        #     'nodes': node_structure,
+        #     'edges': edge_structure
+        # }
 
         return obs
 
@@ -247,8 +248,18 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
         assert action in self.action_space
 
+        # Checks if action is not valid
+        if not action in self._get_available_actions().keys():
+            terminated = False
+            truncated = False
+            reward = -10
+
+            self.env_step += 1
+            observation = self._get_obs()
+            info = self._get_info()
+
         # Checks if action is from special actions (e.g. eof - End of Pipeline)
-        if action in self._special_action.keys():
+        elif action in self._special_action.keys():
             terminated, truncated, reward = self._apply_eop_action()
 
             observation = self._get_obs()

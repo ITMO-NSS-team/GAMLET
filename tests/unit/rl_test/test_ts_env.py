@@ -71,7 +71,7 @@ def test_correct_pipelines(trajectory):
 def test_max_number_of_actions_in_pipelines(max_number_of_nodes):
     train_data, test_data = get_time_series()
 
-    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=max_number_of_nodes, metadata_dim=0)
+    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=max_number_of_nodes, metadata_dim=0, using_number_of_nodes=max_number_of_nodes)
     env.load_data(train_data, test_data, meta=None)
     env.reset()
 

@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from meta_automl.utils import project_root
-from rl_core.dataloader import DataLoader_TS
+from rl_core.dataloader import TimeSeriesDataLoader
 
 OFFLINE_TRAJECTORIES = [
     [2, 0],
@@ -31,8 +31,8 @@ def define_data_for_experiment(test_size: int = 3):
     dataset_names = [name for name in os.listdir(data_folder_path)]
 
     temp = pd.read_csv('pipeline_validation_results.csv', index_col=0)
-    train = temp[temp['Topo Pipeline'].isna() == False]['Dataset'].to_list()
-    test = temp[temp['Topo Pipeline'].isna() == True]['Dataset'].to_list()
+    train = temp[temp['Topo Pipeline'].isna() == True]['Dataset'].to_list()
+    test = temp[temp['Topo Pipeline'].isna() == False]['Dataset'].to_list()
 
     # if test_size:
     #     train, test = train_test_split(dataset_names, test_size=3)
@@ -50,7 +50,7 @@ def define_data_for_experiment(test_size: int = 3):
     path_to_meta_data = os.path.join(str(project_root()),
                                      'MetaFEDOT\\data\\knowledge_base_time_series_0\\meta_features_ts.csv')
 
-    dataloader_train = DataLoader_TS(train_datasets, path_to_meta_data=path_to_meta_data)
-    dataloader_test = DataLoader_TS(test_datasets, path_to_meta_data=path_to_meta_data)
+    dataloader_train = TimeSeriesDataLoader(train_datasets, path_to_meta_data=path_to_meta_data)
+    dataloader_test = TimeSeriesDataLoader(test_datasets, path_to_meta_data=path_to_meta_data)
 
     return dataloader_train, dataloader_test, train, test,
