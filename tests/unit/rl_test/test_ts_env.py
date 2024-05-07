@@ -67,6 +67,29 @@ def test_correct_pipelines(trajectory):
     assert info['validation_rules']['valid'] is True
 
 
+@pytest.mark.parametrize('trajectory',
+    [
+        [1, 2, 3, 31, 41, 49, 0],           # Call pipeline.depth == -1
+    ]
+)
+def test_uncorrect_pipelines(trajectory):
+    train_data, test_data = get_time_series()
+
+    env = TimeSeriesPipelineEnvironment(metadata_dim=None)
+    env.load_data(train_data, test_data, meta=None)
+
+    total_reward = 0
+
+    env.reset()
+
+    for action in trajectory:
+        _, reward, _, _, info = env.step(action)
+        total_reward += reward
+
+    assert total_reward < 0
+    assert info['validation_rules']['valid'] is False
+
+
 @pytest.mark.parametrize('max_number_of_nodes', [i for i in range(1, 25)])
 def test_max_number_of_actions_in_pipelines(max_number_of_nodes):
     train_data, test_data = get_time_series()

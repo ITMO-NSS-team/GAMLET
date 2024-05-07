@@ -27,7 +27,7 @@ if __name__ == '__main__':
         'env_name': 'TimeSeriesPipelineEnvironment',
         'environment': 'TimeSeries',
         'max_number_of_nodes_in_pipeline': 10,
-        'using_number_of_nodes': 5,
+        'using_number_of_nodes': 10,
         'metadata_dim': 126,
         'gamma': 0.25,
         'ent_coef': 0.15,

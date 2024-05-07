@@ -86,44 +86,56 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self._test_data = None
         self._meta_data = None
 
-        self.observation_space = spaces.Dict(
-            {
-                'meta': spaces.Box(low=0, high=1, shape=(self.metadata_dim,)),
-                'nodes': spaces.Box(low=0, high=1, shape=(self._nodes_structure.shape[0], len(self.primitives) + 1), dtype=np.int8),
-                'edges': spaces.Box(low=0, high=1, shape=self._edges_structure.shape, dtype=np.int8),
-            }
-        )
+        if self.metadata_dim:
+            self.observation_space = spaces.Dict(
+                {
+                    'meta': spaces.Box(low=0, high=1, shape=(self.metadata_dim,)),
+                    'nodes': spaces.Box(low=0, high=1, shape=(self._nodes_structure.shape[0], len(self.primitives) + 1), dtype=np.int8),
+                    'edges': spaces.Box(low=0, high=1, shape=self._edges_structure.shape, dtype=np.int8),
+                }
+            )
+
+        else:
+            self.observation_space = spaces.Dict(
+                {
+                    'nodes': spaces.Box(
+                        low=0, high=1,
+                        shape=(self._nodes_structure.shape[0], len(self.primitives) + 1), dtype=np.int8),
+                    'edges': spaces.Box(low=0, high=1, shape=self._edges_structure.shape, dtype=np.int8),
+                }
+            )
+
 
         # -- REWARD --
 
         self.env_step = 0
         self._total_reward = 0
 
-        self.max_reward = 200
-        self.min_reward = -200
+        self.max_reward = 1
+        self.min_reward = -1
 
         assert render_mode is None or render_mode in self.metadata['render_modes']
         self.render_mode = render_mode
 
     def _get_obs(self) -> np.ndarray:
         """ Returns current environment's observation """
-        graph_structure = self._get_graph_structure()
+        # graph_structure = self._get_graph_structure()
 
-        # node_structure = self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1)
-        # edge_structure = self._edges_structure
+        node_structure = self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1)
+        edge_structure = self._edges_structure
 
-        if self._meta_data is not None:
-            obs = np.concatenate((graph_structure, self._meta_data))
-        else:
-            obs = graph_structure
+        # if self._meta_data is not None:
+        #     obs = np.concatenate((graph_structure, self._meta_data))
+        # else:
+        #     obs = graph_structure
 
 
         # For sb3 models
-        # obs = {
-        #     'meta': self._meta_data,
-        #     'nodes': node_structure,
-        #     'edges': edge_structure
-        # }
+        obs = {
+            'meta': self._meta_data,
+            'nodes': node_structure,
+            'edges': edge_structure
+        }
 
         return obs
 
@@ -236,7 +248,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         return observation, info
 
     def step(self, action: int, mode: str = 'train') -> (np.ndarray, int, bool, bool, dict):
-        """ Apply action to environemnt
+        """ Apply action to environment
 
             Returns:
                 - observation
@@ -252,7 +264,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         if not action in self._get_available_actions().keys():
             terminated = False
             truncated = False
-            reward = -10
+            reward = -0.01
 
             self.env_step += 1
             observation = self._get_obs()
@@ -278,8 +290,9 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             elif action in self._action_to_connecting.keys():
                 self._apply_action_to_connecting(action)
 
-            if self._pipeline.depth != -1:
-                reward -= 5
+            if self._pipeline.depth == -1:
+                reward -= 0.5
+                truncated = True
 
             self.env_step += 1
             observation = self._get_obs()
@@ -373,7 +386,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             self._rules['valid'] = False
             self._rules['invalid_single_node_pipeline'] = True
 
-            reward -= 10
+            reward -= 0.01
 
         else:
             self._rules['valid'] = True
@@ -385,25 +398,25 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         if not self._rules['single_node_pipeline'] and self._rules['number_of_detached_nodes'] > 0:
             self._rules['valid'] = False
 
-            reward -= 10 * self._rules['number_of_detached_nodes']
+            reward -= 0.01 * self._rules['number_of_detached_nodes']
 
         else:
             self._rules['valid'] = True
-            reward += 10
+            reward += 0.01
 
         # Inputs nodes in pipeline
         self._rules['input_nodes'] = self._return_inputs_node()
         self._rules['number_of_input_nodes'] = len(self._rules['input_nodes'])
         if not self._rules['single_node_pipeline'] and self._rules['number_of_input_nodes'] < 1:
             self._rules['valid'] = False
-            reward -= 25
+            reward -= 0.01
 
         # Outputs nodes in pipeline
         self._rules['output_nodes'] = self._return_output_node()
         self._rules['number_of_output_nodes'] = len(self._rules['output_nodes'])
         if not self._rules['single_node_pipeline'] and (self._rules['number_of_output_nodes'] != 1):
             self._rules['valid'] = False
-            reward -= 25
+            reward -= 0.01
 
         # Output nodes is not data operation primitive
         elif not self._rules['single_node_pipeline'] and (self._rules['number_of_output_nodes'] == 1):
@@ -411,11 +424,11 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
             if self._is_node_operation(node):
                 self._rules['valid'] = False
-                reward -= 10
+                reward -= 0.01
 
             else:
                 self._rules['valid'] = True
-                reward += 10
+                reward += 0.01
 
         # Checks GOLEM rules (troubles with the craziest pipelines)
         if self._pipeline.depth != -1:
@@ -424,16 +437,16 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
             if self._rules['golem_rules']:
                 self._rules['valid'] = True
-                reward += 50
+                reward += 0.025
 
             else:
                 self._rules['valid'] = False
-                reward -= 50
+                reward -= 0.025
 
-        else:
-            self._rules['golem_rules'] = False
-            self._rules['valid'] = False
-            reward -= 25
+        # else:
+        #     self._rules['golem_rules'] = False
+        #     self._rules['valid'] = False
+        #     reward -= 25
 
         # Otherwise, if it is all fine, environment will try to fit and predict pipeline
         if self._rules['valid']:
@@ -503,7 +516,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
     @staticmethod
     def get_reward_by_metric(m, m_min=-10000, m_max=0):
-        return ((-1 * m - m_min) / (m_max - m_min)) * 100
+        return (-1 * m - m_min) / (m_max - m_min)
 
     def _get_state_dim(self) -> int:
         graph_structure = self._get_graph_structure()
@@ -543,15 +556,16 @@ if __name__ == '__main__':
     dataloader = TimeSeriesDataLoader(train_datasets, path_to_meta_data=path_to_meta_data)
     train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_Q5278')
 
-    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=10, using_number_of_nodes=2, render_mode='pipeline_plot', metadata_dim=125)
+    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=10, using_number_of_nodes=10, render_mode='pipeline_plot', metadata_dim=125)
     env.load_data(train_data, test_data, meta_data)
     terminated = False
 
     total_reward = 0
+    done = False
 
     state = env.reset()
 
-    while not terminated:
+    while not done:
         env.print_available_actions()
         action = int(input())
 
@@ -561,6 +575,7 @@ if __name__ == '__main__':
         print(env._pipeline.depth)
 
         total_reward += reward
+        done = terminated or truncated
 
     info['pipeline'].show()
     print(f'\n{info["pipeline"]}, metric {info["metric"]}, reward {total_reward}')
