@@ -7,6 +7,7 @@ import wandb
 import gymnasium as gym
 import numpy as np
 from sb3_contrib import MaskablePPO
+from stable_baselines3 import PPO
 
 from sb3_contrib.common.maskable.policies import MaskableMultiInputActorCriticPolicy
 from sb3_contrib.common.wrappers import ActionMasker
@@ -23,17 +24,17 @@ if __name__ == '__main__':
     config = {
         'agent': 'MaskablePPO',
         'policy_type': 'MaskableMultiInputActorCriticPolicy',
-        'total_timesteps': 300000,
+        'total_timesteps': 250000,
         'env_name': 'TimeSeriesPipelineEnvironment',
         'environment': 'TimeSeries',
         'max_number_of_nodes_in_pipeline': 10,
         'using_number_of_nodes': 10,
         'metadata_dim': 126,
-        'gamma': 0.25,
+        'gamma': 0.99,
         'ent_coef': 0.15,
     }
 
-    run = wandb.init(project='sb3_ts_pyramid', config=config, sync_tensorboard=True, monitor_gym=False, save_code=True)
+    run = wandb.init(project='sb3_ts_ref', config=config, sync_tensorboard=True, monitor_gym=False, save_code=True)
 
     env = TimeSeriesPipelineEnvironment(
         max_number_of_nodes=config['max_number_of_nodes_in_pipeline'],
@@ -48,16 +49,17 @@ if __name__ == '__main__':
     # Load Dataloader
     env.load_dataloader(dataloader_train)
 
-    env = ActionMasker(env, mask_fn)
+    # env = ActionMasker(env, mask_fn)
 
-    model = MaskablePPO(
-        MaskableMultiInputActorCriticPolicy,
+    model = PPO(
+        'MultiInputPolicy',
         env,
         n_steps=4096,
         gamma=config['gamma'],
         ent_coef=config['ent_coef'],
         verbose=1,
-        tensorboard_log=f'agent/tensorboard_logs/sb3_mppo/{run.id}',
+        tensorboard_log=f'agent/tensorboard_logs/sb3_ppo/{run.id}',
+        device='cuda'
     )
 
     # model.load('agent/pretrained/sb3_mppo/bzcdva6o/model.zip')
@@ -66,7 +68,7 @@ if __name__ == '__main__':
         total_timesteps=config['total_timesteps'],
         callback=WandbCallback(
             gradient_save_freq=100,
-            model_save_path=f'agent/pretrained/sb3_mppo/{run.id}',
+            model_save_path=f'agent/pretrained/sb3_ppo/{run.id}',
             verbose=1
         )
     )
@@ -79,7 +81,8 @@ if __name__ == '__main__':
     state, _ = env.reset()
 
     while not done:
-        action, _state = model.predict(state, action_masks=env.valid_action_mask())
+        # action, _state = model.predict(state, action_masks=env.valid_action_mask())
+        action, _state = model.predict(state)
         print(f'{action}', end=', ')
 
         next_state, reward, terminated, truncated, info = env.step(action.item())

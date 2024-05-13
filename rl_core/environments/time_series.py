@@ -285,13 +285,15 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             # Checks if action is for adding node
             if action in self._action_to_add_node.keys():
                 self._apply_action_to_add_node(action)
+                reward += 0.005
 
             # Checks if action is for connecting nodes
             elif action in self._action_to_connecting.keys():
                 self._apply_action_to_connecting(action)
+                reward += 0.01
 
             if self._pipeline.depth == -1:
-                reward -= 0.5
+                reward -= 0.75
                 truncated = True
 
             self.env_step += 1
