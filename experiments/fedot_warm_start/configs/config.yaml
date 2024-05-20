@@ -1,6 +1,8 @@
 ---
 seed: 42
 tmpdir: '/var/essdata/tmp'
+update_train_test_datasets_split: true
+
 #data_settings:
 n_datasets: null # null for all available datasets
 test_size: 0.25
