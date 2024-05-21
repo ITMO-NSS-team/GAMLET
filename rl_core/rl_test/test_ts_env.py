@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
-from tests.unit.rl_test.utils import get_time_series
+from rl_core.rl_test.utils import get_time_series
 
 
 # {
