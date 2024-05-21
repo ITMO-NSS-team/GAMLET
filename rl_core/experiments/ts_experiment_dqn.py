@@ -27,7 +27,11 @@ def run_experiment(n_episodes, number_of_nodes_in_pipeline, hidden_dim, gamma, e
     )
 
     dataloader_train, dataloader_test, train_list, test_list = define_data_for_experiment()
-    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=number_of_nodes_in_pipeline, render_mode='none', metadata_dim=126)
+    env = TimeSeriesPipelineEnvironment(
+        max_number_of_nodes=number_of_nodes_in_pipeline,
+        render_mode='none',
+        metadata_dim=126
+    )
     state_dim, action_dim = env.state_dim, env.action_dim
 
     agent = DQN(

@@ -102,7 +102,8 @@ if __name__ == '__main__':
 
         path_to_base = os.path.join(
             str(project_root()),
-            f'MetaFEDOT\\data\\knowledge_base_time_series_0\\datasets\\{dataset}\\model\\0_pipeline_saved\\0_pipeline_saved.json'
+            f'MetaFEDOT\\data\\knowledge_base_time_series_0\\datasets\\{dataset}\\'
+            f'model\\0_pipeline_saved\\0_pipeline_saved.json'
         )
 
         try:
@@ -121,7 +122,8 @@ if __name__ == '__main__':
         try:
             path_to_topo = os.path.join(
                 str(project_root()),
-                f'MetaFEDOT\\data\\topo_ws_selection_evo\\{dataset.split("_")[1]}\\model\\0_pipeline_saved\\0_pipeline_saved.json'
+                f'MetaFEDOT\\data\\topo_ws_selection_evo\\{dataset.split("_")[1]}\\'
+                f'model\\0_pipeline_saved\\0_pipeline_saved.json'
             )
 
             topo_pipeline_ = Pipeline().load(source=path_to_topo)

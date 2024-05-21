@@ -127,7 +127,7 @@ def run_experiment(n_episodes, number_of_nodes_in_pipeline, hidden_dim, gamma, e
 
     agent.save(f'{path}/{name}')
 
-    print(f'-- Validation Starts --\n')
+    print('-- Validation Starts --\n')
     for test_dataset in test_list:
         train_data, test_data, meta_data = dataloader_test.get_data(test_dataset)
 
