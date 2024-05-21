@@ -10,7 +10,9 @@ from rl_core.utils import define_data_for_experiment
 
 
 if __name__ == '__main__':
-    for number_of_nodes_in_pipeline in range(2, 11):
+    """ Running Agent with Random Actions sampling """
+
+    for number_of_nodes_in_pipeline in range(1, 11):
         n_episodes = 2000
 
         dataloader, _, _ = define_data_for_experiment()

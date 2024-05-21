@@ -1,11 +1,11 @@
 from typing import io
 
-import numpy as np
 import torch
 from torch import nn
 from torchinfo import summary
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 class EmbeddingLayer(nn.Module):
     def __init__(self, input_dim, embed_dim):
@@ -18,6 +18,7 @@ class EmbeddingLayer(nn.Module):
 
 
 class DecisionTransformer(nn.Module):
+    """ https://arxiv.org/abs/2106.01345 """
     metadata = {'name': 'DecisionTransformer'}
 
     def __init__(self, state_dim, action_dim, max_length, embed_dim, num_heads, num_layers, dim_feedforward=2048, device=DEVICE):

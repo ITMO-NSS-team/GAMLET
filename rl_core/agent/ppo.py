@@ -87,15 +87,18 @@ class CategoricalMasked(Categorical):
 
         return -reduce(p_log_p, "b a -> b", "sum", b=self.batch, a=self.nb_action)
 
+
 class PPO(nn.Module):
+    """ https://arxiv.org/abs/1707.06347 """
     metadata = {'name': 'PPO'}
 
     def __init__(self,
-                 state_dim: int, action_dim: int, hidden_dim: int = 256,
-                 gamma: float = 0.99, epsilon: float = 0.2, tau: float = 0.25,
-                 batch_size: int = 10,  epoch_n: int = 3,
-                 pi_lr: float = 3e-5, v_lr: float = 1e-2, device: str = 'cpu'
-        ):
+                 state_dim: int, action_dim: int, hidden_dim: int = 512,
+                 gamma: float = 0.99, epsilon: float = 0.2, tau: float = 1,
+                 batch_size: int = 32,  epoch_n: int = 10,
+                 pi_lr: float = 1e-4, v_lr: float = 1e-4,
+                 device: str = 'cpu'
+                 ):
         super().__init__()
 
         self.state_dim = state_dim

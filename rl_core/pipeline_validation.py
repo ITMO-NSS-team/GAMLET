@@ -7,9 +7,8 @@ from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from sklearn.metrics import mean_absolute_error
 
 from meta_automl.utils import project_root
-from rl_core.dataloader import DataLoader_TS
+from rl_core.dataloader import TimeSeriesDataLoader
 from rl_core.utils import define_data_for_experiment
-
 
 PIPELINES_WITHOUT_LAGGED = [
     'ar',
@@ -31,12 +30,16 @@ PIPELINES_WITH_LAGGED = [
     'ts_naive_average',
 ]
 
-
 if __name__ == '__main__':
-    columns = ['Dataset'] \
-              + PIPELINES_WITHOUT_LAGGED \
-              + [f'lagged -> {p}' for p in PIPELINES_WITH_LAGGED] \
-              + ['Base Pipeline', 'Topo Pipeline']
+    """
+        This script is designed to create a DataFrame with metric values for different M4 datasets.
+        It step-by-step builds a simple pipeline with a single node and with «lagged ->» pipelines.
+        Then it creates pipelines based on the composing experiments called «base» and using topological models.
+        The resulting DataFrame allows us to visualize the space of pipeline solutions.
+    """
+    columns = ['Dataset'] + PIPELINES_WITHOUT_LAGGED + \
+              [f'lagged -> {p}' for p in PIPELINES_WITH_LAGGED] + \
+              ['Base Pipeline', 'Topo Pipeline']
 
     result = pd.DataFrame([], columns=columns)
 
@@ -49,7 +52,7 @@ if __name__ == '__main__':
     for dataset in train_list:
         train_datasets[dataset] = os.path.join(data_folder_path, f'{dataset}/data.csv')
 
-    dataloader = DataLoader_TS(train_datasets)
+    dataloader = TimeSeriesDataLoader(train_datasets)
 
     single_pipeline_len = len(PIPELINES_WITH_LAGGED) + len(PIPELINES_WITHOUT_LAGGED)
 

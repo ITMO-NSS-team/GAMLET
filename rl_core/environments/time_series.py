@@ -21,20 +21,29 @@ PLOT_PRED = False
 
 
 class TimeSeriesPipelineEnvironment(gym.Env):
-    """
+    """ Environment for constructing time series pipelines
 
+        Args:
+             primitives - list of primitives which can be used for pipeline construction;
+             max_number_of_nodes - maximum number of nodes in pipeline;
+             using_number_of_nodes - number of nodes could be used. This params was used for schedule experiments for
+                saving dimension of state vector;
+             metadata_dim - dimension of metadata vector;
+             is_use_dataloader - param for using dataloader instead loading data by method.
+             output_mode - pending output type: dict or np.ndarray. Default np.ndarray;
+             render_mode - ...
     """
     metadata = {'name': 'time_series_env', 'render_modes': ['none', 'pipeline_plot', 'pipeline_and_predict_plot']}
 
-    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 10, using_number_of_nodes: int = 10, metadata_dim=None, is_use_dataloader=False,
-                 render_mode: str = None):
+    def __init__(self, primitives: list[str] = None, max_number_of_nodes: int = 10, using_number_of_nodes: int = 10,
+                 metadata_dim=None, is_use_dataloader=False, output_mode: type = np.ndarray, render_mode: str = None):
         self.max_number_of_nodes = max_number_of_nodes
         self.using_number_of_nodes = using_number_of_nodes
         self.primitives = primitives if primitives else self._get_default_primitives()
         self._models = OperationTypesRepository().suitable_operation(task_type=TaskTypesEnum.ts_forecasting)
         self.number_of_primitives = len(self.primitives)
 
-        ## -- ACTIONS --
+        # -- ACTIONS --
         actions_dim = 0
 
         # Special actions
@@ -64,7 +73,6 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self.max_number_of_actions = self._get_maximum_number_of_actions_in_environment(self.max_number_of_nodes)
 
         # -- STATE --
-
         self._pipeline = Pipeline()
         self._nodes = []
         self._nodes_structure = np.zeros((self.max_number_of_nodes,), dtype=int)
@@ -81,6 +89,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         self.y_true = None
 
         self.is_use_dataloader = is_use_dataloader
+        self.output_mode = output_mode
         self._dataloader = None
         self._train_data = None
         self._test_data = None
@@ -90,7 +99,9 @@ class TimeSeriesPipelineEnvironment(gym.Env):
             self.observation_space = spaces.Dict(
                 {
                     'meta': spaces.Box(low=0, high=1, shape=(self.metadata_dim,)),
-                    'nodes': spaces.Box(low=0, high=1, shape=(self._nodes_structure.shape[0], len(self.primitives) + 1), dtype=np.int8),
+                    'nodes': spaces.Box(
+                        low=0, high=1,
+                        shape=(self._nodes_structure.shape[0], len(self.primitives) + 1), dtype=np.int8),
                     'edges': spaces.Box(low=0, high=1, shape=self._edges_structure.shape, dtype=np.int8),
                 }
             )
@@ -105,9 +116,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
                 }
             )
 
-
         # -- REWARD --
-
         self.env_step = 0
         self._total_reward = 0
 
@@ -117,30 +126,32 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         assert render_mode is None or render_mode in self.metadata['render_modes']
         self.render_mode = render_mode
 
-    def _get_obs(self) -> np.ndarray:
+    def _get_obs(self) -> Optional[np.ndarray, dict]:
         """ Returns current environment's observation """
-        # graph_structure = self._get_graph_structure()
+        if self.output_mode == np.ndarray:
+            graph_structure = self._get_graph_structure()
 
-        node_structure = self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1)
-        edge_structure = self._edges_structure
+            if self._meta_data is not None:
+                obs = np.concatenate((graph_structure, self._meta_data))
+            else:
+                obs = graph_structure
 
-        # if self._meta_data is not None:
-        #     obs = np.concatenate((graph_structure, self._meta_data))
-        # else:
-        #     obs = graph_structure
+        elif self.output_mode == dict:
+            node_structure = self._apply_one_hot_encoding(self._nodes_structure, self.number_of_primitives + 1)
+            edge_structure = self._edges_structure
 
+            # For sb3 models
+            obs = {'nodes': node_structure, 'edges': edge_structure}
 
-        # For sb3 models
-        obs = {
-            'meta': self._meta_data,
-            'nodes': node_structure,
-            'edges': edge_structure
-        }
+            if self._meta_data is not None:
+                obs['meta'] = self._meta_data
+        else:
+            raise TypeError(f'Invalid type for state required [nd.ndarray, dict], but state is {self.output_mode}')
 
         return obs
 
     def _get_info(self):
-        """ Return additional information in environment """
+        """ Return additional information from the environment """
         return {
             'pipeline': self._pipeline,
             'meta_data': self._meta_data,
@@ -155,6 +166,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         }
 
     def valid_action_mask(self):
+        """ Used for masked agent from sb3-contrib """
         return self.get_available_actions_mask()
 
     def get_available_actions_mask(self) -> np.ndarray:
@@ -293,7 +305,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
                 reward += 0.01
 
             if self._pipeline.depth == -1:
-                reward -= 0.75
+                reward -= 0.8
                 truncated = True
 
             self.env_step += 1
@@ -439,11 +451,11 @@ class TimeSeriesPipelineEnvironment(gym.Env):
 
             if self._rules['golem_rules']:
                 self._rules['valid'] = True
-                reward += 0.025
+                reward += 0.25
 
             else:
                 self._rules['valid'] = False
-                reward -= 0.025
+                reward -= 0.5
 
         # else:
         #     self._rules['golem_rules'] = False

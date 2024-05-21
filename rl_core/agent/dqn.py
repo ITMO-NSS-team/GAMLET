@@ -30,6 +30,7 @@ class Qfunction(nn.Module):
 
 
 class DQN:
+    """ https://arxiv.org/abs/1312.5602 """
     metadata = {'name': 'DQN'}
 
     def __init__(self, state_dim, action_dim, hidden_dim=512, gamma=0.01, lr=1e-4, batch_size=64, eps_decrease=1e-6, eps_min=1e-3, device='cuda'):
@@ -121,4 +122,3 @@ class DQN:
             file.write('- PI MODEL -\n')
             q_function = str(summary(self.q_function, (1, self.state_dim), verbose=0))
             file.write(f'{q_function}')
-
