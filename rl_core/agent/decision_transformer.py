@@ -13,7 +13,6 @@ class EmbeddingLayer(nn.Module):
         self.embedding = nn.Linear(input_dim, embed_dim)
 
     def forward(self, x, pos_embedding):
-        output = self.embedding(x)
         return self.embedding(x) + pos_embedding
 
 
@@ -21,7 +20,10 @@ class DecisionTransformer(nn.Module):
     """ https://arxiv.org/abs/2106.01345 """
     metadata = {'name': 'DecisionTransformer'}
 
-    def __init__(self, state_dim, action_dim, max_length, embed_dim, num_heads, num_layers, dim_feedforward=2048, device=DEVICE):
+    def __init__(
+            self, state_dim, action_dim, max_length, embed_dim, num_heads, num_layers, dim_feedforward=2048,
+            device=DEVICE
+    ):
         super().__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim

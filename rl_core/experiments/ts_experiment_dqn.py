@@ -1,16 +1,13 @@
 import os.path
-from itertools import product
 
 import numpy as np
-from joblib import Parallel, delayed
+import wandb
 from torch.utils.tensorboard import SummaryWriter
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.agent.dqn import DQN
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from rl_core.utils import define_data_for_experiment, OFFLINE_TRAJECTORIES
-
-import wandb
 
 
 def run_experiment(n_episodes, number_of_nodes_in_pipeline, hidden_dim, gamma, eps_min, eps_decrease):
@@ -138,7 +135,6 @@ def run_experiment(n_episodes, number_of_nodes_in_pipeline, hidden_dim, gamma, e
         print(f'-- Finishing {episode} episode --\n')
 
     # -- Saving Agent ---
-
     name = f'{agent.metadata["name"]}_{agent.hidden_dim}_{n_episodes}'
     path = f'{log_dir}/weights/{name}'
     agent.save(path)
@@ -156,15 +152,3 @@ if __name__ == '__main__':
     }
 
     run_experiment(2000, 10, 512, 0.75, 1e-5, 1e-4)
-
-    # flag_to_continue = False
-    # last_experiment = [2, 512, 0.05, 0.001, 0.01]
-
-    # for m, h, g, e_m, e_d in product(*params.values()):
-    #     if [m, h, g, e_m, e_d] == last_experiment:
-    #         flag_to_continue = True
-    #
-    #     if flag_to_continue:
-    #         run_experiment(2000, m, h, g, e_m, e_d)
-
-    # Parallel(n_jobs=-2)(delayed(run_experiment)(2000, m, h, g, e_m, e_d) for m, h, g, e_m, e_d in product(*params.values()))

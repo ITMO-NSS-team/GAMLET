@@ -14,7 +14,7 @@ from gymnasium import spaces
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.dataloader import TimeSeriesDataLoader
 
 PLOT_PRED = False
@@ -273,7 +273,7 @@ class TimeSeriesPipelineEnvironment(gym.Env):
         assert action in self.action_space
 
         # Checks if action is not valid
-        if not action in self._get_available_actions().keys():
+        if action not in self._get_available_actions().keys():
             terminated = False
             truncated = False
             reward = -0.01
@@ -570,7 +570,12 @@ if __name__ == '__main__':
     dataloader = TimeSeriesDataLoader(train_datasets, path_to_meta_data=path_to_meta_data)
     train_data, test_data, meta_data = dataloader.get_data(dataset_name='M4_Q5278')
 
-    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=10, using_number_of_nodes=10, render_mode='pipeline_plot', metadata_dim=125)
+    env = TimeSeriesPipelineEnvironment(
+        max_number_of_nodes=10,
+        using_number_of_nodes=10,
+        render_mode='pipeline_plot',
+        metadata_dim=125
+    )
     env.load_data(train_data, test_data, meta_data)
     terminated = False
 

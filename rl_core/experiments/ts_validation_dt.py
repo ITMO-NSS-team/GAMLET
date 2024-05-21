@@ -6,14 +6,15 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.agent.dqn import DQN
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from rl_core.utils import define_data_for_experiment
 
 
 def print_params(experiment_name, number_of_nodes_in_pipeline=8):
-    log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/dqn/{number_of_nodes_in_pipeline}/{experiment_name}'
+    log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/dqn/' \
+              f'{number_of_nodes_in_pipeline}/{experiment_name}'
 
     with io.open(f'{log_dir}/params.log', 'r', encoding='utf-8') as file:
         lines = file.readlines()
@@ -57,8 +58,6 @@ def run_experiment(n_episodes, number_of_nodes_in_pipeline, hidden_dim, gamma, e
     total_metrics = []
 
     period = 20
-    period_of_cleaning = 15
-    period_of_heatmap = 100
 
     for episode in range(1, n_episodes + 1):
         print(f'-- Starting {episode} episode --')
@@ -119,7 +118,8 @@ def run_experiment(n_episodes, number_of_nodes_in_pipeline, hidden_dim, gamma, e
         print(f'-- Finishing {episode} episode --\n')
 
     # -- Saving Agent ---
-    name = f'{env.metadata["name"]}_{number_of_nodes_in_pipeline}_{state_dim}_{agent.metadata["name"]}_{agent.hidden_dim}_{n_episodes}'
+    name = f'{env.metadata["name"]}_{number_of_nodes_in_pipeline}_{state_dim}_{agent.metadata["name"]}' \
+           f'_{agent.hidden_dim}_{n_episodes}'
     path = f'{log_dir}/weight'
 
     if not os.path.exists(path):
@@ -192,6 +192,3 @@ if __name__ == '__main__':
 
     for h, g, e, e_m, e_d in params:
         run_experiment(2000, 8, h, g, e, e_m, e_d)
-
-    # Parallel(n_jobs=-2)(
-    #     delayed(run_experiment)(2000, 8, h, g, e, e_m, e_d) for m, h, g, e, e_m, e_d in params)

@@ -6,7 +6,7 @@ from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.repository.operation_types_repository import OperationTypesRepository
 from fedot.core.repository.tasks import TaskTypesEnum
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.dataloader import DataLoader
 from rl_core.environments.ensemble import EnsemblePipelineGenerationEnvironment
 from rl_core.environments.linear import LinearPipelineGenerationEnvironment

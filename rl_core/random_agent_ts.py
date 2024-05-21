@@ -1,13 +1,9 @@
-import datetime
-
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from meta_automl.utils import project_root
-from rl_core.agent.ppo import PPO
+from gamlet.utils import project_root
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from rl_core.utils import define_data_for_experiment
-
 
 if __name__ == '__main__':
     """ Running Agent with Random Actions sampling """
@@ -19,8 +15,8 @@ if __name__ == '__main__':
         env = TimeSeriesPipelineEnvironment(render_mode='none', metadata_dim=126)
         state_dim, action_dim = env.state_dim, env.action_dim
 
-        # time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/random_action/{number_of_nodes_in_pipeline}/random_agent'
+        log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/random_action/' \
+                  f'{number_of_nodes_in_pipeline}/random_agent'
         tb_writer = SummaryWriter(log_dir=log_dir)
 
         # -- Starting experiment --

@@ -1,24 +1,24 @@
-import os
 import random
 
 import numpy as np
 import torch
-from torch import nn
 from torch.utils.data import random_split, DataLoader
 from tqdm import tqdm
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.agent.decision_transformer import DecisionTransformer
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from rl_core.utils import OFFLINE_TRAJECTORIES, define_data_for_experiment
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+
 def encode_one_hot(target_dim, num_dims):
     output = np.zeros(num_dims)
     output[target_dim] = 1
 
     return output
+
 
 class EnvDataset(torch.utils.data.Dataset):
     def __init__(self, env, max_length, num_trajectories, goal):
@@ -98,6 +98,7 @@ def collate_batch(batch):
         ))
 
     return zip(*result)
+
 
 def evaluate_model(model, env, max_length, target_return, info_return=False):
     model.eval()
@@ -183,7 +184,7 @@ def validate_model(model, dataloader, max_length, target_return):
             loss = criterion(predicted_actions, tensor_actions.detach())
 
             total_loss += loss.item()
-            pbar.set_postfix({"loss":loss.item()})
+            pbar.set_postfix({"loss": loss.item()})
 
     average_loss = total_loss / len(dataloader)
     print(f"Average validation loss: {average_loss}")
@@ -253,7 +254,6 @@ def inference_model(model, env_dataloader_test, test_list, max_length):
         info['pipeline'].show()
 
 
-
 if __name__ == '__main__':
     number_of_nodes_in_pipeline = 5
 
@@ -311,7 +311,7 @@ if __name__ == '__main__':
         target_return=max_return
     )
 
-    exp_name = f'DecisionTransformer'
+    exp_name = 'DecisionTransformer'
     log_dir = f'{project_root()}/MetaFEDOT/rl_core/agent/tensorboard_logs/dt/{number_of_nodes_in_pipeline}/{exp_name}'
     name = f'{model.metadata["name"]}_{n_epochs}'
     # os.mkdir(f'{log_dir}/weights')

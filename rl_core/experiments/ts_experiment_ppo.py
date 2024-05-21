@@ -4,7 +4,7 @@ import os
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.agent.ppo import PPO
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from rl_core.utils import define_data_for_experiment
@@ -36,7 +36,6 @@ def run_experiment(n_episodes=2000, number_of_nodes_in_pipeline=3):
     total_metrics = []
 
     period = 20
-    period_of_cleaning = 15
     period_of_heatmap = 100
 
     for episode in range(1, n_episodes + 1):
@@ -50,7 +49,6 @@ def run_experiment(n_episodes=2000, number_of_nodes_in_pipeline=3):
 
         done = False
         episode_reward = 0
-        episode_metric = 0
         probs_matrix = np.zeros((env.action_dim, env.max_number_of_actions))
         m_idx = 0
 
@@ -115,7 +113,7 @@ def run_experiment(n_episodes=2000, number_of_nodes_in_pipeline=3):
 
             actions_labels = [str(env.get_action_code(action)) for action in range(len(probs_matrix[:, 0]))]
 
-            fig = sns.heatmap(
+            sns.heatmap(
                 probs_matrix,
                 annot=labels,
                 yticklabels=actions_labels,
@@ -134,7 +132,8 @@ def run_experiment(n_episodes=2000, number_of_nodes_in_pipeline=3):
         print(f'-- Finishing {episode} episode --\n')
 
     # -- Saving Agent ---
-    name = f'{env.metadata["name"]}_{state_dim}_{number_of_nodes_in_pipeline}_{agent.metadata["name"]}_{agent.hidden_dim}_{n_episodes}'
+    name = f'{env.metadata["name"]}_{state_dim}_{number_of_nodes_in_pipeline}_{agent.metadata["name"]}_' \
+           f'{agent.hidden_dim}_{n_episodes}'
     path = f'{log_dir}/weights/{name}'
     agent.save(path)
 

@@ -43,7 +43,8 @@ class Buffer:
         dones_size = self.convert_size(self.dones.__sizeof__())
         masks_size = self.convert_size(self.masks.__sizeof__())
 
-        return f'states: {states_size}, actions: {actions_size}, rewards: {rewards_size}, dones: {dones_size}, masks: {masks_size}'
+        return f'states: {states_size}, actions: {actions_size}, rewards: {rewards_size},' \
+               f' dones: {dones_size}, masks: {masks_size}'
 
     @staticmethod
     def convert_size(size_bytes):
@@ -207,7 +208,9 @@ class PPO(nn.Module):
                 entropy_penalty = -self.tau * entropy
 
                 # KL-Divergence
-                kld = torch.nn.functional.kl_div(b_m_new_log_probs, b_m_old_log_probs, log_target=True).detach().cpu().item()
+                kld = torch.nn.functional.kl_div(
+                    b_m_new_log_probs, b_m_old_log_probs, log_target=True
+                ).detach().cpu().item()
 
                 b_ratio = torch.exp(b_new_log_probs - b_old_log_probs)
                 pi_loss_1 = b_ratio * b_advantage.detach()

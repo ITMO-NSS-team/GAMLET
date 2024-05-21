@@ -1,9 +1,8 @@
 import os
+
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
-
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.dataloader import TimeSeriesDataLoader
 
 OFFLINE_TRAJECTORIES = [
@@ -28,16 +27,10 @@ OFFLINE_TRAJECTORIES = [
 
 def define_data_for_experiment(test_size: int = 3):
     data_folder_path = os.path.join(str(project_root()), 'MetaFEDOT\\data\\knowledge_base_time_series_0\\datasets\\')
-    dataset_names = [name for name in os.listdir(data_folder_path)]
 
     temp = pd.read_csv('pipeline_validation_results.csv', index_col=0)
-    train = temp[temp['Topo Pipeline'].isna() == True]['Dataset'].to_list()
-    test = temp[temp['Topo Pipeline'].isna() == False]['Dataset'].to_list()
-
-    # if test_size:
-    #     train, test = train_test_split(dataset_names, test_size=3)
-    # else:
-    #     train, test = dataset_names, []
+    train = temp[temp['Topo Pipeline'].isna() is True]['Dataset'].to_list()
+    test = temp[temp['Topo Pipeline'].isna() is False]['Dataset'].to_list()
 
     train_datasets = {}
     for dataset in train:

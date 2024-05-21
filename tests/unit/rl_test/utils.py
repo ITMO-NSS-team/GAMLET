@@ -52,4 +52,4 @@ def get_time_series(len_forecast=5, length=80):
         data_type=DataTypesEnum.ts
     )
 
-    return train_data, test_data,
+    return train_data, test_data

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.agent.dqn import DQN
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from rl_core.utils import define_data_for_experiment

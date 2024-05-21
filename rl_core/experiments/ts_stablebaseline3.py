@@ -1,20 +1,11 @@
-import random
-
-import torch
-from wandb.integration.sb3 import WandbCallback
-
-import wandb
 import gymnasium as gym
 import numpy as np
-from sb3_contrib import MaskablePPO, RecurrentPPO
-from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3 import PPO
-
-from sb3_contrib.common.maskable.policies import MaskableMultiInputActorCriticPolicy
-from sb3_contrib.common.wrappers import ActionMasker
+import wandb
+from sb3_contrib import RecurrentPPO
+from wandb.integration.sb3 import WandbCallback
 
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
-from rl_core.utils import define_data_for_experiment, OFFLINE_TRAJECTORIES
+from rl_core.utils import define_data_for_experiment
 
 
 def mask_fn(env: gym.Env) -> np.ndarray:
@@ -36,7 +27,13 @@ if __name__ == '__main__':
         'clip_range': 0.2,
     }
 
-    run = wandb.init(project='sb3_ts_recurrent', config=config, sync_tensorboard=True, monitor_gym=False, save_code=True)
+    run = wandb.init(
+        project='sb3_ts_recurrent',
+        config=config,
+        sync_tensorboard=True,
+        monitor_gym=False,
+        save_code=True
+    )
 
     env_params = dict(
         max_number_of_nodes=config['max_number_of_nodes_in_pipeline'],
@@ -87,8 +84,9 @@ if __name__ == '__main__':
     state, _ = env.reset()
 
     while not done:
-        # action, _state = model.predict(state, action_masks=env.valid_action_mask())
         action, _state = model.predict(state)
+        # For MaskedPPO use next:
+        # action, _state = model.predict(state, action_masks=env.valid_action_mask())
         print(f'{action}', end=', ')
 
         next_state, reward, terminated, truncated, info = env.step(action.item())
@@ -99,4 +97,3 @@ if __name__ == '__main__':
         print(f'reward {reward} \ninfo: {info}')
 
     info['pipeline'].show()
-

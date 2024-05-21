@@ -6,7 +6,7 @@ from fedot.core.pipelines.pipeline import Pipeline
 from fedot.core.pipelines.pipeline_builder import PipelineBuilder
 from sklearn.metrics import mean_absolute_error
 
-from meta_automl.utils import project_root
+from gamlet.utils import project_root
 from rl_core.dataloader import TimeSeriesDataLoader
 from rl_core.utils import define_data_for_experiment
 

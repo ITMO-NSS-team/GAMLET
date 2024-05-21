@@ -1,12 +1,11 @@
 from itertools import permutations
-from typing import io
 
 import numpy as np
 import pytest
 
-from meta_automl.utils import project_root
 from rl_core.environments.time_series import TimeSeriesPipelineEnvironment
 from tests.unit.rl_test.utils import get_time_series
+
 
 # {
 #       1: 'adareg',
@@ -43,12 +42,14 @@ from tests.unit.rl_test.utils import get_time_series
 
 
 @pytest.mark.parametrize('trajectory',
-    [
-        [2, 0], [9, 0], [11, 0], [12, 0], [13, 0], [14, 0],                                 # Single node pipelines
-        [25, 1, 31, 0], [25, 3, 31, 0], [25, 4, 31, 0], [25, 5, 31, 0], [25, 6, 31, 0],     # (1) lagged -> ..model..
-        [25, 7, 31, 0], [25, 8, 31, 0], [25, 10, 31, 0], [25, 15, 31, 0],                   # (2) lagged -> ..model..
-    ]
-)
+                         [
+                             [2, 0], [9, 0], [11, 0], [12, 0], [13, 0], [14, 0],  # Single node pipelines
+                             [25, 1, 31, 0], [25, 3, 31, 0], [25, 4, 31, 0], [25, 5, 31, 0], [25, 6, 31, 0],
+                             # (1) lagged -> ..model..
+                             [25, 7, 31, 0], [25, 8, 31, 0], [25, 10, 31, 0], [25, 15, 31, 0],
+                             # (2) lagged -> ..model..
+                         ]
+                         )
 def test_correct_pipelines(trajectory):
     train_data, test_data = get_time_series()
 
@@ -68,10 +69,10 @@ def test_correct_pipelines(trajectory):
 
 
 @pytest.mark.parametrize('trajectory',
-    [
-        [1, 2, 3, 31, 41, 49, 0],           # Call pipeline.depth == -1
-    ]
-)
+                         [
+                             [1, 2, 3, 31, 41, 49, 0],  # Call pipeline.depth == -1
+                         ]
+                         )
 def test_uncorrect_pipelines(trajectory):
     train_data, test_data = get_time_series()
 
@@ -94,7 +95,11 @@ def test_uncorrect_pipelines(trajectory):
 def test_max_number_of_actions_in_pipelines(max_number_of_nodes):
     train_data, test_data = get_time_series()
 
-    env = TimeSeriesPipelineEnvironment(max_number_of_nodes=max_number_of_nodes, metadata_dim=0, using_number_of_nodes=max_number_of_nodes)
+    env = TimeSeriesPipelineEnvironment(
+        max_number_of_nodes=max_number_of_nodes,
+        metadata_dim=0,
+        using_number_of_nodes=max_number_of_nodes
+    )
     env.load_data(train_data, test_data, meta=None)
     env.reset()
 
@@ -120,9 +125,7 @@ def test_max_number_of_actions_in_pipelines(max_number_of_nodes):
     assert action_number == env.max_number_of_actions
 
 
-@pytest.mark.parametrize('trajectory',
-    [list(pair) for pair in permutations(range(1, 30), 2)]
-)
+@pytest.mark.parametrize('trajectory', [list(pair) for pair in permutations(range(1, 30), 2)])
 def test_correct_pairs_pipelines(trajectory: list):
     train_data, test_data = get_time_series()
 
