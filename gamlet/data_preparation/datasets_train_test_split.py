@@ -29,24 +29,23 @@ def openml_datasets_train_test_split(dataset_ids: List[OpenMLDatasetIDType], tes
     single_value_categories = cat_counts[cat_counts == 1].index
     idx = df_split_categories[df_split_categories['category'].isin(single_value_categories)].index
     df_split_categories.loc[idx, 'category'] = 'single_value'
-    df_datasets_to_split = df_split_categories[df_split_categories['category'] != 'single_value']
-    df_test_only_datasets = df_split_categories[df_split_categories['category'] == 'single_value']
-    if not df_datasets_to_split.empty:
-        df_train_datasets, df_test_datasets = train_test_split(
-            df_datasets_to_split,
-            test_size=test_size,
-            shuffle=True,
-            stratify=df_datasets_to_split['category'],
-            random_state=seed
-        )
-        df_test_datasets = pd.concat([df_test_datasets, df_test_only_datasets])
+    signle_value_datasets = df_split_categories[df_split_categories['category'] == 'single_value']
+    if len(signle_value_datasets) >= 1:
+        df_datasets_to_split = df_split_categories
+        additional_datasets = pd.DataFrame([])
     else:
-        df_train_datasets, df_test_datasets = train_test_split(
-            df_split_categories,
-            test_size=test_size,
-            shuffle=True,
-            random_state=seed
-        )
+        df_datasets_to_split = df_split_categories[df_split_categories['category'] != 'single_value']
+        additional_datasets = signle_value_datasets
+
+    df_train_datasets, df_test_datasets = train_test_split(
+        df_datasets_to_split,
+        test_size=test_size,
+        shuffle=True,
+        stratify=df_datasets_to_split['category'],
+        random_state=seed
+    )
+    df_train_datasets = pd.concat([df_train_datasets, additional_datasets])
+
     df_train_datasets['is_train'] = 1
     df_test_datasets['is_train'] = 0
     df_split_datasets = pd.concat([df_train_datasets, df_test_datasets]).join(

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Sequence
 
 from golem.core.optimisers.opt_history_objects.opt_history import OptHistory
+import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 from gamlet.approaches import MetaLearningApproach
@@ -55,7 +56,7 @@ class KNNSimilarityModelAdvice(MetaLearningApproach):
     class Data:
         meta_features: DatasetMetaFeatures = None
         datasets: List[OpenMLDataset] = None
-        datasets_data: List[OpenMLDataset] = None
+        datasets_data: List[TabularData] = None
         dataset_ids: List[DatasetIDType] = None
         best_models: List[List[EvaluatedModel]] = None
 
@@ -66,11 +67,11 @@ class KNNSimilarityModelAdvice(MetaLearningApproach):
         data = self.data
         params = self.parameters
 
-        data.datasets_data = list(datasets_data)
-        data.datasets = [d.dataset for d in datasets_data]
-        data.dataset_ids = [d.id for d in datasets_data]
+        data.meta_features = self.extract_train_meta_features(datasets_data)
+        data.dataset_ids = list(data.meta_features.index)
+        data.datasets_data = [d_d for d_d in datasets_data if d_d.id in data.dataset_ids]
+        data.datasets = [d_d.dataset for d_d in data.datasets_data]
 
-        data.meta_features = self.extract_train_meta_features(data.datasets_data)
         self.fit_datasets_similarity_assessor(data.meta_features, data.dataset_ids)
 
         data.best_models = self.load_models(data.datasets, histories, params.n_best_dataset_models_to_memorize,

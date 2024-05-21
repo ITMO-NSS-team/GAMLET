@@ -5,7 +5,7 @@
 [![package](https://badge.fury.io/py/gamlet.svg)](https://badge.fury.io/py/gamlet)
 [![Build](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml/badge.svg)](https://github.com/ITMO-NSS-team/MetaFEDOT/actions/workflows/build.yml)
 [![Documentation Status](https://readthedocs.org/projects/gamlet/badge/?version=latest)](https://gamlet.readthedocs.io/en/latest/?badge=latest)
-[![codecov](https://codecov.io/gh/ITMO-NSS-team/GAMLET/graph/badge.svg?token=N3Z9YTPHP9)](https://codecov.io/gh/ITMO-NSS-team/GAMLET)
+<!-- [![codecov](https://codecov.io/gh/ITMO-NSS-team/GAMLET/graph/badge.svg?token=N3Z9YTPHP9)](https://codecov.io/gh/ITMO-NSS-team/GAMLET) -->
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT&countColor=%23263759&style=plastic&labelStyle=lower)](https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FITMO-NSS-team%2FMetaFEDOT)
 
 GAMLET (previously known as MetaFEDOT) is an open platform for sharing meta-learning experiences in **AutoML** and more

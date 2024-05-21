@@ -32,8 +32,11 @@ class PymfeExtractor(MetaFeaturesExtractor):
         for i, dataset_data in enumerate(tqdm(data_sequence, desc='Extracting meta features of the datasets')):
             if isinstance(dataset_data, DatasetBase):
                 dataset_data = dataset_data.get_data()
-            meta_features = self._extract_single(dataset_data, fill_input_nans, fit_kwargs, extract_kwargs)
-            accumulated_meta_features.append(meta_features)
+            try:
+                meta_features = self._extract_single(dataset_data, fill_input_nans, fit_kwargs, extract_kwargs)
+                accumulated_meta_features.append(meta_features)
+            except Exception:
+                logger.exception(f'Dataset {dataset_data.dataset}: error while meta-features extractin.')
 
         output = DatasetMetaFeatures(pd.concat(accumulated_meta_features), is_summarized=self.summarize_features,
                                      features=self.features)
