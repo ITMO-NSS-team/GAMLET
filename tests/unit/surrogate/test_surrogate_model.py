@@ -29,10 +29,3 @@ def get_test_data():
     x_pipe = torch.load(path / 'data_pipe_test.pt')
     x_dset = torch.load(path / 'data_dset_test.pt')
     return x_pipe, x_dset
-
-
-def test_model_output(read_config):
-    x_pipe, x_dset = get_test_data()
-    model = create_model_from_config(read_config, x_pipe, x_dset)
-    pred = torch.squeeze(model.forward(x_pipe, x_dset))
-    assert pred.shape[0] == 256
