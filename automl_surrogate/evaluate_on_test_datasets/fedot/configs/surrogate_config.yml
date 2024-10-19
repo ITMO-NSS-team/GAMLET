@@ -1,0 +1,5 @@
+# TODO: one should specify full path here.
+precomputed_meta_features_file: "data/datasets_folds/testset_openml_meta_feats.csv"
+# TODO: one should specify full path here.
+ckpt_root: "ranknet_checkpoint"
+ckpt_name: "epoch=2-step=17000"
