@@ -77,6 +77,8 @@ class KnowledgeBaseToDataset:
             exclude_datasets=None,
             meta_features_preprocessor: FeaturesPreprocessor = None,
             use_hyperpar: bool = False,
+            models_loader_kwargs=None,
+            pipeline_extractor: FEDOTPipelineFeaturesExtractor = FEDOTPipelineFeaturesExtractor("ordinal"),
     ) -> None:
         if exclude_datasets is None:
             exclude_datasets = []
@@ -92,9 +94,13 @@ class KnowledgeBaseToDataset:
 
         ensure_dir_exists(Path(self.dataset_directory, self.split))
 
-        self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(
-            include_operations_hyperparameters=False, operation_encoding="ordinal"
-        )
+        if pipeline_extractor is None:
+            self.pipeline_extractor = FEDOTPipelineFeaturesExtractor(
+                include_operations_hyperparameters=False, operation_encoding="ordinal"
+            )
+        else:
+            self.pipeline_extractor = pipeline_extractor
+
         self.meta_features_extractor = meta_features_extractor
 
         df_datasets = self.models_loader.load_dataset_split(self.split)
@@ -188,4 +194,12 @@ class KnowledgeBaseToDataset:
     def convert_datasets(self):
         datasets = self.datasets_loader.load(self.df_datasets["dataset_id"].values.tolist())
         datasets_meta_features = self.meta_features_extractor.extract(datasets, fill_input_nans=True)
+
+        datasets_meta_features = self.meta_features_extractor.extract(
+            self.df_datasets['dataset_id'].values.tolist(),
+            fill_input_nans=True,
+        )
+        # For PyMFE. OpenML provides a dictionary of floats.
+        # if isinstance(datasets_meta_features[0], pd.DataFrame):
+        #     datasets_meta_features = [df.iloc[0].to_dict() for df in datasets_meta_features]
         self._save_datasets_meta_features(datasets_meta_features)
